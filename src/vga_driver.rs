@@ -25,6 +25,9 @@ pub const BUFFER_HEIGHT: usize = 25;
 pub const BUFFER_WIDTH: usize = 80;
 
 pub fn set_char(x: usize, y: usize, c: u8, text_color: VgaColor, background_color: VgaColor) {
+    debug_assert!(x < BUFFER_WIDTH);
+    debug_assert!(y < BUFFER_HEIGHT);
+    
     let offset = y * BUFFER_WIDTH + x;
     unsafe {
         let char_pointer = VGA_BUFFER.offset((offset * 2) as isize);
