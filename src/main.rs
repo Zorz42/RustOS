@@ -8,7 +8,9 @@
 mod vga_driver;
 mod print;
 mod tests;
+mod interrupts;
 
+use core::arch::asm;
 use core::panic::PanicInfo;
 use crate::print::{reset_print_color, set_print_color};
 
@@ -27,10 +29,18 @@ pub extern "C" fn _start() -> ! {
         println!("Debug mode enabled (this message should not be present in release builds)");
         reset_print_color();
     }
+    
+    interrupts::init_idt();
 
     #[cfg(test)]
     test_main();
     
+    // divide by zero in assembly
+    unsafe {
+        asm!("mov rax, 0; div rax");
+    }
+    
+    println!("Going to infinite loop...");
     loop {}
 }
 
