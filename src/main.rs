@@ -1,12 +1,21 @@
 #![no_std]
 #![no_main]
 #![feature(core_intrinsics)]
+#![feature(custom_test_frameworks)]
+#![test_runner(crate::tests::test_runner)]
+#![reexport_test_harness_main = "test_main"]
 
 mod vga_driver;
 mod print;
+mod tests;
 
 use core::panic::PanicInfo;
 use crate::print::{reset_print_color, set_print_color};
+
+// this is only so that ide doesn't complain about non-existence of test_main
+// it should be excluded from compilation when in test mode
+#[cfg(not(test))]
+fn test_main(){}
 
 #[no_mangle]
 pub extern "C" fn _start() -> ! {
@@ -18,6 +27,9 @@ pub extern "C" fn _start() -> ! {
         println!("Debug mode enabled (this message should not be present in release builds)");
         reset_print_color();
     }
+
+    #[cfg(test)]
+    test_main();
     
     loop {}
 }

@@ -1,3 +1,5 @@
+use core::intrinsics::volatile_set_memory;
+
 #[allow(dead_code)]
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 #[repr(u8)]
@@ -31,21 +33,24 @@ pub fn set_char(x: usize, y: usize, c: u8, text_color: VgaColor, background_colo
     let offset = y * BUFFER_WIDTH + x;
     unsafe {
         let char_pointer = VGA_BUFFER.offset((offset * 2) as isize);
-        *char_pointer = c;
+        volatile_set_memory(char_pointer, c, 1);
         let color_pointer = VGA_BUFFER.offset((offset * 2 + 1) as isize);
-        *color_pointer = (background_color as u8) << 4 | (text_color as u8);
+        let color_val = (background_color as u8) << 4 | (text_color as u8);
+        volatile_set_memory(color_pointer, color_val, 1);
     }
 }
 
 pub fn scroll() {
-    let buffer = VGA_BUFFER as *mut u16;
     for y in 1..BUFFER_HEIGHT {
         for x in 0..BUFFER_WIDTH {
             let offset = y * BUFFER_WIDTH + x;
             unsafe {
-                let char_pointer = buffer.offset(offset as isize);
-                let prev_char_pointer = buffer.offset((offset - BUFFER_WIDTH) as isize);
-                *prev_char_pointer = *char_pointer;
+                let val1 = *VGA_BUFFER.offset(2 * offset as isize);
+                let val2 = *VGA_BUFFER.offset(2 * offset as isize + 1);
+                let prev_pointer1 = VGA_BUFFER.offset(2 * (offset - BUFFER_WIDTH) as isize);
+                let prev_pointer2 = VGA_BUFFER.offset(2 * (offset - BUFFER_WIDTH) as isize + 1);
+                volatile_set_memory(prev_pointer1, val1, 1);
+                volatile_set_memory(prev_pointer2, val2, 1);
             }
         }
     }

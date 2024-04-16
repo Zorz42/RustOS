@@ -9,7 +9,7 @@ edition = "2021"
 bootloader = "0.9"
 
 [profile.dev]
-panic = "abort"
+#panic = "abort"
 
 [profile.release]
 strip = true
