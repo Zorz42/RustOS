@@ -2,6 +2,7 @@
 #![no_main]
 #![feature(core_intrinsics)]
 #![feature(custom_test_frameworks)]
+#![feature(naked_functions)]
 #![test_runner(crate::tests::test_runner)]
 #![reexport_test_harness_main = "test_main"]
 
@@ -9,6 +10,8 @@ mod vga_driver;
 mod print;
 mod tests;
 mod interrupts;
+mod ports;
+mod timer;
 
 use core::arch::asm;
 use core::panic::PanicInfo;
@@ -31,17 +34,22 @@ pub extern "C" fn _start() -> ! {
     }
     
     interrupts::init_idt();
+    timer::init_timer();
 
     #[cfg(test)]
     test_main();
     
-    // divide by zero in assembly
     unsafe {
-        asm!("mov rax, 0; div rax");
+        asm!("int 0x03");
     }
     
     println!("Going to infinite loop...");
-    loop {}
+    loop {
+        unsafe {
+            asm!("hlt");
+        }
+        println!("Iterating loop");
+    }
 }
 
 #[panic_handler]
