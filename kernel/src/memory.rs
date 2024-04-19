@@ -1,5 +1,4 @@
 use bootloader_api::info::MemoryRegions;
-use crate::println;
 
 const PAGE_SIZE: u64 = 4096;
 
@@ -51,12 +50,16 @@ impl BitSetRaw {
         self.size / 8
     }
     
-    fn get_first_unset(&self) -> Option<usize> {
+    fn get_first_set(&self) -> Option<usize> {
         for i in 0..self.size / 64 {
             let mut val = unsafe { *self.data.offset(i as isize) };
-            val = !val;
             if val != 0 {
-                return Some(i * 64 + val.trailing_zeros() as usize);
+                let mut bit_index = 0;
+                while val & 1 == 0 {
+                    val >>= 1;
+                    bit_index += 1;
+                }
+                return Some(i * 64 + bit_index);
             }
         }
         None
@@ -84,6 +87,84 @@ pub fn get_num_free_pages() -> usize {
 pub fn get_num_pages() -> usize {
     unsafe {
         SEGMENTS_BITSET.size
+    }
+}
+
+type PageTableEntry = u64;
+
+struct PageTable {
+    entries: [PageTableEntry; 512],
+}
+
+impl PageTable {
+    fn get_sub_page_table(&mut self, index: usize) -> Option<*mut PageTable> {
+        let entry = self.entries[index];
+        if entry & 1 == 0 {
+            None
+        } else {
+            let addr = ((entry & 0x000FFFFF_FFFFF000) >> 12) + VIRTUAL_OFFSET;
+            Some(unsafe { addr as *mut PageTable })
+        }
+    }
+}
+
+fn create_page_table_entry(addr: u64, writable: bool, user: bool) -> PageTableEntry {
+    let mut entry = (addr << 12) & 0x000FFFFF_FFFFF000;
+    //entry |= 1; // present
+    if writable {
+        entry |= 1 << 1; // writable
+    }
+    if user {
+        entry |= 1 << 2; // user
+    }
+    entry
+}
+
+static mut CURRENT_PAGE_TABLE: *mut PageTable = 0 as *mut PageTable;
+
+pub fn find_free_page() -> *mut u8 {
+    unsafe {
+        let index = SEGMENTS_BITSET.get_first_set();
+        if let Some(index) = index {
+            SEGMENTS_BITSET.set(index, true);
+            (index as u64 * PAGE_SIZE) as *mut u8
+        } else {
+            panic!("Out of memory");
+        }
+    }
+}
+
+pub unsafe fn clear_page_memory(addr: *mut u8) {
+    let addr = addr as *mut u64;
+    for i in 0..PAGE_SIZE / 8 {
+        *addr.offset(i as isize) = 0;
+    }
+}
+
+pub unsafe fn free_page(addr: *mut u8) {
+    let index = (addr as u64 / PAGE_SIZE) as usize;
+    SEGMENTS_BITSET.set(index, false);
+}
+
+pub fn map_page(virtual_addr: u64, physical_addr: u64, writable: bool, user: bool) {
+    let mut curr_table = unsafe { CURRENT_PAGE_TABLE };
+    for i in 0..3 {
+        let index = (virtual_addr >> (39 - 9 * i)) & 0x1FF;
+        unsafe {
+            if let Some(sub_table) = (*curr_table).get_sub_page_table(index as usize) {
+                curr_table = (sub_table as u64 + VIRTUAL_OFFSET) as *mut PageTable;
+            } else {
+                let new_table = find_free_page() as *mut PageTable;
+                clear_page_memory((new_table as u64 + VIRTUAL_OFFSET) as *mut u8);
+                (*curr_table).entries[index as usize] = create_page_table_entry(new_table as u64, false, false);
+                curr_table = (new_table as u64 + VIRTUAL_OFFSET) as *mut PageTable;
+            }
+        }
+    }
+    
+    unsafe {
+        let index = (virtual_addr >> 12) & 0x1FF;
+        (*curr_table).entries[index as usize] = create_page_table_entry(physical_addr, writable, user);
     }
 }
 
@@ -131,15 +212,37 @@ pub fn init_memory(memory_regions: &MemoryRegions) {
     }
     
     // mark the pages for the bitset as used
-    {
-        let bitset_first_page = bitset_addr / PAGE_SIZE;
-        let bitset_last_page = bitset_first_page + pages_for_bitset;
-        for page in bitset_first_page..bitset_last_page {
-            unsafe {
-                SEGMENTS_BITSET.set(page as usize, false);
-            }
+    let bitset_first_page = bitset_addr / PAGE_SIZE;
+    let bitset_last_page = bitset_first_page + pages_for_bitset;
+    for page in bitset_first_page..bitset_last_page {
+        unsafe {
+            SEGMENTS_BITSET.set(page as usize, false);
         }
     }
     
-    println!("Num pages {}, num free pages {}", get_num_pages(), get_num_free_pages());
+    // create a master level 4 page table
+    unsafe {
+        CURRENT_PAGE_TABLE = (find_free_page() as u64 + VIRTUAL_OFFSET) as *mut PageTable;
+        clear_page_memory(CURRENT_PAGE_TABLE as *mut u8);
+    }
+    
+    for page in bitset_first_page..bitset_last_page {
+        unsafe {
+            map_page(page * PAGE_SIZE + VIRTUAL_OFFSET, page * PAGE_SIZE, true, false);
+        }
+    }
+    
+    // map every non-free page to itself
+    for region in memory_regions.iter() {
+        if region.kind == bootloader_api::info::MemoryRegionKind::Usable {
+            continue;
+        }
+        let start_page = (region.start + PAGE_SIZE - 1) / PAGE_SIZE;
+        let end_page = region.end / PAGE_SIZE;
+        for page in start_page..end_page {
+            unsafe {
+                map_page(page * PAGE_SIZE + VIRTUAL_OFFSET, page * PAGE_SIZE, true, false);
+            }
+        }
+    }
 }
