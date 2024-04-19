@@ -13,16 +13,20 @@ mod interrupts;
 mod ports;
 mod timer;
 mod font;
+mod memory;
 
 use core::arch::asm;
 use core::panic::PanicInfo;
 use crate::print::{reset_print_color, set_print_color, TextColor};
 use bootloader_api::{entry_point, BootInfo};
+use bootloader_api::config::Mapping;
+use crate::memory::{KERNEL_STACK_SIZE, VIRTUAL_OFFSET};
 use crate::vga_driver::clear_screen;
 
 const CONFIG: bootloader_api::BootloaderConfig = {
     let mut config = bootloader_api::BootloaderConfig::new_default();
-    config.kernel_stack_size = 100 * 1024; // 100 KiB
+    config.kernel_stack_size = KERNEL_STACK_SIZE; // 100 KiB
+    config.mappings.physical_memory = Some(Mapping::FixedAddress(VIRTUAL_OFFSET));
     config
 };
 entry_point!(kernel_main, config = &CONFIG);
@@ -47,11 +51,9 @@ fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
     clear_screen();
     
     println!("Booting kernel...");
-    
-    /*for region in boot_info.memory_regions.iter() {
-        println!("{:?}", region);
-    }*/
 
+    debug_assert!(boot_info.physical_memory_offset.take().is_some());
+    
     #[cfg(debug_assertions)]
     {
         set_print_color(TextColor::LightGreen, TextColor::Black);
@@ -61,6 +63,8 @@ fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
     
     interrupts::init_idt();
     timer::init_timer();
+    
+    memory::init_memory(&boot_info.memory_regions);
 
     #[cfg(test)]
     test_main();
