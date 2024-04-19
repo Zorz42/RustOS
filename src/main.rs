@@ -40,7 +40,7 @@ pub extern "C" fn _start() -> ! {
     test_main();
     
     unsafe {
-        asm!("int 0x03");
+        //asm!("int 0x03");
     }
     
     println!("Going to infinite loop...");
@@ -48,7 +48,7 @@ pub extern "C" fn _start() -> ! {
         unsafe {
             asm!("hlt");
         }
-        println!("Iterating loop");
+        print!("Ticks: {}\r", timer::get_ticks());
     }
 }
 

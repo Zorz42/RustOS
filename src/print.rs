@@ -31,6 +31,10 @@ impl Writer {
             self.new_line();
             return;
         }
+        if c == b'\r' {
+            self.x = 0;
+            return;
+        }
         vga_driver::set_char(self.x, vga_driver::BUFFER_HEIGHT - 1, c, self.text_color, self.background_color);
         self.x += 1;
         if self.x >= vga_driver::BUFFER_WIDTH {

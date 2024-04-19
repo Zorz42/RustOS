@@ -43,6 +43,16 @@ macro_rules! interrupt_wrapper {
     }}
 }
 
+macro_rules! interrupt_message {
+    ($name: expr) => {{
+        extern "C" fn wrapper() -> ! {
+            println!("{} exception", $name);
+            loop {}
+        }
+        wrapper
+    }}
+}
+
 
 #[derive(Debug, Clone, Copy)]
 #[repr(C, packed)]
@@ -103,57 +113,43 @@ static mut IDT_POINTER: IDTPointer = IDTPointer {
     base: 0,
 };
 
-const exception_messages: [&str; 32] = [
-    "Divide by zero",
-    "Debug",
-    "Non-maskable interrupt",
-    "Breakpoint",
-    "Overflow",
-    "Bound range exceeded",
-    "Invalid opcode",
-    "Device not available",
-    "Double fault",
-    "Coprocessor segment overrun",
-    "Invalid TSS",
-    "Segment not present",
-    "Stack-segment fault",
-    "General protection fault",
-    "Page fault",
-    "Reserved",
-    "x87 FPU floating-point error",
-    "Alignment check",
-    "Machine check",
-    "SIMD floating-point",
-    "Virtualization",
-    "Control",
-    "Reserved",
-    "Reserved",
-    "Reserved",
-    "Reserved",
-    "Reserved",
-    "Reserved",
-    "Reserved",
-    "Reserved",
-    "Security",
-    "Reserved",
-];
-
 pub fn init_idt() {
     unsafe {
         IDT_POINTER.base = &IDT as *const _ as u64;
     }
     
-    for i in 0..32 {
-        set_idt_entry(i, (|| -> ! {
-                println!("{} exception", exception_messages[i]);
-                loop {
-                    unsafe {
-                        asm!("hlt");
-                    }
-                }
-            })()
-        );
-    }
+    set_idt_entry(0, interrupt_message!("Divide by zero"));
+    set_idt_entry(1, interrupt_message!("Debug"));
+    set_idt_entry(2, interrupt_message!("Non-maskable interrupt"));
+    set_idt_entry(3, interrupt_message!("Breakpoint"));
+    set_idt_entry(4, interrupt_message!("Overflow"));
+    set_idt_entry(5, interrupt_message!("Bound range exceeded"));
+    set_idt_entry(6, interrupt_message!("Invalid opcode"));
+    set_idt_entry(7, interrupt_message!("Device not available"));
+    set_idt_entry(8, interrupt_message!("Double fault"));
+    set_idt_entry(9, interrupt_message!("Coprocessor segment overrun"));
+    set_idt_entry(10, interrupt_message!("Invalid TSS"));
+    set_idt_entry(11, interrupt_message!("Segment not present"));
+    set_idt_entry(12, interrupt_message!("Stack-segment fault"));
+    set_idt_entry(13, interrupt_message!("General protection fault"));
+    set_idt_entry(14, interrupt_message!("Page fault"));
+    set_idt_entry(15, interrupt_message!("Reserved"));
+    set_idt_entry(16, interrupt_message!("x87 FPU floating-point error"));
+    set_idt_entry(17, interrupt_message!("Alignment check"));
+    set_idt_entry(18, interrupt_message!("Machine check"));
+    set_idt_entry(19, interrupt_message!("SIMD floating-point"));
+    set_idt_entry(20, interrupt_message!("Virtualization"));
+    set_idt_entry(21, interrupt_message!("Control"));
+    set_idt_entry(22, interrupt_message!("Reserved"));
+    set_idt_entry(23, interrupt_message!("Reserved"));
+    set_idt_entry(24, interrupt_message!("Reserved"));
+    set_idt_entry(25, interrupt_message!("Reserved"));
+    set_idt_entry(26, interrupt_message!("Reserved"));
+    set_idt_entry(27, interrupt_message!("Reserved"));
+    set_idt_entry(28, interrupt_message!("Reserved"));
+    set_idt_entry(29, interrupt_message!("Reserved"));
+    set_idt_entry(30, interrupt_message!("Security"));
+    set_idt_entry(31, interrupt_message!("Reserved"));
     
     
     // remap irq table to 0x20-0x2F
@@ -172,25 +168,6 @@ pub fn init_idt() {
     
     unsafe {
         asm!("lidt [{}]", in(reg) &IDT_POINTER);
+        asm!("sti");
     }
-}
-
-extern "C" fn divide_by_zero_handler() -> ! {
-    println!("Divide by zero exception");
-    loop {}
-}
-
-extern "C" fn breakpoint_handler() -> ! {
-    println!("Breakpoint exception");
-    loop {}
-}
-
-extern "C" fn invalid_opcode_handler() -> ! {
-    println!("Invalid opcode exception");
-    loop {}
-}
-
-extern "C" fn page_fault_handler() -> ! {
-    println!("Page fault exception");
-    loop {}
 }

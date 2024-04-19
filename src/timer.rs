@@ -14,8 +14,18 @@ pub fn init_timer() {
     byte_out(0x40, ((divisor >> 8) & 0xFF) as u8);
 }
 
+static mut TIMER_TICKS: u32 = 0;
+
 extern "C" fn timer_handler() {
     byte_out(0x20, 0x20);
     
-    println!("Timer interrupt");
+    unsafe {
+        TIMER_TICKS += 1;
+    }
+}
+
+pub fn get_ticks() -> u32 {
+    unsafe {
+        TIMER_TICKS
+    }
 }
