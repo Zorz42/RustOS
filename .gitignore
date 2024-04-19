@@ -1,6 +1,7 @@
 /target
 **/.DS_Store
 .idea/
+kernel/target/
 
 # Added by cargo
 #
