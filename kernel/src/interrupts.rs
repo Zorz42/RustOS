@@ -154,7 +154,7 @@ pub fn init_idt() {
     
     // remap irq table to 0x20-0x2F
     // master PIC
-    /*byte_out(0x20, 0x11);
+    byte_out(0x20, 0x11);
     byte_out(0x21, 0x20);
     byte_out(0x21, 0x04);
     byte_out(0x21, 0x01);
@@ -164,10 +164,10 @@ pub fn init_idt() {
     byte_out(0xA1, 0x28);
     byte_out(0xA1, 0x02);
     byte_out(0xA1, 0x01);
-    byte_out(0xA1, 0x00);*/
+    byte_out(0xA1, 0x00);
     
     unsafe {
         asm!("lidt [{}]", in(reg) &IDT_POINTER);
-        //asm!("sti");
+        asm!("sti");
     }
 }

@@ -32,7 +32,8 @@ entry_point!(kernel_main, config = &CONFIG);
 #[cfg(not(test))]
 fn test_main(){}
 
-fn init_display(boot_info: &'static mut BootInfo) {
+#[no_mangle]
+fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
     let binding = boot_info.framebuffer.as_mut().unwrap();
     assert_eq!(binding.info().pixel_format, bootloader_api::info::PixelFormat::Bgr);
     let width = binding.info().width;
@@ -42,14 +43,14 @@ fn init_display(boot_info: &'static mut BootInfo) {
     let framebuffer = binding.buffer_mut();
 
     vga_driver::init(width, height, stride, bytes_per_pixel, framebuffer.as_mut_ptr());
-}
-
-#[no_mangle]
-fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
-    init_display(boot_info);
+    
     clear_screen();
     
     println!("Booting kernel...");
+    
+    /*for region in boot_info.memory_regions.iter() {
+        println!("{:?}", region);
+    }*/
 
     #[cfg(debug_assertions)]
     {
@@ -59,7 +60,7 @@ fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
     }
     
     interrupts::init_idt();
-    //timer::init_timer();
+    timer::init_timer();
 
     #[cfg(test)]
     test_main();
@@ -69,15 +70,15 @@ fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
     }
     
     println!("Going to infinite loop...");
-    let mut i = 0;
+    //let mut i = 0;
     loop {
-        /*unsafe {
+        unsafe {
             asm!("hlt");
-        }*/
+        }
         //print!("Ticks: {}\r", timer::get_ticks());
         
-        i += 1;
-        println!("Iteration: {}", i);
+        //i += 1;
+        //println!("Iteration: {}", i);
     }
 }
 
