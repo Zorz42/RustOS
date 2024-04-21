@@ -1,13 +1,6 @@
-use core::arch::asm;
 use core::intrinsics::volatile_set_memory;
-use core::ptr::copy_nonoverlapping;
 use crate::font::{CHAR_HEIGHT, CHAR_WIDTH, DEFAULT_FONT};
-
-pub fn volatile_store_byte(ptr: *mut u8, value: u8) {
-    unsafe {
-        asm!("mov [{}], {}", in(reg) ptr, in(reg_byte) value);
-    }
-}
+use crate::memory::{memcpy, volatile_store_byte};
 
 struct VgaBinding {
     width: usize,
@@ -66,11 +59,8 @@ fn get_pixel_mut(x: usize, y: usize) -> *mut u8 {
     unsafe {
         debug_assert!(x < VGA_BINDING.width);
         debug_assert!(y < VGA_BINDING.height);
-        let framebuffer = VGA_BINDING.framebuffer;
-        let bytes_per_pixel = VGA_BINDING.bytes_per_pixel;
-        let stride = VGA_BINDING.stride;
-        let offset = (y * stride + x) * bytes_per_pixel;
-        framebuffer.offset(offset as isize)
+        let offset = (y * VGA_BINDING.stride + x) * VGA_BINDING.bytes_per_pixel;
+        VGA_BINDING.framebuffer.offset(offset as isize)
     }
 }
 
@@ -120,7 +110,7 @@ pub fn scroll() {
         for y in BORDER_PADDING..VGA_BINDING.height - BORDER_PADDING - CHAR_HEIGHT {
             let src = VGA_BINDING.framebuffer.offset(((y + CHAR_HEIGHT) * VGA_BINDING.stride * VGA_BINDING.bytes_per_pixel) as isize);
             let dest = VGA_BINDING.framebuffer.offset((y * VGA_BINDING.stride * VGA_BINDING.bytes_per_pixel) as isize);
-            copy_nonoverlapping(src, dest, VGA_BINDING.width * VGA_BINDING.bytes_per_pixel);
+            memcpy(src, dest, VGA_BINDING.width * VGA_BINDING.bytes_per_pixel);
         }
         
         for y in VGA_BINDING.height - BORDER_PADDING - CHAR_HEIGHT..VGA_BINDING.height - BORDER_PADDING {

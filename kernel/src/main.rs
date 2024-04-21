@@ -23,7 +23,7 @@ use bootloader_api::config::Mapping;
 use bootloader_api::info::PixelFormat;
 use crate::interrupts::init_idt;
 use crate::memory::{init_memory, KERNEL_STACK_ADDR, KERNEL_STACK_SIZE, VIRTUAL_OFFSET};
-use crate::timer::init_timer;
+use crate::timer::{get_ticks, init_timer};
 use crate::vga_driver::clear_screen;
 
 const CONFIG: BootloaderConfig = {
@@ -77,13 +77,21 @@ fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
         //asm!("int 0x03");
     }
     
+    let start = get_ticks();
+    
+    for i in 0..100 {
+        println!("Iteration: {}", i);
+    }
+    
+    println!("That took {}ms", get_ticks() - start);
+    
     println!("Going to infinite loop...");
     //let mut i = 0;
     loop {
         unsafe {
             asm!("hlt");
         }
-        //print!("Ticks: {}\r", timer::get_ticks());
+        //print!("Ticks: {}\r", get_ticks());
         
         //i += 1;
         //println!("Iteration: {}", i);
