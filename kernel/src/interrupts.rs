@@ -1,4 +1,5 @@
 use core::arch::asm;
+use core::intrinsics::size_of;
 use crate::ports::byte_out;
 use crate::println;
 
@@ -109,7 +110,7 @@ pub fn set_idt_entry(index: usize, handler: HandlerFunc) {
 }
 
 static mut IDT_POINTER: IDTPointer = IDTPointer {
-    limit: (IDT_SIZE * core::mem::size_of::<IDTEntry>() - 1) as u16,
+    limit: (IDT_SIZE * size_of::<IDTEntry>() - 1) as u16,
     base: 0,
 };
 

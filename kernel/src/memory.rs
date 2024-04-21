@@ -1,6 +1,5 @@
 use core::arch::asm;
-use bootloader_api::info::MemoryRegions;
-use crate::{print, println};
+use bootloader_api::info::{MemoryRegionKind, MemoryRegions};
 
 const PAGE_SIZE: u64 = 4096;
 
@@ -198,7 +197,7 @@ pub fn init_memory(memory_regions: &MemoryRegions, framebuffer: u64, framebuffer
         // find some consecutive free pages in memory_regions
         let mut bitset_addr = None;
         for region in memory_regions.iter() {
-            if region.kind != bootloader_api::info::MemoryRegionKind::Usable || region.start == 0 {
+            if region.kind != MemoryRegionKind::Usable || region.start == 0 {
                 continue;
             }
             
@@ -232,7 +231,7 @@ pub fn init_memory(memory_regions: &MemoryRegions, framebuffer: u64, framebuffer
     
     // mark every page, that is already used, as used
     for region in memory_regions.iter() {
-        if region.kind == bootloader_api::info::MemoryRegionKind::Usable && region.start != 0 {
+        if region.kind == MemoryRegionKind::Usable && region.start != 0 {
             continue;
         }
         

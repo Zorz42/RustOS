@@ -18,13 +18,16 @@ mod memory;
 use core::arch::asm;
 use core::panic::PanicInfo;
 use crate::print::{reset_print_color, set_print_color, TextColor};
-use bootloader_api::{entry_point, BootInfo};
+use bootloader_api::{entry_point, BootInfo, BootloaderConfig};
 use bootloader_api::config::Mapping;
-use crate::memory::{KERNEL_STACK_ADDR, KERNEL_STACK_SIZE, VIRTUAL_OFFSET};
+use bootloader_api::info::PixelFormat;
+use crate::interrupts::init_idt;
+use crate::memory::{init_memory, KERNEL_STACK_ADDR, KERNEL_STACK_SIZE, VIRTUAL_OFFSET};
+use crate::timer::init_timer;
 use crate::vga_driver::clear_screen;
 
-const CONFIG: bootloader_api::BootloaderConfig = {
-    let mut config = bootloader_api::BootloaderConfig::new_default();
+const CONFIG: BootloaderConfig = {
+    let mut config = BootloaderConfig::new_default();
     config.kernel_stack_size = KERNEL_STACK_SIZE;
     config.mappings.physical_memory = Some(Mapping::FixedAddress(VIRTUAL_OFFSET));
     config.mappings.kernel_stack = Mapping::FixedAddress(KERNEL_STACK_ADDR);
@@ -40,7 +43,7 @@ fn test_main(){}
 #[no_mangle]
 fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
     let binding = boot_info.framebuffer.as_mut().unwrap();
-    assert_eq!(binding.info().pixel_format, bootloader_api::info::PixelFormat::Bgr);
+    assert_eq!(binding.info().pixel_format, PixelFormat::Bgr);
     let width = binding.info().width;
     let height = binding.info().height;
     let stride = binding.info().stride;
@@ -62,10 +65,10 @@ fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
         reset_print_color();
     }
     
-    interrupts::init_idt();
-    timer::init_timer();
+    init_idt();
+    init_timer();
     
-    memory::init_memory(&boot_info.memory_regions, framebuffer.as_ptr() as u64, binding.info().byte_len as u64, boot_info.kernel_addr, boot_info.kernel_image_offset, boot_info.kernel_len);
+    init_memory(&boot_info.memory_regions, framebuffer.as_ptr() as u64, binding.info().byte_len as u64, boot_info.kernel_addr, boot_info.kernel_image_offset, boot_info.kernel_len);
 
     #[cfg(test)]
     test_main();
