@@ -1,3 +1,4 @@
+use core::arch::asm;
 use bootloader_api::info::MemoryRegions;
 
 const PAGE_SIZE: u64 = 4096;
@@ -143,6 +144,7 @@ pub unsafe fn clear_page_memory(addr: *mut u8) {
 
 pub unsafe fn free_page(addr: *mut u8) {
     let index = (addr as u64 / PAGE_SIZE) as usize;
+    assert!(!SEGMENTS_BITSET.get(index), "Double free of page");
     SEGMENTS_BITSET.set(index, false);
 }
 
@@ -168,7 +170,11 @@ pub fn map_page(virtual_addr: u64, physical_addr: u64, writable: bool, user: boo
     }
 }
 
-pub fn init_memory(memory_regions: &MemoryRegions) {
+unsafe fn switch_to_page_table(page_table: *mut PageTable) {
+    asm!("mov cr3, {}", in(reg) page_table);
+}
+
+pub fn init_memory(memory_regions: &MemoryRegions, framebuffer: u64, framebuffer_size: u64) {
     let mut highest_address = 0;
     for region in memory_regions.iter() {
         highest_address = highest_address.max(region.end);
@@ -176,7 +182,7 @@ pub fn init_memory(memory_regions: &MemoryRegions) {
     let num_all_pages = highest_address / PAGE_SIZE;
     // how many pages will the bitset alone take
     let pages_for_bitset = (num_all_pages + 8 * PAGE_SIZE - 1) / (8 * PAGE_SIZE);
-    
+
     let bitset_addr = {
         // find some consecutive free pages in memory_regions
         let mut bitset_addr = None;
@@ -194,12 +200,12 @@ pub fn init_memory(memory_regions: &MemoryRegions) {
             panic!("Could not find enough free pages for the bitset");
         }
     };
-    
+
     unsafe {
         SEGMENTS_BITSET = BitSetRaw::new(num_all_pages as usize, (VIRTUAL_OFFSET + bitset_addr) as *mut u64);
         SEGMENTS_BITSET.clear();
     }
-    
+
     // mark every free page as free
     for region in memory_regions.iter() {
         let start_page = (region.start + PAGE_SIZE - 1) / PAGE_SIZE;
@@ -210,7 +216,7 @@ pub fn init_memory(memory_regions: &MemoryRegions) {
             }
         }
     }
-    
+
     // mark the pages for the bitset as used
     let bitset_first_page = bitset_addr / PAGE_SIZE;
     let bitset_last_page = bitset_first_page + pages_for_bitset;
@@ -219,19 +225,19 @@ pub fn init_memory(memory_regions: &MemoryRegions) {
             SEGMENTS_BITSET.set(page as usize, false);
         }
     }
-    
+
     // create a master level 4 page table
     unsafe {
         CURRENT_PAGE_TABLE = (find_free_page() as u64 + VIRTUAL_OFFSET) as *mut PageTable;
         clear_page_memory(CURRENT_PAGE_TABLE as *mut u8);
     }
-    
+
     for page in bitset_first_page..bitset_last_page {
         unsafe {
             map_page(page * PAGE_SIZE + VIRTUAL_OFFSET, page * PAGE_SIZE, true, false);
         }
     }
-    
+
     // map every non-free page to itself
     for region in memory_regions.iter() {
         if region.kind == bootloader_api::info::MemoryRegionKind::Usable {
@@ -244,5 +250,17 @@ pub fn init_memory(memory_regions: &MemoryRegions) {
                 map_page(page * PAGE_SIZE + VIRTUAL_OFFSET, page * PAGE_SIZE, true, false);
             }
         }
+    }
+    
+    // map the framebuffer
+    let framebuffer_pages = (framebuffer_size + PAGE_SIZE - 1) / PAGE_SIZE;
+    for i in 0..framebuffer_pages {
+        unsafe {
+            map_page(framebuffer + i * PAGE_SIZE, framebuffer + i * PAGE_SIZE, true, false);
+        }
+    }
+
+    unsafe {
+        //switch_to_page_table(CURRENT_PAGE_TABLE);
     }
 }

@@ -1,4 +1,5 @@
 use core::intrinsics::volatile_set_memory;
+use core::ptr::copy_nonoverlapping;
 use crate::font::{CHAR_HEIGHT, CHAR_WIDTH, DEFAULT_FONT};
 
 
@@ -109,15 +110,16 @@ pub fn set_char(x: usize, y: usize, c: u8, text_color: (u8, u8, u8), background_
 }
 
 pub fn scroll() {
-    for y in BORDER_PADDING..get_screen_height() - BORDER_PADDING - CHAR_HEIGHT {
-        for x in BORDER_PADDING..get_screen_width() - BORDER_PADDING {
-            set_pixel(x, y, get_pixel(x, y + CHAR_HEIGHT));
+    unsafe {
+        for y in BORDER_PADDING..VGA_BINDING.height - BORDER_PADDING - CHAR_HEIGHT {
+            let src = VGA_BINDING.framebuffer.offset(((y + CHAR_HEIGHT) * VGA_BINDING.stride * VGA_BINDING.bytes_per_pixel) as isize);
+            let dest = VGA_BINDING.framebuffer.offset((y * VGA_BINDING.stride * VGA_BINDING.bytes_per_pixel) as isize);
+            copy_nonoverlapping(src, dest, VGA_BINDING.width * VGA_BINDING.bytes_per_pixel);
         }
-    }
-    
-    for y in get_screen_height() - BORDER_PADDING - CHAR_HEIGHT..get_screen_height() - BORDER_PADDING {
-        for x in BORDER_PADDING..get_screen_width() - BORDER_PADDING {
-            set_pixel(x, y, (0, 0, 0));
+        
+        for y in VGA_BINDING.height - BORDER_PADDING - CHAR_HEIGHT..VGA_BINDING.height - BORDER_PADDING {
+            let dest = VGA_BINDING.framebuffer.offset((y * VGA_BINDING.stride * VGA_BINDING.bytes_per_pixel) as isize);
+            volatile_set_memory(dest, 0, VGA_BINDING.width * VGA_BINDING.bytes_per_pixel);
         }
     }
 }

@@ -64,7 +64,7 @@ fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
     interrupts::init_idt();
     timer::init_timer();
     
-    memory::init_memory(&boot_info.memory_regions);
+    memory::init_memory(&boot_info.memory_regions, framebuffer.as_ptr() as u64, binding.info().byte_len as u64);
 
     #[cfg(test)]
     test_main();
