@@ -20,13 +20,14 @@ use core::panic::PanicInfo;
 use crate::print::{reset_print_color, set_print_color, TextColor};
 use bootloader_api::{entry_point, BootInfo};
 use bootloader_api::config::Mapping;
-use crate::memory::{KERNEL_STACK_SIZE, VIRTUAL_OFFSET};
+use crate::memory::{KERNEL_STACK_ADDR, KERNEL_STACK_SIZE, VIRTUAL_OFFSET};
 use crate::vga_driver::clear_screen;
 
 const CONFIG: bootloader_api::BootloaderConfig = {
     let mut config = bootloader_api::BootloaderConfig::new_default();
-    config.kernel_stack_size = KERNEL_STACK_SIZE; // 100 KiB
+    config.kernel_stack_size = KERNEL_STACK_SIZE;
     config.mappings.physical_memory = Some(Mapping::FixedAddress(VIRTUAL_OFFSET));
+    config.mappings.kernel_stack = Mapping::FixedAddress(KERNEL_STACK_ADDR);
     config
 };
 entry_point!(kernel_main, config = &CONFIG);
@@ -49,7 +50,7 @@ fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
     vga_driver::init(width, height, stride, bytes_per_pixel, framebuffer.as_mut_ptr());
     
     clear_screen();
-    
+
     println!("Booting kernel...");
 
     debug_assert!(boot_info.physical_memory_offset.take().is_some());
@@ -64,7 +65,7 @@ fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
     interrupts::init_idt();
     timer::init_timer();
     
-    memory::init_memory(&boot_info.memory_regions, framebuffer.as_ptr() as u64, binding.info().byte_len as u64);
+    memory::init_memory(&boot_info.memory_regions, framebuffer.as_ptr() as u64, binding.info().byte_len as u64, boot_info.kernel_addr, boot_info.kernel_image_offset, boot_info.kernel_len);
 
     #[cfg(test)]
     test_main();

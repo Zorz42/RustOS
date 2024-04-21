@@ -1,7 +1,13 @@
+use core::arch::asm;
 use core::intrinsics::volatile_set_memory;
 use core::ptr::copy_nonoverlapping;
 use crate::font::{CHAR_HEIGHT, CHAR_WIDTH, DEFAULT_FONT};
 
+pub fn volatile_store_byte(ptr: *mut u8, value: u8) {
+    unsafe {
+        asm!("mov [{}], {}", in(reg) ptr, in(reg_byte) value);
+    }
+}
 
 struct VgaBinding {
     width: usize,
@@ -72,9 +78,9 @@ fn get_pixel_mut(x: usize, y: usize) -> *mut u8 {
 pub fn set_pixel(x: usize, y: usize, color: (u8, u8, u8)) {
     unsafe {
         let pixel_pointer = get_pixel_mut(x, y);
-        volatile_set_memory(pixel_pointer, color.0, 1);
-        volatile_set_memory(pixel_pointer.offset(1), color.1, 1);
-        volatile_set_memory(pixel_pointer.offset(2), color.2, 1);
+        volatile_store_byte(pixel_pointer, color.0);
+        volatile_store_byte(pixel_pointer.offset(1), color.1);
+        volatile_store_byte(pixel_pointer.offset(2), color.2);
     }
 }
 
