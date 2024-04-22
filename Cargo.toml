@@ -1,5 +1,5 @@
 [package]
-name = "RustOS"         # or any other name
+name = "RustOS"
 version = "0.1.0"
 
 [build-dependencies]

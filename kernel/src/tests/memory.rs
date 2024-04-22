@@ -1,5 +1,6 @@
-#[cfg(test)]
-mod test_memory {
-    #[test_case]
-    fn test_one_page() {}
+use kernel_test::kernel_test;
+
+#[kernel_test(crate::tests::memory)]
+fn test_one_page() {
 }
+

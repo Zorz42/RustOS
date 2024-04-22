@@ -1,7 +1,6 @@
-#[cfg(test)]
-mod test_elementary {
-    #[test_case]
-    fn test_assert() {
-        assert!(true);
-    }
+use kernel_test::kernel_test;
+
+#[kernel_test(crate::tests::elementary)]
+fn test_assert() {
+    assert!(true);
 }

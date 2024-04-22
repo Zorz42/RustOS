@@ -1,9 +1,6 @@
 #![no_std]
 #![no_main]
-//#![feature(custom_test_frameworks)]
 #![feature(naked_functions)]
-//#![test_runner(crate::tests::test_runner)]
-#![reexport_test_harness_main = "test_main"]
 
 use core::arch::asm;
 use core::panic::PanicInfo;
@@ -11,10 +8,12 @@ use core::panic::PanicInfo;
 use bootloader_api::{BootInfo, BootloaderConfig, entry_point};
 use bootloader_api::config::Mapping;
 use bootloader_api::info::PixelFormat;
+use kernel_test::all_tests;
 
 use crate::interrupts::init_idt;
 use crate::memory::{init_memory, KERNEL_STACK_ADDR, KERNEL_STACK_SIZE, VIRTUAL_OFFSET};
 use crate::print::{reset_print_color, set_print_color, TextColor};
+use crate::tests::test_runner;
 use crate::timer::{get_ticks, init_timer};
 use crate::vga_driver::clear_screen;
 
@@ -35,11 +34,6 @@ const CONFIG: BootloaderConfig = {
     config
 };
 entry_point!(kernel_main, config = &CONFIG);
-
-// this is only so that ide doesn't complain about non-existence of test_main
-// it should be excluded from compilation when in test mode
-//#[cfg(not(test))]
-//fn test_main() {}
 
 #[no_mangle]
 fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
@@ -77,8 +71,8 @@ fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
 
     init_memory(&boot_info.memory_regions);
 
-    //#[cfg(test)]
-    //test_main();
+    #[cfg(debug_assertions)]
+    test_runner();
 
     let start = get_ticks();
 
