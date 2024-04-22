@@ -556,7 +556,14 @@ name = "kernel"
 version = "0.1.0"
 dependencies = [
  "bootloader_api",
- "log",
+ "kernel_test",
+]
+
+[[package]]
+name = "kernel_test"
+version = "0.1.0"
+dependencies = [
+ "syn",
 ]
 
 [[package]]

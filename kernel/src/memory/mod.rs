@@ -1,20 +1,22 @@
-mod bitset;
-mod paging;
-mod utils;
-
 use core::arch::asm;
+
 use bootloader_api::info::{MemoryRegionKind, MemoryRegions};
+
+pub use utils::*;
+
 use crate::memory::bitset::BitSetRaw;
 use crate::memory::paging::{CURRENT_PAGE_TABLE, map_page, PageTable, SEGMENTS_BITSET};
 
-pub use utils::*;
+mod bitset;
+mod paging;
+mod utils;
 
 pub const PAGE_SIZE: u64 = 4096;
 pub const VIRTUAL_OFFSET: u64 = 0x100000000;
 pub const KERNEL_STACK_SIZE: u64 = 100 * 1024; // 100 KiB
 pub const KERNEL_STACK_ADDR: u64 = 0x200000000 - KERNEL_STACK_SIZE;
 
-pub fn init_memory(memory_regions: &MemoryRegions, framebuffer: u64, framebuffer_size: u64, kernel_phys: u64, kernel_virt: u64, kernel_len: u64) {
+pub fn init_memory(memory_regions: &MemoryRegions) {
     unsafe {
         // use already existing page table
         let cr3: u64;
@@ -53,7 +55,10 @@ pub fn init_memory(memory_regions: &MemoryRegions, framebuffer: u64, framebuffer
     };
 
     unsafe {
-        SEGMENTS_BITSET = BitSetRaw::new(num_all_pages as usize, (VIRTUAL_OFFSET + bitset_addr) as *mut u64);
+        SEGMENTS_BITSET = BitSetRaw::new(
+            num_all_pages as usize,
+            (VIRTUAL_OFFSET + bitset_addr) as *mut u64,
+        );
         SEGMENTS_BITSET.clear();
     }
 
@@ -83,8 +88,11 @@ pub fn init_memory(memory_regions: &MemoryRegions, framebuffer: u64, framebuffer
 
     // map the bitset
     for page in bitset_first_page..bitset_last_page {
-        unsafe {
-            map_page(page * PAGE_SIZE + VIRTUAL_OFFSET, page * PAGE_SIZE, true, false);
-        }
+        map_page(
+            page * PAGE_SIZE + VIRTUAL_OFFSET,
+            page * PAGE_SIZE,
+            true,
+            false,
+        );
     }
 }

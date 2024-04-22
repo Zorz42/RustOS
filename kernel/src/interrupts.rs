@@ -1,5 +1,5 @@
 use core::arch::asm;
-use core::intrinsics::size_of;
+
 use crate::ports::byte_out;
 use crate::println;
 
@@ -35,8 +35,8 @@ macro_rules! interrupt_wrapper {
                 pop rax
 
                 iretq
-                ", 
-                sym $name, 
+                ",
+                sym $name,
                 options(noreturn));
             }
         }
@@ -51,9 +51,10 @@ macro_rules! interrupt_message {
             loop {}
         }
         wrapper
-    }}
+    }};
 }
 
+const IDT_ENTRY_SIZE: usize = 16;
 
 #[derive(Debug, Clone, Copy)]
 #[repr(C, packed)]
@@ -103,14 +104,13 @@ static mut IDT: [IDTEntry; IDT_SIZE] = [IDTEntry::new(0, 0, create_options(false
 pub type HandlerFunc = extern "C" fn() -> !;
 
 pub fn set_idt_entry(index: usize, handler: HandlerFunc) {
-    let pointer = handler as u64;
     unsafe {
-        IDT[index] = IDTEntry::new(pointer, 0x08, create_options(true, false));
+        IDT[index] = IDTEntry::new(handler as u64, 0x08, create_options(true, false));
     }
 }
 
 static mut IDT_POINTER: IDTPointer = IDTPointer {
-    limit: (IDT_SIZE * size_of::<IDTEntry>() - 1) as u16,
+    limit: (IDT_SIZE * IDT_ENTRY_SIZE - 1) as u16,
     base: 0,
 };
 
@@ -118,7 +118,7 @@ pub fn init_idt() {
     unsafe {
         IDT_POINTER.base = &IDT as *const _ as u64;
     }
-    
+
     set_idt_entry(0, interrupt_message!("Divide by zero"));
     set_idt_entry(1, interrupt_message!("Debug"));
     set_idt_entry(2, interrupt_message!("Non-maskable interrupt"));
@@ -151,8 +151,7 @@ pub fn init_idt() {
     set_idt_entry(29, interrupt_message!("Reserved"));
     set_idt_entry(30, interrupt_message!("Security"));
     set_idt_entry(31, interrupt_message!("Reserved"));
-    
-    
+
     // remap irq table to 0x20-0x2F
     // master PIC
     byte_out(0x20, 0x11);
@@ -166,7 +165,7 @@ pub fn init_idt() {
     byte_out(0xA1, 0x02);
     byte_out(0xA1, 0x01);
     byte_out(0xA1, 0x00);
-    
+
     unsafe {
         asm!("lidt [{}]", in(reg) &IDT_POINTER);
         asm!("sti");

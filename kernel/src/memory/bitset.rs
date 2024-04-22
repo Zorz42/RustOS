@@ -22,9 +22,9 @@ impl BitSetRaw {
         self.count0 -= self.get(index) as usize ^ 1;
         unsafe {
             if val {
-                *self.data.offset(byte_index as isize) |= 1 << bit_index;
+                *self.data.add(byte_index) |= 1 << bit_index;
             } else {
-                *self.data.offset(byte_index as isize) &= !(1 << bit_index);
+                *self.data.add(byte_index) &= !(1 << bit_index);
             }
         }
     }
@@ -34,20 +34,20 @@ impl BitSetRaw {
 
         let byte_index = index / 64;
         let bit_index = index % 64;
-        unsafe {
-            (*self.data.offset(byte_index as isize) & (1 << bit_index)) != 0
-        }
+        unsafe { (*self.data.add(byte_index) & (1 << bit_index)) != 0 }
     }
 
     pub fn get_size_bytes(&self) -> usize {
         self.size / 8
     }
-    
-    pub fn get_size_bits(&self) -> usize { self.size }
+
+    pub fn get_size_bits(&self) -> usize {
+        self.size
+    }
 
     pub fn get_first_zero(&self) -> Option<usize> {
         for i in 0..self.size / 64 {
-            let mut val = unsafe { *self.data.offset(i as isize) };
+            let mut val = unsafe { *self.data.add(i) };
             if val != 0xFFFFFFFF_FFFFFFFF {
                 for j in 0..64 {
                     if val & 1 == 0 {
@@ -64,12 +64,12 @@ impl BitSetRaw {
     pub fn clear(&mut self) {
         for i in 0..self.size / 64 {
             unsafe {
-                *self.data.offset(i as isize) = 0;
+                *self.data.add(i) = 0;
             }
         }
         self.count0 = self.size;
     }
-    
+
     pub fn get_count0(&mut self) -> usize {
         self.count0
     }

@@ -1,15 +1,15 @@
-use crate::{print, println, vga_driver};
-use crate::print::{reset_print_color, set_print_color};
+use kernel_test::kernel_test;
 
 mod elementary;
+mod memory;
 
-pub trait Testable {
+/*pub trait Testable {
     fn run(&self) -> ();
 }
 
 impl<T> Testable for T
-    where
-        T: Fn(),
+where
+    T: Fn(),
 {
     fn run(&self) {
         print!("{} ... ", core::any::type_name::<T>());
@@ -20,11 +20,18 @@ impl<T> Testable for T
 
 #[cfg(test)]
 pub fn test_runner(tests: &[&dyn Testable]) {
-    set_print_color(vga_driver::VgaColor::LightCyan, vga_driver::VgaColor::Black);
+    use crate::print::{reset_print_color, set_print_color, TextColor};
+
+    set_print_color(TextColor::LightCyan, TextColor::Black);
     println!("Running {} tests", tests.len());
     for test in tests {
         test.run();
     }
 
     reset_print_color();
+}*/
+
+#[kernel_test]
+fn test_example() {
+    assert_eq!(1, 1);
 }

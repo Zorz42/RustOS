@@ -1,19 +1,15 @@
+use crate::memory::{memset_int64, PAGE_SIZE, VIRTUAL_OFFSET};
 use crate::memory::bitset::BitSetRaw;
-use crate::memory::{PAGE_SIZE, VIRTUAL_OFFSET};
 
 // bit is 1 if the page is used, 0 if it's free
 pub static mut SEGMENTS_BITSET: BitSetRaw = BitSetRaw::new(0, 0 as *mut u64);
 
 pub fn get_num_free_pages() -> usize {
-    unsafe {
-        SEGMENTS_BITSET.get_count0()
-    }
+    unsafe { SEGMENTS_BITSET.get_count0() }
 }
 
 pub fn get_num_pages() -> usize {
-    unsafe {
-        SEGMENTS_BITSET.get_size_bits()
-    }
+    unsafe { SEGMENTS_BITSET.get_size_bits() }
 }
 
 type PageTableEntry = u64;
@@ -29,7 +25,7 @@ impl PageTable {
             None
         } else {
             let addr = entry & 0x000FFFFF_FFFFF000;
-            Some(unsafe { addr as *mut PageTable })
+            Some(addr as *mut PageTable)
         }
     }
 }
@@ -61,10 +57,8 @@ pub fn find_free_page() -> *mut u8 {
 }
 
 pub unsafe fn clear_page_memory(addr: *mut u8) {
-    let addr = addr as *mut u64;
-    for i in 0..PAGE_SIZE / 8 {
-        *addr.offset(i as isize) = 0;
-    }
+    let addr = addr as u64 / PAGE_SIZE * PAGE_SIZE;
+    memset_int64(addr as *mut u8, 0, PAGE_SIZE as usize);
 }
 
 pub unsafe fn free_page(addr: *mut u8) {
@@ -83,7 +77,8 @@ pub fn map_page(virtual_addr: u64, physical_addr: u64, writable: bool, user: boo
             } else {
                 let new_table = find_free_page() as *mut PageTable;
                 clear_page_memory((new_table as u64 + VIRTUAL_OFFSET) as *mut u8);
-                (*curr_table).entries[index as usize] = create_page_table_entry(new_table as u64, false, false);
+                (*curr_table).entries[index as usize] =
+                    create_page_table_entry(new_table as u64, false, false);
                 curr_table = (new_table as u64 + VIRTUAL_OFFSET) as *mut PageTable;
             }
         }
@@ -91,6 +86,7 @@ pub fn map_page(virtual_addr: u64, physical_addr: u64, writable: bool, user: boo
 
     unsafe {
         let index = (virtual_addr >> 12) & 0x1FF;
-        (*curr_table).entries[index as usize] = create_page_table_entry(physical_addr, writable, user);
+        (*curr_table).entries[index as usize] =
+            create_page_table_entry(physical_addr, writable, user);
     }
 }
