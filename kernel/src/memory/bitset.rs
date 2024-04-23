@@ -5,7 +5,16 @@ pub struct BitSetRaw {
 }
 
 impl BitSetRaw {
-    pub const fn new(size: usize, addr: *mut u64) -> BitSetRaw {
+    pub const fn new_empty() -> BitSetRaw {
+        BitSetRaw {
+            data: 0 as *mut u64,
+            size: 0,
+            count0: 0,
+        }
+    }
+
+    pub fn new(size: usize, addr: *mut u64) -> BitSetRaw {
+        debug_assert_eq!(addr as u64 % 8, 0);
         BitSetRaw {
             data: addr,
             size: (size + 63) / 64 * 64,
@@ -41,7 +50,7 @@ impl BitSetRaw {
         self.size / 8
     }
 
-    pub fn get_size_bits(&self) -> usize {
+    pub fn get_size(&self) -> usize {
         self.size
     }
 

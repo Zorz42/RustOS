@@ -2,14 +2,14 @@ use crate::memory::{memset_int64, PAGE_SIZE, VIRTUAL_OFFSET};
 use crate::memory::bitset::BitSetRaw;
 
 // bit is 1 if the page is used, 0 if it's free
-pub static mut SEGMENTS_BITSET: BitSetRaw = BitSetRaw::new(0, 0 as *mut u64);
+pub static mut SEGMENTS_BITSET: BitSetRaw = BitSetRaw::new_empty();
 
 pub fn get_num_free_pages() -> usize {
     unsafe { SEGMENTS_BITSET.get_count0() }
 }
 
 pub fn get_num_pages() -> usize {
-    unsafe { SEGMENTS_BITSET.get_size_bits() }
+    unsafe { SEGMENTS_BITSET.get_size() }
 }
 
 type PageTableEntry = u64;

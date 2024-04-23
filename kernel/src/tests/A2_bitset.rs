@@ -14,8 +14,12 @@ fn get_free_space_addr() -> *mut u8 {
 
 #[kernel_test]
 fn test_bitset_clear() {
-    unsafe {
-        let mut bitset = BitSetRaw::new(1024 / 8, get_free_space_addr() as *mut u64);
+    let bitset = unsafe {
+        let mut bitset = BitSetRaw::new(1024 * 8, get_free_space_addr() as *mut u64);
         bitset.clear();
+        bitset
+    };
+    for i in 0..1024 * 8 {
+        assert!(!bitset.get(i));
     }
 }

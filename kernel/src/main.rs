@@ -21,6 +21,7 @@ mod interrupts;
 mod memory;
 mod ports;
 mod print;
+mod rand;
 mod tests;
 mod timer;
 mod vga_driver;

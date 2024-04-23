@@ -1,10 +1,10 @@
 #[allow(unused_imports)]
-use A0_elementary::*;
+use A0_rand::*;
 use kernel_test::all_tests;
 
 use crate::{print, println};
 
-mod A0_elementary;
+mod A0_rand;
 mod A1_utils;
 mod A2_bitset;
 mod A3_paging;
