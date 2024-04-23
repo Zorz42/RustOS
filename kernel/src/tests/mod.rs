@@ -2,6 +2,7 @@ mod A0_rand;
 mod A1_utils;
 mod A2_bitset;
 mod A3_paging;
+mod A4_malloc;
 
 #[cfg(feature = "run_tests")]
 static mut FREE_SPACE: [u8; 1032] = [0; 1032];

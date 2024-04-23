@@ -63,6 +63,7 @@ fn test_rand_distribution() {
                 max_count
             };
             assert!(max_count - min_count < 50 * m);
+            assert!(min_count > 50);
         }
     }
 }

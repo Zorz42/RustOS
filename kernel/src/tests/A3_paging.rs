@@ -1,6 +1,6 @@
 use kernel_test::{kernel_test, kernel_test_mod};
 
-use crate::memory::{find_free_page, free_page};
+use crate::memory::{find_free_page, free_page, memset_int64, VIRTUAL_OFFSET};
 use crate::rand::Rng;
 
 kernel_test_mod!(crate::tests::A3_paging);
@@ -30,6 +30,9 @@ fn test_page_free() {
 
         for i in 0..1024 {
             pages[i] = find_free_page();
+            unsafe {
+                memset_int64(pages[i].add(VIRTUAL_OFFSET as usize), 0, 4096);
+            }
         }
         for i in 0..1024 {
             unsafe {

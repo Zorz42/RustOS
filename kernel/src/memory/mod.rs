@@ -3,6 +3,7 @@ use core::arch::asm;
 use bootloader_api::info::{MemoryRegionKind, MemoryRegions};
 
 pub use bitset::BitSetRaw;
+pub use malloc::{free, malloc};
 pub use paging::{find_free_page, free_page, map_page};
 use paging::{PageTable, SEGMENTS_BITSET};
 pub use utils::*;
@@ -10,6 +11,7 @@ pub use utils::*;
 use crate::memory::paging::CURRENT_PAGE_TABLE;
 
 mod bitset;
+mod malloc;
 mod paging;
 mod utils;
 
@@ -17,6 +19,8 @@ pub const PAGE_SIZE: u64 = 4096;
 pub const VIRTUAL_OFFSET: u64 = 0x100000000;
 pub const KERNEL_STACK_SIZE: u64 = 100 * 1024; // 100 KiB
 pub const KERNEL_STACK_ADDR: u64 = 0x200000000 - KERNEL_STACK_SIZE;
+pub const HEAP_BASE: u64 = 0x300000000;
+pub const HEAP_TREE: u64 = 0x400000000;
 
 pub fn init_memory(memory_regions: &MemoryRegions) {
     unsafe {

@@ -31,13 +31,13 @@ impl PageTable {
 }
 
 fn create_page_table_entry(addr: u64, writable: bool, user: bool) -> PageTableEntry {
-    let mut entry = (addr << 12) & 0x000FFFFF_FFFFF000;
-    entry |= 1; // present
+    let mut entry = addr & 0x000FFFFF_FFFFF000;
+    entry |= 1 << 0; // present
     if writable {
-        entry |= 1 << 1; // writable
+        entry |= 1 << 1;
     }
     if user {
-        entry |= 1 << 2; // user
+        entry |= 1 << 2;
     }
     entry
 }
@@ -85,7 +85,7 @@ pub fn map_page(virtual_addr: u64, physical_addr: u64, writable: bool, user: boo
     }
 
     unsafe {
-        let index = (virtual_addr >> 12) & 0x1FF;
+        let index = (virtual_addr >> 12) & 0b111111111;
         (*curr_table).entries[index as usize] =
             create_page_table_entry(physical_addr, writable, user);
     }
