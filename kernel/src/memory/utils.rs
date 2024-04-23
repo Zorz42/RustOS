@@ -9,10 +9,10 @@ pub unsafe fn memcpy(src: *mut u8, dst: *mut u8, len: usize) {
     debug_assert_eq!(src as u64 % 8, 0);
     debug_assert_eq!(dst as u64 % 8, 0);
     debug_assert_eq!(len % 8, 0);
-    
+
     // check for non-overlapping
     debug_assert!(src as u64 + len as u64 <= dst as u64 || src as u64 >= dst as u64 + len as u64);
-    
+
     asm!("
     mov rax, {}
     mov rbx, {}    
@@ -33,7 +33,7 @@ pub unsafe fn memcpy(src: *mut u8, dst: *mut u8, len: usize) {
 pub unsafe fn memcpy_non_aligned(src: *mut u8, dst: *mut u8, len: usize) {
     // check for non-overlapping
     debug_assert!(src as u64 + len as u64 <= dst as u64 || src as u64 >= dst as u64 + len as u64);
-    
+
     asm!("
     mov rax, {}
     mov rbx, {}
@@ -54,7 +54,10 @@ pub unsafe fn memcpy_non_aligned(src: *mut u8, dst: *mut u8, len: usize) {
 pub unsafe fn memset_int64(ptr: *mut u8, val: u64, len: usize) {
     debug_assert_eq!(len % 8, 0);
     debug_assert_eq!(len as u64 % 8, 0);
-    
+    if len == 0 {
+        return;
+    }
+
     asm!("
     mov rax, {}
     mov rbx, rax

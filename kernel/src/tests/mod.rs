@@ -1,8 +1,13 @@
+#[allow(unused_imports)]
+use A0_elementary::*;
 use kernel_test::all_tests;
+
 use crate::{print, println};
 
-mod elementary;
-mod memory;
+mod A0_elementary;
+mod A1_utils;
+mod A2_bitset;
+mod A3_paging;
 
 #[cfg(debug_assertions)]
 pub fn test_runner() {

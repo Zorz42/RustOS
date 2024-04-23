@@ -8,7 +8,6 @@ use core::panic::PanicInfo;
 use bootloader_api::{BootInfo, BootloaderConfig, entry_point};
 use bootloader_api::config::Mapping;
 use bootloader_api::info::PixelFormat;
-use kernel_test::all_tests;
 
 use crate::interrupts::init_idt;
 use crate::memory::{init_memory, KERNEL_STACK_ADDR, KERNEL_STACK_SIZE, VIRTUAL_OFFSET};

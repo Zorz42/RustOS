@@ -2,10 +2,12 @@ use core::arch::asm;
 
 use bootloader_api::info::{MemoryRegionKind, MemoryRegions};
 
+pub use bitset::BitSetRaw;
+pub use paging::{find_free_page, free_page, map_page};
+use paging::{PageTable, SEGMENTS_BITSET};
 pub use utils::*;
 
-use crate::memory::bitset::BitSetRaw;
-use crate::memory::paging::{CURRENT_PAGE_TABLE, map_page, PageTable, SEGMENTS_BITSET};
+use crate::memory::paging::CURRENT_PAGE_TABLE;
 
 mod bitset;
 mod paging;
