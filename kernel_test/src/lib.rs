@@ -1,34 +1,23 @@
 use proc_macro::TokenStream;
 use std::ops::Add;
 
-use syn::__private::ToTokens;
 use syn::ItemFn;
 
 static mut TESTS: Vec<String> = Vec::new();
 static mut CURR_MOD: String = String::new();
 
-#[cfg(debug_assertions)]
 #[proc_macro_attribute]
-pub fn kernel_test(args: TokenStream, input: TokenStream) -> TokenStream {
-    // Parse the input function and wrap it with the kernel test logic
-    let input = syn::parse_macro_input!(input as ItemFn);
-    //let args = args.to_string();
-    let test_fn = input.sig.ident;
-    let function_full_name = unsafe { format!("{CURR_MOD}::{test_fn}") };
+pub fn kernel_test(_args: TokenStream, input: TokenStream) -> TokenStream {
+    let function = input.to_string();
 
-    let test_body = input.block;
-    let mut body_str = String::new();
-    for stt in test_body.stmts {
-        body_str = body_str.add(&stt.to_token_stream().to_string());
-        body_str.push('\n');
-    }
+    let input_fn = syn::parse_macro_input!(input as ItemFn);
+    let test_fn = input_fn.sig.ident;
+    let function_full_name = unsafe { format!("{CURR_MOD}::{test_fn}") };
 
     let code = format!(
         r#"
-        #[cfg(debug_assertions)]
-        pub fn {test_fn}() {{
-            {body_str}
-        }}
+        #[cfg(feature = "run_tests")]
+        pub {function}
     "#
     );
 
@@ -45,7 +34,7 @@ pub fn all_tests(_item: TokenStream) -> TokenStream {
 
     unsafe {
         for test in &TESTS {
-            code = code.add(&format!("({test} as fn(), \"{test}\"),"))
+            code = code.add(&format!("({test} as fn(), \"{test}\"),"));
         }
     }
 

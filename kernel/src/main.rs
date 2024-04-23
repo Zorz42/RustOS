@@ -6,14 +6,13 @@
 use core::arch::asm;
 use core::panic::PanicInfo;
 
-use bootloader_api::{BootInfo, BootloaderConfig, entry_point};
 use bootloader_api::config::Mapping;
 use bootloader_api::info::PixelFormat;
+use bootloader_api::{entry_point, BootInfo, BootloaderConfig};
 
 use crate::interrupts::init_idt;
 use crate::memory::{init_memory, KERNEL_STACK_ADDR, KERNEL_STACK_SIZE, VIRTUAL_OFFSET};
 use crate::print::{reset_print_color, set_print_color, TextColor};
-use crate::tests::test_runner;
 use crate::timer::{get_ticks, init_timer};
 use crate::vga_driver::clear_screen;
 
@@ -72,16 +71,19 @@ fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
 
     init_memory(&boot_info.memory_regions);
 
-    #[cfg(debug_assertions)]
-    test_runner();
+    #[cfg(feature = "run_tests")]
+    {
+        use crate::tests::test_runner;
+        test_runner();
+    }
 
-    let start = get_ticks();
+    //let start = get_ticks();
 
     //for i in 0..100 {
     //println!("Iteration: {}", i);
     //}
 
-    println!("That took {}ms", get_ticks() - start);
+    //println!("That took {}ms", get_ticks() - start);
 
     println!("Going to infinite loop...");
     //let mut i = 0;

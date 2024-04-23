@@ -2,6 +2,9 @@
 name = "RustOS"
 version = "0.1.0"
 
+[features]
+run_tests = ["kernel/run_tests"]
+
 [build-dependencies]
 bootloader = "0.11"
 kernel = { path = "kernel", artifact = "bin", target = "x86_64-unknown-none" }
@@ -12,3 +15,4 @@ ovmf-prebuilt = "0.1.0-alpha.1"
 
 [workspace]
 members = ["kernel", "kernel_test"]
+
