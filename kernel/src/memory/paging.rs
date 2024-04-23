@@ -63,7 +63,7 @@ pub unsafe fn clear_page_memory(addr: *mut u8) {
 
 pub unsafe fn free_page(addr: *mut u8) {
     let index = (addr as u64 / PAGE_SIZE) as usize;
-    assert!(!SEGMENTS_BITSET.get(index), "Double free of page");
+    assert!(SEGMENTS_BITSET.get(index), "Double free of page");
     SEGMENTS_BITSET.set(index, false);
 }
 
