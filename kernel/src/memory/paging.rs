@@ -46,7 +46,7 @@ pub static mut CURRENT_PAGE_TABLE: *mut PageTable = 0 as *mut PageTable;
 
 pub fn find_free_page() -> *mut u8 {
     unsafe {
-        let index = SEGMENTS_BITSET.get_first_zero();
+        let index = SEGMENTS_BITSET.get_zero_element();
         if let Some(index) = index {
             SEGMENTS_BITSET.set(index, true);
             (index as u64 * PAGE_SIZE) as *mut u8

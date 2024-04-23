@@ -43,7 +43,7 @@ fn test_memset() {
     for _ in 0..1000 {
         let offset = rng.get(0, 1024);
         let len = rng.get(0, 1024 - offset);
-        let val = rng.get(0, (1 << 8) - 1) as u8;
+        let val = rng.get(0, 1 << 8) as u8;
 
         unsafe {
             memset(

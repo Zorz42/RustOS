@@ -15,11 +15,13 @@ impl BitSetRaw {
 
     pub fn new(size: usize, addr: *mut u64) -> BitSetRaw {
         debug_assert_eq!(addr as u64 % 8, 0);
-        BitSetRaw {
+        let mut res = BitSetRaw {
             data: addr,
             size: (size + 63) / 64 * 64,
             count0: 0,
-        }
+        };
+        res.clear();
+        res
     }
 
     pub fn set(&mut self, index: usize, val: bool) {
@@ -27,8 +29,8 @@ impl BitSetRaw {
 
         let byte_index = index / 64;
         let bit_index = index % 64;
-        self.count0 += val as usize ^ 1;
-        self.count0 -= self.get(index) as usize ^ 1;
+        self.count0 += !val as usize;
+        self.count0 -= !self.get(index) as usize;
         unsafe {
             if val {
                 *self.data.add(byte_index) |= 1 << bit_index;
@@ -54,7 +56,7 @@ impl BitSetRaw {
         self.size
     }
 
-    pub fn get_first_zero(&self) -> Option<usize> {
+    pub fn get_zero_element(&self) -> Option<usize> {
         for i in 0..self.size / 64 {
             let mut val = unsafe { *self.data.add(i) };
             if val != 0xFFFFFFFF_FFFFFFFF {

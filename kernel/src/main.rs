@@ -1,6 +1,7 @@
 #![no_std]
 #![no_main]
 #![feature(naked_functions)]
+#![allow(non_snake_case)]
 
 use core::arch::asm;
 use core::panic::PanicInfo;
