@@ -1,6 +1,7 @@
 use kernel_test::{kernel_test, kernel_test_mod};
 
 use crate::memory::{memset, memset_int64};
+use crate::rand::Rng;
 
 kernel_test_mod!(crate::tests::A1_utils);
 
@@ -14,21 +15,23 @@ fn get_free_space_addr() -> *mut u8 {
 
 #[kernel_test]
 fn test_memset_u64() {
-    let tests = [
-        (54278593275892752, 1024 / 8),
-        (635334567986743589, 1024 / 8),
-        (0, 1024 / 8),
-        (12, 43),
-        (564378643758436, 50),
-        (433, 0),
-        (0, 0),
-    ];
+    let mut rng = Rng::new(54375839);
+    for _ in 0..1000 {
+        let offset = rng.get(0, 1024 / 8);
+        let len = rng.get(0, 1024 / 8 - offset);
+        let val = rng.get(0, (1 << 63) - 1 + (1 << 63));
 
-    for (val, len) in tests {
         unsafe {
-            memset_int64(get_free_space_addr(), val, len * 8);
+            memset_int64(
+                get_free_space_addr().add((8 * offset) as usize),
+                val,
+                (len * 8) as usize,
+            );
             for i in 0..len {
-                assert_eq!(*(get_free_space_addr() as *mut u64).add(i), val);
+                assert_eq!(
+                    *(get_free_space_addr() as *mut u64).add((offset + i) as usize),
+                    val
+                );
             }
         }
     }
@@ -36,24 +39,20 @@ fn test_memset_u64() {
 
 #[kernel_test]
 fn test_memset() {
-    let tests = [
-        (0, 164, 1024),
-        (0, 63, 1024),
-        (0, 0, 1024),
-        (1, 12, 43),
-        (2, 84, 50),
-        (3, 12, 43),
-        (4, 84, 50),
-        (3, 32, 0),
-        (0, 0, 0),
-        (3, 0, 0),
-    ];
+    let mut rng = Rng::new(6547382);
+    for _ in 0..1000 {
+        let offset = rng.get(0, 1024);
+        let len = rng.get(0, 1024 - offset);
+        let val = rng.get(0, (1 << 8) - 1) as u8;
 
-    for (offset, val, len) in tests {
         unsafe {
-            memset(get_free_space_addr().add(offset), val, len);
+            memset(
+                get_free_space_addr().add(offset as usize),
+                val,
+                len as usize,
+            );
             for i in 0..len {
-                assert_eq!(*get_free_space_addr().add(offset + i), val);
+                assert_eq!(*get_free_space_addr().add((offset + i) as usize), val);
             }
         }
     }
