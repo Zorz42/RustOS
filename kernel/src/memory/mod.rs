@@ -7,8 +7,9 @@ pub use malloc::{free, malloc};
 pub use paging::{find_free_page, free_page, map_page};
 use paging::{PageTable, SEGMENTS_BITSET};
 pub use utils::*;
+pub use paging::{VirtAddr, PhysAddr};
 
-use crate::memory::paging::CURRENT_PAGE_TABLE;
+use crate::memory::paging::{CURRENT_PAGE_TABLE};
 
 mod bitset;
 mod malloc;
@@ -16,11 +17,11 @@ mod paging;
 mod utils;
 
 pub const PAGE_SIZE: u64 = 4096;
-pub const VIRTUAL_OFFSET: u64 = 0x100000000;
+pub const VIRTUAL_OFFSET: u64 = 1u64 << 44;
 pub const KERNEL_STACK_SIZE: u64 = 100 * 1024; // 100 KiB
-pub const KERNEL_STACK_ADDR: u64 = 0x200000000 - KERNEL_STACK_SIZE;
-pub const HEAP_BASE: u64 = 0x300000000;
-pub const HEAP_TREE: u64 = 0x400000000;
+pub const KERNEL_STACK_ADDR: u64 = 2 * VIRTUAL_OFFSET - KERNEL_STACK_SIZE;
+pub const HEAP_BASE: u64 = 3 * VIRTUAL_OFFSET;
+pub const HEAP_TREE: u64 = 4 * VIRTUAL_OFFSET;
 
 pub fn init_memory(memory_regions: &MemoryRegions) {
     unsafe {
@@ -95,7 +96,7 @@ pub fn init_memory(memory_regions: &MemoryRegions) {
     // map the bitset
     for page in bitset_first_page..bitset_last_page {
         map_page(
-            page * PAGE_SIZE + VIRTUAL_OFFSET,
+            (page * PAGE_SIZE + VIRTUAL_OFFSET) as VirtAddr,
             page * PAGE_SIZE,
             true,
             false,
