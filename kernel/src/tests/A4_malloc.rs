@@ -2,7 +2,6 @@ use kernel_test::{kernel_test, kernel_test_mod};
 
 use crate::memory::{free, malloc, memset};
 use crate::rand::Rng;
-use crate::println;
 
 kernel_test_mod!(crate::tests::A4_malloc);
 
@@ -50,7 +49,7 @@ fn test_malloc_free() {
 
 #[kernel_test]
 fn test_malloc_write_stays() {
-    let mut rng = Rng::new(5674382);
+    let mut rng = Rng::new(745421);
 
     let ptr = malloc(0);
     let _ = malloc((4 - (ptr as u64) % 4) as usize);
@@ -92,6 +91,17 @@ fn test_malloc_write_stays() {
             unsafe {
                 free(ptrs[i]);
             }
+        }
+    }
+}
+
+#[kernel_test]
+fn test_malloc_free_works() {
+    let mut rng = Rng::new(657438);
+    for i in 0..100000 {
+        let ptr = malloc(rng.get(0, 0x1000) as usize);
+        unsafe {
+            free(ptr);
         }
     }
 }
