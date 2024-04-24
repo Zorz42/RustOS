@@ -14,7 +14,7 @@ fn test_memset_u64() {
     for _ in 0..1000 {
         let offset = rng.get(0, 1024 / 8);
         let len = rng.get(0, 1024 / 8 - offset);
-        let val = rng.get(0, (1 << 63) - 1 + (1 << 63));
+        let val = rng.get(0, (1u64 << 63) - 1 + (1u64 << 63));
 
         unsafe {
             memset_int64(
