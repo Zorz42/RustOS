@@ -14,6 +14,7 @@ use crate::interrupts::init_idt;
 use crate::memory::{init_memory, KERNEL_STACK_ADDR, KERNEL_STACK_SIZE, VIRTUAL_OFFSET};
 use crate::print::{reset_print_color, set_print_color, TextColor};
 use crate::timer::{get_ticks, init_timer};
+
 use crate::vga_driver::clear_screen;
 
 mod font;
