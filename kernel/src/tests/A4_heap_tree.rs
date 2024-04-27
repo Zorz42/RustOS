@@ -18,7 +18,7 @@ fn test_heap_tree_init() {
 
 #[kernel_test]
 fn test_heap_tree_alloc() {
-    let tree = get_heap_tree();
+    let mut tree = get_heap_tree();
     let mut rng = Rng::new(5473895743);
 
     for _ in 0..100 {
@@ -28,7 +28,7 @@ fn test_heap_tree_alloc() {
 
 #[kernel_test]
 fn test_heap_tree_alloc_free() {
-    let tree = get_heap_tree();
+    let mut tree = get_heap_tree();
     let mut rng = Rng::new(5473895743);
 
     for _ in 0..100000 {
@@ -39,7 +39,7 @@ fn test_heap_tree_alloc_free() {
 
 #[kernel_test]
 fn test_heap_tree_alloc_free_batch() {
-    let tree = get_heap_tree();
+    let mut tree = get_heap_tree();
     let mut rng = Rng::new(6436534);
 
     for _ in 0..100 {
@@ -68,7 +68,7 @@ fn test_heap_tree_alloc_free_batch() {
 
 #[kernel_test]
 fn test_heap_tree_alloc_aligned() {
-    let tree = get_heap_tree();
+    let mut tree = get_heap_tree();
     let mut rng = Rng::new(5473895743);
 
     for _ in 0..10000 {
@@ -83,7 +83,7 @@ fn test_heap_tree_alloc_aligned() {
 
 #[kernel_test]
 fn test_heap_tree_alloc_disjoint() {
-    let tree = get_heap_tree();
+    let mut tree = get_heap_tree();
     let mut rng = Rng::new(5473895743);
 
     let mut arr = [(0, 0); 1000];
