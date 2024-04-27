@@ -34,7 +34,8 @@ pub fn all_tests(_item: TokenStream) -> TokenStream {
 
     unsafe {
         for test in &TESTS {
-            code = code.add(&format!("({test} as fn(), \"{test}\"),"));
+            let function_name = test.split(':').last().unwrap();
+            code = code.add(&format!("({test} as fn(), \"{function_name}\"),"));
         }
     }
 

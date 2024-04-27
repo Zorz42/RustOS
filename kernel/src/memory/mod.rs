@@ -3,15 +3,17 @@ use core::arch::asm;
 use bootloader_api::info::{MemoryRegionKind, MemoryRegions};
 
 pub use bitset::BitSetRaw;
+pub use heap_tree::HeapTree;
 pub use malloc::{free, malloc};
-pub use paging::{find_free_page, free_page, map_page};
+pub use paging::{find_free_page, free_page, map_page, map_page_auto};
 use paging::{PageTable, SEGMENTS_BITSET};
+pub use paging::{PhysAddr, VirtAddr};
 pub use utils::*;
-pub use paging::{VirtAddr, PhysAddr};
 
-use crate::memory::paging::{CURRENT_PAGE_TABLE};
+use crate::memory::paging::CURRENT_PAGE_TABLE;
 
 mod bitset;
+mod heap_tree;
 mod malloc;
 mod paging;
 mod utils;

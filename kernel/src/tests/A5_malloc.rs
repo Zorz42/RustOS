@@ -3,7 +3,7 @@ use kernel_test::{kernel_test, kernel_test_mod};
 use crate::memory::{free, malloc, memset};
 use crate::rand::Rng;
 
-kernel_test_mod!(crate::tests::A4_malloc);
+kernel_test_mod!(crate::tests::A5_malloc);
 
 #[kernel_test]
 fn test_malloc() {
@@ -70,7 +70,7 @@ fn test_malloc_write_stays() {
 
         let mut arr = [0; 1024];
         for i in 0..1024 {
-            arr[i] = rng.get(0, 1u64<<32);
+            arr[i] = rng.get(0, 1u64 << 32);
         }
 
         for i in 0..1024 {

@@ -91,7 +91,13 @@ pub fn map_page(virtual_addr: VirtAddr, physical_addr: PhysAddr, writable: bool,
 
     unsafe {
         let index = (virtual_addr as u64 >> 12) & 0b111111111;
-        (*curr_table).entries[index as usize] =
-            create_page_table_entry(physical_addr, writable, user);
+        if (*curr_table).get_sub_page_table(index as usize).is_none() {
+            (*curr_table).entries[index as usize] =
+                create_page_table_entry(physical_addr, writable, user);
+        }
     }
+}
+
+pub fn map_page_auto(virtual_addr: VirtAddr, writable: bool, user: bool) {
+    map_page(virtual_addr, find_free_page(), writable, user);
 }
