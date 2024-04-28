@@ -34,6 +34,7 @@ fn test_heap_tree_alloc_free() {
 
     for _ in 0..100000 {
         let pos = tree.alloc(rng.get(0, 8) as u32);
+        assert!(pos < 10000);
         tree.free(pos);
     }
 }
@@ -47,6 +48,7 @@ fn test_heap_tree_alloc_free_batch() {
         let mut arr = [0; 1024];
         for i in 0..1024 {
             arr[i] = tree.alloc(rng.get(0, 8) as u32);
+            assert!(arr[i] < 1000000);
         }
 
         // create a random permutation
