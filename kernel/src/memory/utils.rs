@@ -18,20 +18,17 @@ pub unsafe fn memcpy(src: *mut u8, dst: *mut u8, len: usize) {
     debug_assert!(src as u64 + len as u64 <= dst as u64 || src as u64 >= dst as u64 + len as u64);
 
     asm!("
-    mov rax, {}
-    mov rbx, {}    
-    mov rcx, {}
-    mov rdx, rax
-    add rdx, rcx
+    mov r11, r8
+    add r11, r10
     2:
-    mov rcx, [rax]
-    mov [rbx], rcx
-    add rax, 8
-    add rbx, 8
-    cmp rax, rdx
+    mov r10, [r8]
+    mov [r9], r10
+    add r8, 8
+    add r9, 8
+    cmp r8, r11
     jne 2b
     
-    ", in(reg) src, in(reg) dst, in(reg) len, options(preserves_flags, nostack));
+    ", in("r8") src, in("r9") dst, in("r10") len, lateout("r8") _, lateout("r9") _, lateout("r10") _, out("r11") _, options(preserves_flags, nostack));
 }
 
 pub unsafe fn memcpy_non_aligned(src: *mut u8, dst: *mut u8, len: usize) {
@@ -43,20 +40,17 @@ pub unsafe fn memcpy_non_aligned(src: *mut u8, dst: *mut u8, len: usize) {
     }
 
     asm!("
-    mov rax, {}
-    mov rbx, {}
-    mov rcx, {}
-    mov rdx, rax
-    add rdx, rcx
+    mov r11, r8
+    add r11, r10
     2:
-    mov cl, [rax]
-    mov [rbx], cl
-    add rax, 1
-    add rbx, 1
-    cmp rax, rdx
+    mov r10b, [r8]
+    mov [r9], r10b
+    add r8, 1
+    add r9, 1
+    cmp r8, r11
     jne 2b
     
-    ", in(reg) src, in(reg) dst, in(reg) len, options(preserves_flags, nostack));
+    ", in("r8") src, in("r9") dst, in("r10") len, lateout("r8") _, lateout("r9") _, lateout("r10") _, out("r11") _, options(preserves_flags, nostack));
 }
 
 pub unsafe fn memset_int64(ptr: *mut u8, val: u64, len: usize) {
@@ -67,16 +61,14 @@ pub unsafe fn memset_int64(ptr: *mut u8, val: u64, len: usize) {
     }
 
     asm!("
-    mov rax, {}
-    mov rbx, rax
-    add rbx, {}
+    add r9, r8
     2:
-    mov [rax], {}
-    add rax, 8
-    cmp rax, rbx
+    mov [r8], r10
+    add r8, 8
+    cmp r8, r9
     jne 2b
     
-    ", in(reg) ptr, in(reg) len, in(reg) val, options(preserves_flags, nostack));
+    ", in("r8") ptr, in("r9") len, in("r10") val, lateout("r8") _, lateout("r9") _, lateout("r10") _, options(preserves_flags, nostack));
 }
 
 pub unsafe fn memset(mut ptr: *mut u8, val: u8, len: usize) {
