@@ -2,6 +2,7 @@ use kernel_test::{kernel_test, kernel_test_mod};
 
 use crate::memory::{HeapTree, TESTING_OFFSET};
 use crate::rand::Rng;
+use crate::println;
 
 kernel_test_mod!(crate::tests::A4_heap_tree);
 
@@ -95,6 +96,9 @@ fn test_heap_tree_alloc_disjoint() {
 
     for i1 in 0..1000 {
         for i2 in 0..1000 {
+            if i1 == i2 {
+                continue;
+            }
             let l1 = arr[i1].0;
             let r1 = l1 + (1 << arr[i1].1);
             let l2 = arr[i2].0;

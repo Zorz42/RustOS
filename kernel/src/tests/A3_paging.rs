@@ -59,28 +59,36 @@ fn test_page_write() {
 
 #[kernel_test]
 fn test_page_write_stays() {
-    let num_pages = 1000;
+    const num_pages: usize = 1000;
     let offset = TESTING_OFFSET as *mut u8;
     let offset_u64 = offset as *mut u64;
+    let mut pages = [0; num_pages];
 
     for i in 0..num_pages {
         unsafe {
-            map_page_auto(offset.add((i * PAGE_SIZE) as usize), true, false);
+            pages[i] = find_free_page();
+            map_page(offset.add(i * PAGE_SIZE as usize), pages[i], true, false);
         }
     }
 
-    for i in 0..num_pages * PAGE_SIZE / 8 {
+    for i in 0..num_pages * PAGE_SIZE as usize / 8 {
         unsafe {
-            *offset_u64.add(i as usize) = i;
+            *offset_u64.add(i as usize) = i as u64;
         }
     }
 
-    for i in 0..num_pages * PAGE_SIZE / 8 {
+    for i in 0..num_pages * PAGE_SIZE as usize / 8 {
         unsafe {
-            if *offset_u64.add(i as usize) != i {
+            if *offset_u64.add(i) != i as u64 {
                 println!("Mismatch at position {} 0x{:x}", i, i);
             }
-            assert_eq!(*offset_u64.add(i as usize), i);
+            assert_eq!(*offset_u64.add(i), i as u64);
+        }
+    }
+
+    for i in 0..num_pages {
+        unsafe {
+            free_page(pages[i]);
         }
     }
 }
