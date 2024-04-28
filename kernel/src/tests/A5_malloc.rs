@@ -1,6 +1,6 @@
 use kernel_test::{kernel_test, kernel_test_mod};
 
-use crate::memory::{free, malloc, memset};
+use crate::memory::{free, HeapTree, malloc, memset};
 use crate::rand::Rng;
 
 kernel_test_mod!(crate::tests::A5_malloc);

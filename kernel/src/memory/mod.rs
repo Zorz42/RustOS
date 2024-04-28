@@ -4,14 +4,13 @@ use bootloader_api::info::{MemoryRegionKind, MemoryRegions};
 
 pub use bitset::BitSetRaw;
 pub use heap_tree::HeapTree;
-pub use malloc::{free, malloc};
+pub use malloc::{free, malloc, init_malloc};
 pub use paging::{find_free_page, free_page, map_page, map_page_auto};
 use paging::{PageTable, SEGMENTS_BITSET};
 pub use paging::{PhysAddr, VirtAddr};
 pub use utils::*;
 
 use crate::memory::paging::CURRENT_PAGE_TABLE;
-use crate::println;
 
 mod bitset;
 mod heap_tree;
@@ -24,8 +23,8 @@ pub const VIRTUAL_OFFSET: u64 = 1u64 << 41;
 const FRAME_SIZE: u64 = 1u64 << 30;
 pub const KERNEL_STACK_SIZE: u64 = 100 * 1024; // 100 KiB
 pub const KERNEL_STACK_ADDR: u64 = 2 * FRAME_SIZE - KERNEL_STACK_SIZE;
-pub const HEAP_BASE: u64 = 3 * FRAME_SIZE;
-pub const HEAP_TREE: u64 = 4 * FRAME_SIZE;
+pub const HEAP_BASE_ADDR: u64 = 3 * FRAME_SIZE;
+pub const HEAP_TREE_ADDR: u64 = 4 * FRAME_SIZE;
 pub const TESTING_OFFSET: u64 = 5 * FRAME_SIZE;
 
 pub fn init_memory(memory_regions: &MemoryRegions) {

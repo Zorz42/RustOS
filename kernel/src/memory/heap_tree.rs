@@ -14,6 +14,10 @@ pub struct HeapTree {
 }
 
 impl HeapTree {
+    pub const fn new_empty() -> Self {
+        HeapTree { tree_ptr: 0 as *mut u8, size: 0 }
+    }
+
     pub unsafe fn new(ptr: *mut u8) -> Self {
         let mut tree = HeapTree { tree_ptr: ptr, size: 8192 };
         tree.allocate_pages();

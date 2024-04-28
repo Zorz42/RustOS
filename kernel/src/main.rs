@@ -11,7 +11,7 @@ use bootloader_api::info::PixelFormat;
 use bootloader_api::{entry_point, BootInfo, BootloaderConfig};
 
 use crate::interrupts::init_idt;
-use crate::memory::{init_memory, HEAP_BASE, HEAP_TREE, KERNEL_STACK_ADDR, KERNEL_STACK_SIZE, TESTING_OFFSET, VIRTUAL_OFFSET, volatile_store_byte, memset, VirtAddr, PAGE_SIZE, map_framebuffer};
+use crate::memory::{init_memory, KERNEL_STACK_ADDR, KERNEL_STACK_SIZE, VIRTUAL_OFFSET, map_framebuffer, init_malloc};
 use crate::print::{reset_print_color, set_print_color, TextColor};
 use crate::timer::init_timer;
 use crate::vga_driver::clear_screen;
@@ -67,6 +67,8 @@ fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
 
     // make sure that framebuffer ram has also occupied pages
     map_framebuffer(width as u32, height as u32, stride as u32, bytes_per_pixel as u32);
+
+    init_malloc();
 
     #[cfg(feature = "run_tests")]
     {
