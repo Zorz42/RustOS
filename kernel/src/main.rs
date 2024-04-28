@@ -11,10 +11,9 @@ use bootloader_api::info::PixelFormat;
 use bootloader_api::{entry_point, BootInfo, BootloaderConfig};
 
 use crate::interrupts::init_idt;
-use crate::memory::{init_memory, KERNEL_STACK_ADDR, KERNEL_STACK_SIZE, VIRTUAL_OFFSET};
+use crate::memory::{init_memory, HEAP_BASE, HEAP_TREE, KERNEL_STACK_ADDR, KERNEL_STACK_SIZE, TESTING_OFFSET, VIRTUAL_OFFSET};
 use crate::print::{reset_print_color, set_print_color, TextColor};
-use crate::timer::{get_ticks, init_timer};
-
+use crate::timer::init_timer;
 use crate::vga_driver::clear_screen;
 
 mod font;
@@ -46,17 +45,18 @@ fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
     let bytes_per_pixel = binding.info().bytes_per_pixel;
     let framebuffer = binding.buffer_mut();
 
-    vga_driver::init(
-        width,
-        height,
-        stride,
-        bytes_per_pixel,
-        framebuffer.as_mut_ptr(),
-    );
+    vga_driver::init(width, height, stride, bytes_per_pixel, framebuffer.as_mut_ptr());
 
     clear_screen();
 
     println!("Booting kernel...");
+
+    println!("Framebuffer is at    0x{:x}", framebuffer.as_mut_ptr() as u64);
+    println!("Virtual offset is at 0x{:x}", VIRTUAL_OFFSET);
+    println!("Kernel stack is at   0x{:x}", KERNEL_STACK_ADDR);
+    println!("Heap base is at      0x{:x}", HEAP_BASE);
+    println!("Heap tree is at      0x{:x}", HEAP_TREE);
+    println!("Testing addr is at   0x{:x}", TESTING_OFFSET);
 
     debug_assert!(boot_info.physical_memory_offset.take().is_some());
 

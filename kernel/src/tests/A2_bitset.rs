@@ -88,3 +88,24 @@ fn test_bitset_get_zero() {
         }
     }
 }
+
+#[kernel_test]
+fn test_bitset_fill() {
+    let mut bitset = unsafe {
+        let mut bitset = BitSetRaw::new(1024 * 8, get_free_space_addr() as *mut u64);
+        bitset.clear();
+        bitset
+    };
+
+    let mut arr = [0; 1024 * 8];
+    for i in 0..1024 * 8 {
+        let idx = bitset.get_zero_element().unwrap();
+        assert_eq!(idx, i);
+        assert!(arr[idx] == 0);
+        assert!(!bitset.get(idx));
+        bitset.set(idx, true);
+        arr[idx] = 1;
+        assert!(bitset.get(idx));
+        assert_eq!(bitset.get_count0(), 1024 * 8 - i - 1);
+    }
+}

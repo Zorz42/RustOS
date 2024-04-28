@@ -59,7 +59,7 @@ impl BitSetRaw {
     pub fn get_zero_element(&self) -> Option<usize> {
         for i in 0..self.size / 64 {
             let mut val = unsafe { *self.data.add(i) };
-            if val != 0xFFFFFFFF_FFFFFFFF {
+            if val != 0xFFFF_FFFF_FFFF_FFFF {
                 for j in 0..64 {
                     if val & 1 == 0 {
                         return Some(i * 64 + j);

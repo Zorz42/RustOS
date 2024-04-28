@@ -1,5 +1,6 @@
-use crate::memory::{memset_int64, PAGE_SIZE, VIRTUAL_OFFSET};
 use crate::memory::bitset::BitSetRaw;
+use crate::memory::{memset_int64, PAGE_SIZE, VIRTUAL_OFFSET};
+use crate::{print, println};
 
 pub type PhysAddr = u64;
 pub type VirtAddr = *mut u8;
@@ -53,6 +54,10 @@ pub fn find_free_page() -> PhysAddr {
     unsafe {
         let index = SEGMENTS_BITSET.get_zero_element();
         if let Some(index) = index {
+            if index % 20 == 0 {
+                print!("\nFound ");
+            }
+            print!("P0x{:x} ", index as u64 * PAGE_SIZE);
             SEGMENTS_BITSET.set(index, true);
             index as u64 * PAGE_SIZE
         } else {
@@ -80,10 +85,10 @@ pub fn map_page(virtual_addr: VirtAddr, physical_addr: PhysAddr, writable: bool,
             if let Some(sub_table) = (*curr_table).get_sub_page_table(index as usize) {
                 curr_table = (sub_table + VIRTUAL_OFFSET) as *mut PageTable;
             } else {
+                println!("Creating a new page table");
                 let new_table = find_free_page();
                 clear_page_memory((new_table + VIRTUAL_OFFSET) as VirtAddr);
-                (*curr_table).entries[index as usize] =
-                    create_page_table_entry(new_table, true, false);
+                (*curr_table).entries[index as usize] = create_page_table_entry(new_table, true, false);
                 curr_table = (new_table + VIRTUAL_OFFSET) as *mut PageTable;
             }
         }
@@ -92,8 +97,7 @@ pub fn map_page(virtual_addr: VirtAddr, physical_addr: PhysAddr, writable: bool,
     unsafe {
         let index = (virtual_addr as u64 >> 12) & 0b111111111;
         if (*curr_table).get_sub_page_table(index as usize).is_none() {
-            (*curr_table).entries[index as usize] =
-                create_page_table_entry(physical_addr, writable, user);
+            (*curr_table).entries[index as usize] = create_page_table_entry(physical_addr, writable, user);
         }
     }
 }

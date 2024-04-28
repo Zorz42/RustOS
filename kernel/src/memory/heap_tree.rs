@@ -1,4 +1,4 @@
-use crate::memory::{map_page_auto, memcpy, memcpy_non_aligned, memset, PAGE_SIZE, VirtAddr};
+use crate::memory::{map_page_auto, memcpy, memcpy_non_aligned, memset, VirtAddr, PAGE_SIZE};
 use crate::println;
 
 /// Heap tree is a data structure, that keeps track of free regions on the heap
@@ -15,10 +15,7 @@ pub struct HeapTree {
 
 impl HeapTree {
     pub unsafe fn new(ptr: *mut u8) -> Self {
-        let mut tree = HeapTree {
-            tree_ptr: ptr,
-            size: 8192,
-        };
+        let mut tree = HeapTree { tree_ptr: ptr, size: 8192 };
         tree.allocate_pages();
         tree.clear();
         tree
@@ -36,8 +33,7 @@ impl HeapTree {
 
     fn allocate_pages(&self) {
         let from = self.get_base_ptr() as u64 / PAGE_SIZE;
-        let to = (self.get_base_ptr() as u64 + self.get_tree_size() as u64 * 3 + PAGE_SIZE - 1)
-            / PAGE_SIZE;
+        let to = (self.get_base_ptr() as u64 + self.get_tree_size() as u64 * 3 + PAGE_SIZE - 1) / PAGE_SIZE;
         for page in from..to {
             map_page_auto((page * PAGE_SIZE) as VirtAddr, true, false);
         }
@@ -68,7 +64,7 @@ impl HeapTree {
         let mut curr_val = 3;
         while curr != 0 {
             unsafe {
-                memset(self.tree_ptr.add(curr as usize), curr_val, curr as usize);
+                memset(self.get_node_ptr(curr), curr_val, curr as usize);
             }
             curr_val += 1;
             curr /= 2;
@@ -84,14 +80,18 @@ impl HeapTree {
     }
 
     fn update_node(&mut self, node: u32, size_log2: u32) {
-        self.set_node_val(
-            node,
-            Self::merge(
-                self.get_node_val(2 * node),
-                self.get_node_val(2 * node + 1),
-                size_log2 as i32,
-            ),
-        );
+        self.set_node_val(node, Self::merge(self.get_node_val(2 * node), self.get_node_val(2 * node + 1), size_log2 as i32));
+    }
+
+    fn get_node_ptr(&mut self, node: u32) -> *mut u8 {
+        debug_assert!(node < self.get_tree_size() * 2);
+        debug_assert!(node != 0);
+        unsafe { self.tree_ptr.add(node as usize) }
+    }
+
+    fn get_base_block_ptr(&mut self, idx: u32) -> *mut u8 {
+        debug_assert!(idx < self.get_tree_size());
+        unsafe { self.get_base_ptr().add(idx as usize) }
     }
 
     /// Doubles its size
@@ -101,30 +101,43 @@ impl HeapTree {
         println!("Resized to {}", self.size);
         self.allocate_pages();
 
+        if self.size == 1048576 {
+            println!("Val at node 196608 {}", self.get_node_val(196608));
+            unsafe {
+                println!("Val at block 65536 {:#010b}", *self.get_base_block_ptr(65536));
+            }
+        }
+
         unsafe {
             memset(self.get_base_ptr(), 0, self.get_tree_size() as usize);
-            memcpy(
-                prev_base_ptr,
-                self.get_base_ptr(),
-                self.get_tree_size() as usize / 2,
-            );
+            memcpy(prev_base_ptr, self.get_base_ptr(), self.get_tree_size() as usize / 2);
+        }
+
+        if self.size == 1048576 {
+            println!("Val at node 196608 {}", self.get_node_val(196608));
+            unsafe {
+                println!("Val at block 65536 {:#010b}", *self.get_base_block_ptr(65536));
+            }
         }
 
         let mut curr = self.get_tree_size();
         let mut curr_val = 3;
         while curr != 1 {
             unsafe {
-                memset(self.tree_ptr.add(curr as usize), curr_val, curr as usize);
-                memcpy_non_aligned(
-                    self.tree_ptr.add(curr as usize / 2),
-                    self.tree_ptr.add(curr as usize),
-                    curr as usize / 2,
-                );
+                memset(self.get_node_ptr(curr), curr_val, curr as usize);
+                memcpy_non_aligned(self.get_node_ptr(curr / 2), self.get_node_ptr(curr), curr as usize / 2);
             }
             curr_val += 1;
             curr /= 2;
         }
         self.update_node(1, curr_val as u32);
+
+        if self.size == 1048576 {
+            println!("Val at node 196608 {}", self.get_node_val(196608));
+            unsafe {
+                println!("Val at block 65536 {:#010b}", *self.get_base_block_ptr(65536));
+            }
+        }
     }
 
     fn get_biggest_segment(bits: u32) -> i32 {
@@ -197,17 +210,15 @@ impl HeapTree {
         }
 
         let idx = node - self.get_tree_size();
-        let bitmask = unsafe { *self.get_base_ptr().add(idx as usize) as u32 };
+        let bitmask = unsafe { *self.get_base_block_ptr(idx) as u32 };
         let bits: u32 = (1 << size) - 1;
         for i in 0..8 / size {
             if (bitmask & (bits << (i * size))) == 0 {
                 unsafe {
-                    *self.get_base_ptr().add(idx as usize) |= (bits << (i * size)) as u8;
+                    *self.get_base_block_ptr(idx) |= (bits << (i * size)) as u8;
                 }
 
-                let node_val = Self::get_biggest_segment(unsafe {
-                    *self.get_base_ptr().add(idx as usize) as u32
-                });
+                let node_val = Self::get_biggest_segment(unsafe { *self.get_base_block_ptr(idx) as u32 });
                 self.set_node_val(node, node_val);
 
                 // update all parent nodes

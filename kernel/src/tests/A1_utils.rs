@@ -18,16 +18,9 @@ fn test_memset_u64() {
         let val = rng.get(0, (1u64 << 63) - 1 + (1u64 << 63));
 
         unsafe {
-            memset_int64(
-                get_free_space_addr().add((8 * offset) as usize),
-                val,
-                (len * 8) as usize,
-            );
+            memset_int64(get_free_space_addr().add((8 * offset) as usize), val, (len * 8) as usize);
             for i in 0..len {
-                assert_eq!(
-                    *(get_free_space_addr() as *mut u64).add((offset + i) as usize),
-                    val
-                );
+                assert_eq!(*(get_free_space_addr() as *mut u64).add((offset + i) as usize), val);
             }
         }
     }
@@ -42,11 +35,7 @@ fn test_memset() {
         let val = rng.get(0, 1 << 8) as u8;
 
         unsafe {
-            memset(
-                get_free_space_addr().add(offset as usize),
-                val,
-                len as usize,
-            );
+            memset(get_free_space_addr().add(offset as usize), val, len as usize);
             for i in 0..len {
                 assert_eq!(*get_free_space_addr().add((offset + i) as usize), val);
             }
@@ -70,19 +59,12 @@ fn test_memcpy() {
             }
         }
         unsafe {
-            memcpy(
-                free_addr.add(offset1 as usize) as *mut u8,
-                free_addr.add(offset2 as usize) as *mut u8,
-                len as usize * 8,
-            );
+            memcpy(free_addr.add(offset1 as usize) as *mut u8, free_addr.add(offset2 as usize) as *mut u8, len as usize * 8);
         }
         for i in 0..len {
             unsafe {
                 assert_eq!(arr[i as usize], *free_addr.add((offset1 + i) as usize));
-                assert_eq!(
-                    *free_addr.add((offset1 + i) as usize),
-                    *free_addr.add((offset2 + i) as usize)
-                )
+                assert_eq!(*free_addr.add((offset1 + i) as usize), *free_addr.add((offset2 + i) as usize))
             }
         }
     }
@@ -104,20 +86,13 @@ fn test_memcpy_non_aligned() {
             }
         }
         unsafe {
-            memcpy_non_aligned(
-                free_addr.add(offset1 as usize),
-                free_addr.add(offset2 as usize),
-                len as usize,
-            );
+            memcpy_non_aligned(free_addr.add(offset1 as usize), free_addr.add(offset2 as usize), len as usize);
         }
 
         for i in 0..len {
             unsafe {
                 assert_eq!(arr[i as usize], *free_addr.add((offset1 + i) as usize));
-                assert_eq!(
-                    *free_addr.add((offset1 + i) as usize),
-                    *free_addr.add((offset2 + i) as usize)
-                )
+                assert_eq!(*free_addr.add((offset1 + i) as usize), *free_addr.add((offset2 + i) as usize))
             }
         }
     }
@@ -138,11 +113,7 @@ fn test_memset_u64_exact_bounds() {
 
         unsafe {
             memset_int64(free_addr as *mut u8, val1, 1024);
-            memset_int64(
-                free_addr.add(x1 as usize) as *mut u8,
-                val2,
-                (x2 - x1) as usize * 8,
-            );
+            memset_int64(free_addr.add(x1 as usize) as *mut u8, val2, (x2 - x1) as usize * 8);
         }
 
         for i in 0..1024 / 8 {
@@ -202,11 +173,7 @@ fn test_memcpy_u64_exact_bounds() {
 
         unsafe {
             memcpy(free_addr as *mut u8, free_addr.add(512 / 8) as *mut u8, 256);
-            memcpy(
-                free_addr.add(256 / 8 + x1 as usize) as *mut u8,
-                free_addr.add(512 / 8 + x1 as usize) as *mut u8,
-                (x2 - x1) as usize * 8,
-            );
+            memcpy(free_addr.add(256 / 8 + x1 as usize) as *mut u8, free_addr.add(512 / 8 + x1 as usize) as *mut u8, (x2 - x1) as usize * 8);
         }
 
         for i in 0..256 / 8 {
@@ -245,11 +212,7 @@ fn test_memcpy_exact_bounds() {
 
         unsafe {
             memcpy_non_aligned(free_addr, free_addr.add(512), 256);
-            memcpy_non_aligned(
-                free_addr.add(256 + x1 as usize),
-                free_addr.add(512 + x1 as usize),
-                (x2 - x1) as usize,
-            );
+            memcpy_non_aligned(free_addr.add(256 + x1 as usize), free_addr.add(512 + x1 as usize), (x2 - x1) as usize);
         }
 
         for i in 0..256 {

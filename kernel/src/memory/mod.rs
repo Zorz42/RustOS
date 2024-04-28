@@ -11,6 +11,7 @@ pub use paging::{PhysAddr, VirtAddr};
 pub use utils::*;
 
 use crate::memory::paging::CURRENT_PAGE_TABLE;
+use crate::println;
 
 mod bitset;
 mod heap_tree;
@@ -19,11 +20,13 @@ mod paging;
 mod utils;
 
 pub const PAGE_SIZE: u64 = 4096;
-pub const VIRTUAL_OFFSET: u64 = 1u64 << 44;
+pub const VIRTUAL_OFFSET: u64 = 1u64 << 41;
+const FRAME_SIZE: u64 = 1u64 << 30;
 pub const KERNEL_STACK_SIZE: u64 = 100 * 1024; // 100 KiB
-pub const KERNEL_STACK_ADDR: u64 = 2 * VIRTUAL_OFFSET - KERNEL_STACK_SIZE;
-pub const HEAP_BASE: u64 = 3 * VIRTUAL_OFFSET;
-pub const HEAP_TREE: u64 = 4 * VIRTUAL_OFFSET;
+pub const KERNEL_STACK_ADDR: u64 = 2 * FRAME_SIZE - KERNEL_STACK_SIZE;
+pub const HEAP_BASE: u64 = 3 * FRAME_SIZE;
+pub const HEAP_TREE: u64 = 4 * FRAME_SIZE;
+pub const TESTING_OFFSET: u64 = 5 * FRAME_SIZE;
 
 pub fn init_memory(memory_regions: &MemoryRegions) {
     unsafe {
@@ -45,7 +48,7 @@ pub fn init_memory(memory_regions: &MemoryRegions) {
         // find some consecutive free pages in memory_regions
         let mut bitset_addr = None;
         for region in memory_regions.iter() {
-            if region.kind != MemoryRegionKind::Usable || region.start == 0 {
+            if region.kind != MemoryRegionKind::Usable || region.start == 1 {
                 continue;
             }
 
@@ -64,11 +67,7 @@ pub fn init_memory(memory_regions: &MemoryRegions) {
     };
 
     unsafe {
-        SEGMENTS_BITSET = BitSetRaw::new(
-            num_all_pages as usize,
-            (VIRTUAL_OFFSET + bitset_addr) as *mut u64,
-        );
-        SEGMENTS_BITSET.clear();
+        SEGMENTS_BITSET = BitSetRaw::new(num_all_pages as usize, (VIRTUAL_OFFSET + bitset_addr) as *mut u64);
     }
 
     // mark the pages for the bitset as used
@@ -97,11 +96,6 @@ pub fn init_memory(memory_regions: &MemoryRegions) {
 
     // map the bitset
     for page in bitset_first_page..bitset_last_page {
-        map_page(
-            (page * PAGE_SIZE + VIRTUAL_OFFSET) as VirtAddr,
-            page * PAGE_SIZE,
-            true,
-            false,
-        );
+        map_page((page * PAGE_SIZE + VIRTUAL_OFFSET) as VirtAddr, page * PAGE_SIZE, true, false);
     }
 }

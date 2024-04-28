@@ -1,4 +1,4 @@
-use crate::memory::{HEAP_BASE, map_page_auto, PAGE_SIZE};
+use crate::memory::{map_page_auto, HEAP_BASE, PAGE_SIZE};
 
 static mut CURR_PTR: *mut u8 = HEAP_BASE as *mut u8;
 static mut CURR_PAGE: *mut u8 = HEAP_BASE as *mut u8;

@@ -1,11 +1,11 @@
 use kernel_test::{kernel_test, kernel_test_mod};
 
-use crate::memory::{HeapTree, VIRTUAL_OFFSET};
+use crate::memory::{HeapTree, TESTING_OFFSET};
 use crate::rand::Rng;
 
 kernel_test_mod!(crate::tests::A4_heap_tree);
 
-const HEAP_TREE_PTR: u64 = 5 * VIRTUAL_OFFSET;
+const HEAP_TREE_PTR: u64 = TESTING_OFFSET;
 
 fn get_heap_tree() -> HeapTree {
     unsafe { HeapTree::new(HEAP_TREE_PTR as *mut u8) }

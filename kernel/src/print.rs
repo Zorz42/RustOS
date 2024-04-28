@@ -1,6 +1,6 @@
-use core::fmt;
 use crate::vga_driver;
 use crate::vga_driver::{get_screen_height_in_chars, get_screen_width_in_chars};
+use core::fmt;
 
 #[allow(dead_code)]
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -63,7 +63,7 @@ impl Writer {
         self.text_color = text_color_to_rgb(text_color);
         self.background_color = text_color_to_rgb(background_color);
     }
-    
+
     fn new_line(&mut self) {
         self.x = 0;
         vga_driver::scroll();

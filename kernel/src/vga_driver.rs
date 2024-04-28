@@ -14,16 +14,10 @@ static mut VGA_BINDING: VgaBinding = VgaBinding {
     height: 0,
     stride: 0,
     bytes_per_pixel: 0,
-    framebuffer: core::ptr::null_mut(),
+    framebuffer: 0 as *mut u8,
 };
 
-pub fn init(
-    width: usize,
-    height: usize,
-    stride: usize,
-    bytes_per_pixel: usize,
-    framebuffer: *mut u8,
-) {
+pub fn init(width: usize, height: usize, stride: usize, bytes_per_pixel: usize, framebuffer: *mut u8) {
     unsafe {
         VGA_BINDING.width = width;
         VGA_BINDING.height = height;
@@ -82,13 +76,7 @@ pub fn get_pixel(x: usize, y: usize) -> (u8, u8, u8) {
     }
 }
 
-pub fn set_char(
-    x: usize,
-    y: usize,
-    c: u8,
-    text_color: (u8, u8, u8),
-    background_color: (u8, u8, u8),
-) {
+pub fn set_char(x: usize, y: usize, c: u8, text_color: (u8, u8, u8), background_color: (u8, u8, u8)) {
     debug_assert!(x < get_screen_width_in_chars());
     debug_assert!(y < get_screen_height_in_chars());
 
@@ -98,10 +86,7 @@ pub fn set_char(
         for char_x in 0..CHAR_WIDTH {
             let pixel_x = screen_x + char_x;
             let pixel_y = screen_y + char_y;
-            let color = if DEFAULT_FONT[c as usize * CHAR_HEIGHT + char_y]
-                & (1 << (CHAR_WIDTH - char_x - 1))
-                != 0
-            {
+            let color = if DEFAULT_FONT[c as usize * CHAR_HEIGHT + char_y] & (1 << (CHAR_WIDTH - char_x - 1)) != 0 {
                 text_color
             } else {
                 background_color
@@ -114,21 +99,13 @@ pub fn set_char(
 pub fn scroll() {
     unsafe {
         for y in BORDER_PADDING..VGA_BINDING.height - BORDER_PADDING - CHAR_HEIGHT {
-            let src = VGA_BINDING
-                .framebuffer
-                .add((y + CHAR_HEIGHT) * VGA_BINDING.stride * VGA_BINDING.bytes_per_pixel);
-            let dest = VGA_BINDING
-                .framebuffer
-                .add(y * VGA_BINDING.stride * VGA_BINDING.bytes_per_pixel);
+            let src = VGA_BINDING.framebuffer.add((y + CHAR_HEIGHT) * VGA_BINDING.stride * VGA_BINDING.bytes_per_pixel);
+            let dest = VGA_BINDING.framebuffer.add(y * VGA_BINDING.stride * VGA_BINDING.bytes_per_pixel);
             memcpy(src, dest, VGA_BINDING.width * VGA_BINDING.bytes_per_pixel);
         }
 
-        for y in
-            VGA_BINDING.height - BORDER_PADDING - CHAR_HEIGHT..VGA_BINDING.height - BORDER_PADDING
-        {
-            let dest = VGA_BINDING
-                .framebuffer
-                .add(y * VGA_BINDING.stride * VGA_BINDING.bytes_per_pixel);
+        for y in VGA_BINDING.height - BORDER_PADDING - CHAR_HEIGHT..VGA_BINDING.height - BORDER_PADDING {
+            let dest = VGA_BINDING.framebuffer.add(y * VGA_BINDING.stride * VGA_BINDING.bytes_per_pixel);
             memset_int64(dest, 0, VGA_BINDING.width * VGA_BINDING.bytes_per_pixel);
         }
     }
@@ -137,9 +114,7 @@ pub fn scroll() {
 pub fn clear_screen() {
     for y in 0..get_screen_height() {
         unsafe {
-            let dest = VGA_BINDING
-                .framebuffer
-                .add(y * VGA_BINDING.stride * VGA_BINDING.bytes_per_pixel);
+            let dest = VGA_BINDING.framebuffer.add(y * VGA_BINDING.stride * VGA_BINDING.bytes_per_pixel);
             memset_int64(dest, 0, VGA_BINDING.width * VGA_BINDING.bytes_per_pixel);
         }
     }
