@@ -77,9 +77,10 @@ impl HeapTree {
 
     fn merge(a: i32, b: i32, csize: i32) -> i32 {
         if a == csize - 1 && b == csize - 1 {
-            return csize;
+            csize
+        } else {
+            i32::max(a, b)
         }
-        i32::max(a, b)
     }
 
     fn update_node(&mut self, node: u32, size_log2: u32) {
@@ -97,6 +98,7 @@ impl HeapTree {
     fn double_size(&mut self) {
         let prev_base_ptr = self.get_base_ptr();
         self.size *= 2;
+        println!("Resized to {}", self.size);
         self.allocate_pages();
 
         unsafe {
@@ -151,6 +153,7 @@ impl HeapTree {
 
     /// Finds a new region of the size: 2^size
     pub fn alloc(&mut self, size_log2: u32) -> u32 {
+        debug_assert!(size_log2 < 48);
         let size = 1 << size_log2;
 
         // increase size, until there is enough space
@@ -199,7 +202,7 @@ impl HeapTree {
         for i in 0..8 / size {
             if (bitmask & (bits << (i * size))) == 0 {
                 unsafe {
-                    *self.get_base_ptr().add(idx as usize) = (bitmask | (bits << (i * size))) as u8;
+                    *self.get_base_ptr().add(idx as usize) |= (bits << (i * size)) as u8;
                 }
 
                 let node_val = Self::get_biggest_segment(unsafe {
@@ -220,6 +223,7 @@ impl HeapTree {
             }
         }
 
+        println!("Node {}", node);
         println!("Node val {}", self.get_node_val(node));
         println!("Bits {:#010b}", bitmask);
 

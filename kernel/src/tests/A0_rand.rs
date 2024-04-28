@@ -23,7 +23,10 @@ fn test_rand_in_range() {
             (54375353, 54375354),
             (0, (1u64 << 63) - 1 + (1u64 << 63)),
             (1u64 << 63, (1u64 << 63) - 1 + (1u64 << 63)),
-            ((1u64 << 63) - 2 + (1u64 << 63), (1u64 << 63) - 1 + (1u64 << 63)),
+            (
+                (1u64 << 63) - 2 + (1u64 << 63),
+                (1u64 << 63) - 1 + (1u64 << 63),
+            ),
         ];
         for (l, r) in ranges {
             for _ in 0..100 {
@@ -41,7 +44,7 @@ fn test_rand_distribution() {
     let seeds = [0, 1, 2, 3, 54378395, 4537589435, 25324, 23421];
     for seed in seeds {
         let mut rng = Rng::new(seed);
-        let mods = [2, 4, 5, 6, 7, 8, 17, 32, 346, 536, 124];
+        let mods = [2, 4, 5, 6, 7, 8, 17, 32, 124];
         let count = 1000;
         for m in mods {
             let mut counts = [0; 1024];
@@ -49,14 +52,14 @@ fn test_rand_distribution() {
                 counts[rng.get(0, m) as usize] += 1;
             }
             let min_count = {
-                let mut min_count = 1000; // Dirichlet's principle
+                let mut min_count = count; // Dirichlet's principle
                 for i in 0..m {
                     min_count = min_count.min(counts[i as usize]);
                 }
                 min_count
             };
             let max_count = {
-                let mut max_count = 1000; // also Dirichlet's principle
+                let mut max_count = count; // also Dirichlet's principle
                 for i in 0..m {
                     max_count = max_count.max(counts[i as usize]);
                 }

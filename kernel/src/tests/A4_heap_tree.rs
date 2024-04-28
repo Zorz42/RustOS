@@ -21,7 +21,7 @@ fn test_heap_tree_alloc() {
     let mut tree = get_heap_tree();
     let mut rng = Rng::new(5473895743);
 
-    for _ in 0..100 {
+    for _ in 0..1000 {
         let _ = tree.alloc(rng.get(0, 8) as u32);
     }
 }
