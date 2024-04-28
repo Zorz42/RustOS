@@ -12,7 +12,7 @@ fn test_one_page() {
     let _ = find_free_page();
 }
 
-//#[kernel_test]
+#[kernel_test]
 fn test_page_free() {
     let mut rng = Rng::new(54375893);
 
@@ -45,7 +45,7 @@ fn test_page_free() {
     }
 }
 
-//#[kernel_test]
+#[kernel_test]
 fn test_page_write() {
     let offset = TESTING_OFFSET as *mut u8;
 
@@ -59,7 +59,7 @@ fn test_page_write() {
 
 #[kernel_test]
 fn test_page_write_stays() {
-    let num_pages = 200;
+    let num_pages = 1000;
     let offset = TESTING_OFFSET as *mut u8;
     let offset_u64 = offset as *mut u64;
 

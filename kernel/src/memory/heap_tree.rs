@@ -98,26 +98,11 @@ impl HeapTree {
     fn double_size(&mut self) {
         let prev_base_ptr = self.get_base_ptr();
         self.size *= 2;
-        println!("Resized to {}", self.size);
         self.allocate_pages();
-
-        if self.size == 1048576 {
-            println!("Val at node 196608 {}", self.get_node_val(196608));
-            unsafe {
-                println!("Val at block 65536 {:#010b}", *self.get_base_block_ptr(65536));
-            }
-        }
 
         unsafe {
             memset(self.get_base_ptr(), 0, self.get_tree_size() as usize);
             memcpy(prev_base_ptr, self.get_base_ptr(), self.get_tree_size() as usize / 2);
-        }
-
-        if self.size == 1048576 {
-            println!("Val at node 196608 {}", self.get_node_val(196608));
-            unsafe {
-                println!("Val at block 65536 {:#010b}", *self.get_base_block_ptr(65536));
-            }
         }
 
         let mut curr = self.get_tree_size();
@@ -131,13 +116,6 @@ impl HeapTree {
             curr /= 2;
         }
         self.update_node(1, curr_val as u32);
-
-        if self.size == 1048576 {
-            println!("Val at node 196608 {}", self.get_node_val(196608));
-            unsafe {
-                println!("Val at block 65536 {:#010b}", *self.get_base_block_ptr(65536));
-            }
-        }
     }
 
     fn get_biggest_segment(bits: u32) -> i32 {
@@ -160,7 +138,6 @@ impl HeapTree {
                 }
             }
         }
-        println!("Bits {:#010b}", bits);
         unreachable!();
     }
 
@@ -233,10 +210,6 @@ impl HeapTree {
                 return 8 * idx + i * size;
             }
         }
-
-        println!("Node {}", node);
-        println!("Node val {}", self.get_node_val(node));
-        println!("Bits {:#010b}", bitmask);
 
         unreachable!();
     }

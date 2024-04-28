@@ -11,7 +11,7 @@ use bootloader_api::info::PixelFormat;
 use bootloader_api::{entry_point, BootInfo, BootloaderConfig};
 
 use crate::interrupts::init_idt;
-use crate::memory::{init_memory, HEAP_BASE, HEAP_TREE, KERNEL_STACK_ADDR, KERNEL_STACK_SIZE, TESTING_OFFSET, VIRTUAL_OFFSET};
+use crate::memory::{init_memory, HEAP_BASE, HEAP_TREE, KERNEL_STACK_ADDR, KERNEL_STACK_SIZE, TESTING_OFFSET, VIRTUAL_OFFSET, volatile_store_byte, memset, VirtAddr, PAGE_SIZE, map_framebuffer};
 use crate::print::{reset_print_color, set_print_color, TextColor};
 use crate::timer::init_timer;
 use crate::vga_driver::clear_screen;
@@ -51,13 +51,6 @@ fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
 
     println!("Booting kernel...");
 
-    println!("Framebuffer is at    0x{:x}", framebuffer.as_mut_ptr() as u64);
-    println!("Virtual offset is at 0x{:x}", VIRTUAL_OFFSET);
-    println!("Kernel stack is at   0x{:x}", KERNEL_STACK_ADDR);
-    println!("Heap base is at      0x{:x}", HEAP_BASE);
-    println!("Heap tree is at      0x{:x}", HEAP_TREE);
-    println!("Testing addr is at   0x{:x}", TESTING_OFFSET);
-
     debug_assert!(boot_info.physical_memory_offset.take().is_some());
 
     #[cfg(debug_assertions)]
@@ -71,6 +64,9 @@ fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
     init_timer();
 
     init_memory(&boot_info.memory_regions);
+
+    // make sure that framebuffer ram has also occupied pages
+    map_framebuffer(width as u32, height as u32, stride as u32, bytes_per_pixel as u32);
 
     #[cfg(feature = "run_tests")]
     {

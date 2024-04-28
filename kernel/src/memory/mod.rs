@@ -99,3 +99,15 @@ pub fn init_memory(memory_regions: &MemoryRegions) {
         map_page((page * PAGE_SIZE + VIRTUAL_OFFSET) as VirtAddr, page * PAGE_SIZE, true, false);
     }
 }
+
+pub fn map_framebuffer(width: u32, height: u32, stride: u32, bytes_per_pixel: u32) {
+    let start_addr = 0xA0000u64;
+    let end_addr = start_addr + (height * stride * bytes_per_pixel) as u64;
+    let start_page = start_addr / PAGE_SIZE;
+    let end_page = (end_addr + PAGE_SIZE - 1) / PAGE_SIZE;
+    for page in start_page..end_page {
+        unsafe {
+            SEGMENTS_BITSET.set(page as usize, true);
+        }
+    }
+}

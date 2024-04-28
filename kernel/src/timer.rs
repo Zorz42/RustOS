@@ -1,6 +1,6 @@
 use core::arch::asm;
 
-use crate::interrupt_wrapper;
+use crate::{interrupt_wrapper, println};
 use crate::interrupts::set_idt_entry;
 use crate::ports::byte_out;
 
