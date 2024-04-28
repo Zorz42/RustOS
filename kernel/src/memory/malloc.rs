@@ -1,5 +1,4 @@
 use crate::memory::{map_page_auto, HEAP_BASE_ADDR, PAGE_SIZE, HeapTree, HEAP_TREE_ADDR};
-use crate::println;
 
 static mut CURR_PAGE: *mut u8 = HEAP_BASE_ADDR as *mut u8;
 static mut HEAP_TREE: HeapTree = HeapTree::new_empty();
@@ -17,16 +16,6 @@ pub fn malloc(size: usize) -> *mut u8 {
         actual_size *= 2;
         actual_size_log2 += 1;
     }
-
-    /*unsafe {
-        let result = CURR_PTR;
-        CURR_PTR = CURR_PTR.add(size);
-        while (CURR_PAGE as u64) < (CURR_PTR as u64) {
-            map_page_auto(CURR_PAGE, true, false);
-            CURR_PAGE = CURR_PAGE.add(PAGE_SIZE as usize);
-        }
-        result
-    }*/
 
     unsafe {
         let ptr = (HEAP_TREE.alloc(actual_size_log2 - 3) as u64 * 8 + HEAP_BASE_ADDR) as *mut u8;

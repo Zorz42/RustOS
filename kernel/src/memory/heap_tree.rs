@@ -1,5 +1,4 @@
 use crate::memory::{map_page_auto, memcpy, memcpy_non_aligned, memset, VirtAddr, PAGE_SIZE};
-use crate::println;
 
 /// Heap tree is a data structure, that keeps track of free regions on the heap
 /// It does not use malloc/free, because it is used in malloc and free (obviously)

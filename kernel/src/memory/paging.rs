@@ -1,6 +1,5 @@
 use crate::memory::bitset::BitSetRaw;
 use crate::memory::{memset_int64, PAGE_SIZE, VIRTUAL_OFFSET};
-use crate::{print, println};
 
 pub type PhysAddr = u64;
 pub type VirtAddr = *mut u8;
