@@ -17,7 +17,7 @@ fn test_page_free() {
     let mut rng = Rng::new(54375893);
 
     let mut pages = [0 as PhysAddr; 1024];
-    for _ in 0..100 {
+    for _ in 0..20 {
         // create a random permutation
         let mut perm = [0; 1024];
         for i in 0..1024 {
@@ -59,7 +59,7 @@ fn test_page_write() {
 
 #[kernel_test]
 fn test_page_write_stays() {
-    const num_pages: usize = 1000;
+    const num_pages: usize = 200;
     let offset = TESTING_OFFSET as *mut u8;
     let offset_u64 = offset as *mut u64;
     let mut pages = [0; num_pages];

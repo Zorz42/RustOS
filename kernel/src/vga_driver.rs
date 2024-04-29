@@ -59,9 +59,9 @@ fn get_pixel_mut(x: usize, y: usize) -> *mut u8 {
 pub fn set_pixel(x: usize, y: usize, color: (u8, u8, u8)) {
     unsafe {
         let pixel_pointer = get_pixel_mut(x, y);
-        volatile_store_byte(pixel_pointer, color.0);
+        volatile_store_byte(pixel_pointer, color.2);
         volatile_store_byte(pixel_pointer.add(1), color.1);
-        volatile_store_byte(pixel_pointer.add(2), color.2);
+        volatile_store_byte(pixel_pointer.add(2), color.0);
     }
 }
 
@@ -69,9 +69,9 @@ pub fn set_pixel(x: usize, y: usize, color: (u8, u8, u8)) {
 pub fn get_pixel(x: usize, y: usize) -> (u8, u8, u8) {
     unsafe {
         let pixel_pointer = get_pixel_mut(x, y);
-        let r = *pixel_pointer;
+        let b = *pixel_pointer;
         let g = *pixel_pointer.add(1);
-        let b = *pixel_pointer.add(2);
+        let r = *pixel_pointer.add(2);
         (r, g, b)
     }
 }

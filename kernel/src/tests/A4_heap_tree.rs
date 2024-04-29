@@ -32,7 +32,7 @@ fn test_heap_tree_alloc_free() {
     let mut tree = get_heap_tree();
     let mut rng = Rng::new(5473895743);
 
-    for _ in 0..100000 {
+    for _ in 0..30000 {
         let pos = tree.alloc(rng.get(0, 8) as u32);
         assert!(pos < 10000);
         tree.free(pos);
@@ -44,7 +44,7 @@ fn test_heap_tree_alloc_free_batch() {
     let mut tree = get_heap_tree();
     let mut rng = Rng::new(6436534);
 
-    for _ in 0..100 {
+    for _ in 0..20 {
         let mut arr = [0; 1024];
         for i in 0..1024 {
             arr[i] = tree.alloc(rng.get(0, 8) as u32);

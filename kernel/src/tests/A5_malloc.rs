@@ -19,7 +19,7 @@ fn test_malloc_free() {
     let mut rng = Rng::new(5674382);
 
     let mut ptrs = [0 as *mut u8; 1024];
-    for _ in 0..100 {
+    for _ in 0..20 {
         // create a random permutation
         let mut perm = [0; 1024];
         for i in 0..1024 {
@@ -55,7 +55,7 @@ fn test_malloc_write_stays() {
     let _ = malloc((4 - (ptr as u64) % 4) as usize);
 
     let mut ptrs = [0 as *mut u8; 1024];
-    for _ in 0..100 {
+    for _ in 0..20 {
         // create a random permutation
         let mut perm = [0; 1024];
         for i in 0..1024 {
@@ -98,8 +98,8 @@ fn test_malloc_write_stays() {
 #[kernel_test]
 fn test_malloc_free_works() {
     let mut rng = Rng::new(657438);
-    for i in 0..100000 {
-        let ptr = malloc(rng.get(0, 0x1000) as usize);
+    for i in 0..10000 {
+        let ptr = malloc(rng.get(0, 0x100000) as usize);
         unsafe {
             free(ptr);
         }

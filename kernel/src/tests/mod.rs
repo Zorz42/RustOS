@@ -1,3 +1,5 @@
+use crate::timer::get_ticks;
+
 mod A0_rand;
 mod A1_utils;
 mod A2_bitset;
@@ -22,12 +24,28 @@ pub fn test_runner() {
 
     let tests = all_tests!();
 
-    set_print_color(TextColor::LightCyan, TextColor::Black);
+    let mut max_length = 0;
+
+    for (_, name) in tests {
+        max_length = max_length.max((name.len() + 9) / 10 * 10);
+    }
+
+    set_print_color(TextColor::Pink, TextColor::Black);
     println!("Running {} tests", tests.len());
     for (test, name) in tests {
-        print!("testing {name} ... ");
+        set_print_color(TextColor::LightCyan, TextColor::Black);
+        print!("Testing {name} ... ");
+        let start_time = get_ticks();
         test();
-        println!("[ok]");
+        let end_time = get_ticks();
+        set_print_color(TextColor::LightGreen, TextColor::Black);
+        let width = max_length - name.len();
+        for _ in 0..width {
+            print!(" ");
+        }
+        print!("[OK] ");
+        set_print_color(TextColor::LightGray, TextColor::Black);
+        println!("{}ms", end_time - start_time);
     }
 
     reset_print_color();
