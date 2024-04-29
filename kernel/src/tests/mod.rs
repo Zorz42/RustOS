@@ -34,7 +34,7 @@ pub fn test_runner() {
     println!("Running {} tests", tests.len());
     for (test, name) in tests {
         set_print_color(TextColor::LightCyan, TextColor::Black);
-        print!("Testing {name} ... ");
+        print!("Testing {name}");
         let start_time = get_ticks();
         test();
         let end_time = get_ticks();

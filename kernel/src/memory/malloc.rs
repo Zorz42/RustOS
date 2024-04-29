@@ -1,4 +1,4 @@
-use crate::memory::{map_page_auto, HEAP_BASE_ADDR, PAGE_SIZE, HeapTree, HEAP_TREE_ADDR};
+use crate::memory::{map_page_auto, HeapTree, HEAP_BASE_ADDR, HEAP_TREE_ADDR, PAGE_SIZE};
 
 static mut CURR_PAGE: *mut u8 = HEAP_BASE_ADDR as *mut u8;
 static mut HEAP_TREE: HeapTree = HeapTree::new_empty();

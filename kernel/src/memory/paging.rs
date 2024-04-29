@@ -1,5 +1,6 @@
 use crate::memory::bitset::BitSetRaw;
 use crate::memory::{memset_int64, PAGE_SIZE, VIRTUAL_OFFSET};
+use crate::{print, println};
 
 pub type PhysAddr = u64;
 pub type VirtAddr = *mut u8;
@@ -17,14 +18,16 @@ pub fn get_num_pages() -> usize {
 
 type PageTableEntry = u64;
 
+const PAGE_TABLE_SIZE: usize = 512;
+
 #[repr(C)]
 pub struct PageTable {
-    entries: [PageTableEntry; 512],
+    entries: [PageTableEntry; PAGE_TABLE_SIZE],
 }
 
 impl PageTable {
     fn get_sub_page_table(&mut self, index: usize) -> Option<PhysAddr> {
-        debug_assert!(index < 512);
+        debug_assert!(index < PAGE_TABLE_SIZE);
         let entry = self.entries[index];
         if entry & 1 == 0 {
             None
@@ -102,4 +105,19 @@ pub fn map_page(virtual_addr: VirtAddr, physical_addr: PhysAddr, writable: bool,
 
 pub fn map_page_auto(virtual_addr: VirtAddr, writable: bool, user: bool) {
     map_page(virtual_addr, find_free_page(), writable, user);
+}
+
+pub fn check_page_table_integrity() {
+    #[cfg(debug_assertions)]
+    {
+        print!("Checking page table integrity ... ");
+
+        // first 4 entries will be used by the kernel and will be identical for all page tables
+        for i in 4..PAGE_TABLE_SIZE {
+            let entry = unsafe { (*CURRENT_PAGE_TABLE).get_sub_page_table(i) };
+            assert!(entry.is_none());
+        }
+
+        println!("OK");
+    }
 }

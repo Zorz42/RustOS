@@ -45,9 +45,7 @@ impl HeapTree {
     fn get_node_val(&self, node: u32) -> i32 {
         debug_assert!(node < 2 * self.get_tree_size());
         debug_assert!(node != 0);
-        unsafe {
-            *self.tree_ptr.add(node as usize) as i32 - 2
-        }
+        unsafe { *self.tree_ptr.add(node as usize) as i32 - 2 }
     }
 
     fn set_node_val(&mut self, node: u32, val: i32) {
@@ -113,7 +111,11 @@ impl HeapTree {
         unsafe {
             memset(self.get_base_ptr(), 0, self.get_tree_size() as usize * 2);
             memcpy(prev_base_ptr, self.get_base_ptr(), self.get_tree_size() as usize / 2);
-            memcpy(prev_base_ptr.add(self.get_tree_size() as usize / 2), self.get_base_ptr().add(self.get_tree_size() as usize), self.get_tree_size() as usize / 2);
+            memcpy(
+                prev_base_ptr.add(self.get_tree_size() as usize / 2),
+                self.get_base_ptr().add(self.get_tree_size() as usize),
+                self.get_tree_size() as usize / 2,
+            );
         }
 
         let mut curr = self.get_tree_size();

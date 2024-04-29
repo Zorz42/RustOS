@@ -11,7 +11,7 @@ use bootloader_api::info::PixelFormat;
 use bootloader_api::{entry_point, BootInfo, BootloaderConfig};
 
 use crate::interrupts::init_idt;
-use crate::memory::{init_memory, KERNEL_STACK_ADDR, KERNEL_STACK_SIZE, VIRTUAL_OFFSET, map_framebuffer, init_malloc};
+use crate::memory::{check_page_table_integrity, init_malloc, init_memory, map_framebuffer, FRAMEBUFFER_OFFSET, KERNEL_STACK_ADDR, KERNEL_STACK_SIZE, VIRTUAL_OFFSET};
 use crate::print::{reset_print_color, set_print_color, TextColor};
 use crate::timer::init_timer;
 use crate::vga_driver::clear_screen;
@@ -22,6 +22,7 @@ mod memory;
 mod ports;
 mod print;
 mod rand;
+mod std;
 mod tests;
 mod timer;
 mod vga_driver;
@@ -31,6 +32,7 @@ const CONFIG: BootloaderConfig = {
     config.kernel_stack_size = KERNEL_STACK_SIZE;
     config.mappings.physical_memory = Some(Mapping::FixedAddress(VIRTUAL_OFFSET));
     config.mappings.kernel_stack = Mapping::FixedAddress(KERNEL_STACK_ADDR);
+    config.mappings.framebuffer = Mapping::FixedAddress(FRAMEBUFFER_OFFSET);
     config
 };
 entry_point!(kernel_main, config = &CONFIG);
@@ -70,30 +72,19 @@ fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
 
     init_malloc();
 
+    check_page_table_integrity();
+
     #[cfg(feature = "run_tests")]
     {
         use crate::tests::test_runner;
         test_runner();
     }
 
-    //let start = get_ticks();
-
-    //for i in 0..100 {
-    //println!("Iteration: {}", i);
-    //}
-
-    //println!("That took {}ms", get_ticks() - start);
-
     println!("Going to infinite loop...");
-    //let mut i = 0;
     loop {
         unsafe {
             asm!("hlt");
         }
-        //print!("Ticks: {}\r", get_ticks());
-
-        //i += 1;
-        //println!("Iteration: {}", i);
     }
 }
 

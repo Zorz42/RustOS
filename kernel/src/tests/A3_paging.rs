@@ -1,9 +1,9 @@
 use kernel_test::{kernel_test, kernel_test_mod};
 
 use crate::memory::{find_free_page, free_page, map_page, map_page_auto, memset_int64, PhysAddr, VirtAddr, PAGE_SIZE, TESTING_OFFSET, VIRTUAL_OFFSET};
+use crate::print;
 use crate::println;
 use crate::rand::Rng;
-use crate::print;
 
 kernel_test_mod!(crate::tests::A3_paging);
 
