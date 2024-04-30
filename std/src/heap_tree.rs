@@ -1,4 +1,6 @@
-use crate::memory::{map_page_auto, memcpy, memcpy_non_aligned, memset, VirtAddr, PAGE_SIZE};
+use crate::{allocate_page, memcpy, memcpy_non_aligned, memset};
+
+const PAGE_SIZE: u64 = 4096;
 
 /// Heap tree is a data structure, that keeps track of free regions on the heap
 /// It does not use malloc/free, because it is used in malloc and free (obviously)
@@ -13,12 +15,14 @@ pub struct HeapTree {
 }
 
 impl HeapTree {
+    #[must_use]
     pub const fn new_empty() -> Self {
-        HeapTree { tree_ptr: 0 as *mut u8, size: 0 }
+        Self { tree_ptr: 0 as *mut u8, size: 0 }
     }
 
+    #[must_use]
     pub unsafe fn new(ptr: *mut u8) -> Self {
-        let mut tree = HeapTree { tree_ptr: ptr, size: 8192 };
+        let mut tree = Self { tree_ptr: ptr, size: 8192 };
         tree.allocate_pages();
         tree.clear();
         tree
@@ -26,11 +30,12 @@ impl HeapTree {
 
     /// returns n - the size of the tree
     /// the number of nodes in the tree is then 2 * n - 1
-    fn get_tree_size(&self) -> u32 {
+    #[must_use]
+    const fn get_tree_size(&self) -> u32 {
         self.size / 8
     }
 
-    fn get_base_ptr(&self) -> *mut u8 {
+    const fn get_base_ptr(&self) -> *mut u8 {
         unsafe { self.tree_ptr.add(self.get_tree_size() as usize * 2) }
     }
 
@@ -38,7 +43,7 @@ impl HeapTree {
         let from = self.get_base_ptr() as u64 / PAGE_SIZE;
         let to = (self.get_base_ptr() as u64 + self.get_tree_size() as u64 * 4 + PAGE_SIZE - 1) / PAGE_SIZE;
         for page in from..to {
-            map_page_auto((page * PAGE_SIZE) as VirtAddr, true, false);
+            allocate_page((page * PAGE_SIZE) as *mut u8);
         }
     }
 
@@ -134,7 +139,7 @@ impl HeapTree {
     fn get_biggest_segment(bits: u32) -> i32 {
         debug_assert!(bits < (1 << 8));
 
-        if bits == 0b11111111 {
+        if bits == 0b1111_1111 {
             return -1;
         }
 
@@ -152,7 +157,7 @@ impl HeapTree {
             }
         }
 
-        return 0;
+        0
     }
 
     fn update_parents(&mut self, mut node: u32, mut csize_log2: u32) {
@@ -197,7 +202,7 @@ impl HeapTree {
 
             let mid = (l + r) / 2;
             if self.get_node_val(2 * node) >= size_log2 as i32 {
-                node = 2 * node;
+                node *= 2;
                 r = mid;
             } else {
                 node = 2 * node + 1;
@@ -212,7 +217,10 @@ impl HeapTree {
             if (bitmask & (bits << (i * size))) == 0 {
                 unsafe {
                     *self.get_base_block_ptr(idx) |= (bits << (i * size)) as u8;
-                    debug_assert_eq!(*self.get_base_block2_ptr(idx) as u32 & (bits << (i * size)), 0);
+                    #[allow(clippy::debug_assert_with_mut_call)]
+                    {
+                        debug_assert_eq!(*self.get_base_block2_ptr(idx) as u32 & (bits << (i * size)), 0);
+                    }
                     *self.get_base_block2_ptr(idx) |= (1 << (i * size)) as u8;
                 }
 
@@ -240,8 +248,11 @@ impl HeapTree {
                 debug_assert_eq!(l, pos);
                 if node >= self.get_tree_size() {
                     self.set_node_val(node, 3);
-                    debug_assert_eq!(unsafe { *self.get_base_block_ptr(node - self.get_tree_size()) }, 0);
-                    debug_assert_eq!(unsafe { *self.get_base_block2_ptr(node - self.get_tree_size()) }, 0);
+                    #[allow(clippy::debug_assert_with_mut_call)]
+                    {
+                        debug_assert_eq!(unsafe { *self.get_base_block_ptr(node - self.get_tree_size()) }, 0);
+                        debug_assert_eq!(unsafe { *self.get_base_block2_ptr(node - self.get_tree_size()) }, 0);
+                    }
                 } else {
                     debug_assert_eq!(self.get_node_val(2 * node), self.get_node_val(2 * node + 1));
                     let val = self.get_node_val(2 * node) + 1;
@@ -260,7 +271,7 @@ impl HeapTree {
 
             let mid = (l + r) / 2;
             if pos < mid {
-                node = 2 * node;
+                node *= 2;
                 r = mid;
             } else {
                 node = 2 * node + 1;

@@ -1,5 +1,6 @@
+use std::memset_int64;
 use crate::memory::bitset::BitSetRaw;
-use crate::memory::{memset_int64, PAGE_SIZE, VIRTUAL_OFFSET};
+use crate::memory::{PAGE_SIZE, VIRTUAL_OFFSET};
 use crate::{print, println};
 
 pub type PhysAddr = u64;
@@ -74,7 +75,7 @@ pub unsafe fn clear_page_memory(addr: VirtAddr) {
 }
 
 pub unsafe fn free_page(addr: PhysAddr) {
-    let index = (addr as u64 / PAGE_SIZE) as usize;
+    let index = (addr / PAGE_SIZE) as usize;
     assert!(SEGMENTS_BITSET.get(index), "Double free of page");
     SEGMENTS_BITSET.set(index, false);
 }

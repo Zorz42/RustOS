@@ -557,6 +557,7 @@ version = "0.1.0"
 dependencies = [
  "bootloader_api",
  "kernel_test",
+ "std",
 ]
 
 [[package]]
@@ -831,6 +832,10 @@ dependencies = [
  "libc",
  "winapi",
 ]
+
+[[package]]
+name = "std"
+version = "0.1.0"
 
 [[package]]
 name = "syn"

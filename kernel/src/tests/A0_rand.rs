@@ -1,6 +1,7 @@
 use kernel_test::{kernel_test, kernel_test_mod};
 
-use crate::rand::Rng;
+#[cfg(feature = "run_tests")]
+use std::Rng;
 
 kernel_test_mod!(crate::tests::A0_rand);
 

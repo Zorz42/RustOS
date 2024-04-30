@@ -2,6 +2,7 @@
 #![no_main]
 #![feature(naked_functions)]
 #![allow(non_snake_case)]
+#![feature(raw_ref_op)]
 
 use core::arch::asm;
 use core::panic::PanicInfo;
@@ -11,7 +12,7 @@ use bootloader_api::info::PixelFormat;
 use bootloader_api::{entry_point, BootInfo, BootloaderConfig};
 
 use crate::interrupts::init_idt;
-use crate::memory::{check_page_table_integrity, init_malloc, init_memory, map_framebuffer, FRAMEBUFFER_OFFSET, KERNEL_STACK_ADDR, KERNEL_STACK_SIZE, VIRTUAL_OFFSET};
+use crate::memory::{check_page_table_integrity, init_memory, map_framebuffer, FRAMEBUFFER_OFFSET, KERNEL_STACK_ADDR, KERNEL_STACK_SIZE, VIRTUAL_OFFSET};
 use crate::print::{reset_print_color, set_print_color, TextColor};
 use crate::timer::init_timer;
 use crate::vga_driver::clear_screen;
@@ -21,8 +22,6 @@ mod interrupts;
 mod memory;
 mod ports;
 mod print;
-mod rand;
-mod std;
 mod tests;
 mod timer;
 mod vga_driver;
@@ -68,9 +67,7 @@ fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
     init_memory(&boot_info.memory_regions);
 
     // make sure that framebuffer ram has also occupied pages
-    map_framebuffer(width as u32, height as u32, stride as u32, bytes_per_pixel as u32);
-
-    init_malloc();
+    map_framebuffer(height as u32, stride as u32, bytes_per_pixel as u32);
 
     check_page_table_integrity();
 

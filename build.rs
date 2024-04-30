@@ -1,5 +1,6 @@
 use std::path::PathBuf;
 
+#[allow(clippy::unwrap_used)]
 fn main() {
     // set by cargo, build scripts should use this directory for output files
     let out_dir = PathBuf::from(std::env::var_os("OUT_DIR").unwrap());

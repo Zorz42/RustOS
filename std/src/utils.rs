@@ -1,5 +1,9 @@
 use core::arch::asm;
 
+pub macro addr_of($place:expr) {
+&raw const $place
+}
+
 pub unsafe fn volatile_store_byte(ptr: *mut u8, value: u8) {
     asm!("mov [{}], {}", in(reg) ptr, in(reg_byte) value);
 }
@@ -53,7 +57,7 @@ pub unsafe fn memcpy_non_aligned(src: *mut u8, dst: *mut u8, len: usize) {
     ", in("r8") src, in("r9") dst, in("r10") len, lateout("r8") _, lateout("r9") _, lateout("r10") _, out("r11") _, options(preserves_flags, nostack));
 }
 
-pub unsafe fn memset_int64(ptr: *mut u8, val: u64, len: usize) {
+pub unsafe fn memset_int64(ptr: *mut u8, val: u64, mut len: usize) {
     debug_assert_eq!(len % 8, 0);
     debug_assert_eq!(len as u64 % 8, 0);
     if len == 0 {

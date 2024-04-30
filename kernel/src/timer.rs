@@ -2,7 +2,7 @@ use core::arch::asm;
 
 use crate::interrupts::set_idt_entry;
 use crate::ports::byte_out;
-use crate::{interrupt_wrapper, println};
+use crate::{interrupt_wrapper};
 
 pub fn init_timer() {
     set_idt_entry(32, interrupt_wrapper!(timer_handler));
@@ -15,7 +15,7 @@ pub fn init_timer() {
     byte_out(0x40, ((divisor >> 8) & 0xFF) as u8);
 }
 
-static mut TIMER_TICKS: u32 = 0;
+pub static mut TIMER_TICKS: u32 = 0;
 
 extern "C" fn timer_handler() {
     byte_out(0x20, 0x20);

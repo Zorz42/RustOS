@@ -3,20 +3,17 @@ use core::arch::asm;
 use bootloader_api::info::{MemoryRegionKind, MemoryRegions};
 
 pub use bitset::BitSetRaw;
-pub use heap_tree::HeapTree;
-pub use malloc::{free, init_malloc, malloc};
-pub use paging::{check_page_table_integrity, PhysAddr, VirtAddr};
-pub use paging::{find_free_page, free_page, map_page, map_page_auto};
+pub use paging::{check_page_table_integrity, VirtAddr};
+pub use paging::{map_page, map_page_auto};
+#[cfg(feature = "run_tests")]
+pub use paging::{find_free_page, PhysAddr, free_page};
 use paging::{PageTable, SEGMENTS_BITSET};
-pub use utils::*;
+use std::init_std_memory;
 
 use crate::memory::paging::CURRENT_PAGE_TABLE;
 
 mod bitset;
-mod heap_tree;
-mod malloc;
 mod paging;
-mod utils;
 
 pub const PAGE_SIZE: u64 = 4096;
 const FRAME_SIZE: u64 = 1u64 << 30;
@@ -24,9 +21,14 @@ pub const KERNEL_STACK_SIZE: u64 = 100 * 1024; // 100 KiB
 pub const KERNEL_STACK_ADDR: u64 = FRAME_SIZE - KERNEL_STACK_SIZE;
 pub const HEAP_BASE_ADDR: u64 = 2 * FRAME_SIZE;
 pub const HEAP_TREE_ADDR: u64 = 3 * FRAME_SIZE;
+#[allow(dead_code)]
 pub const TESTING_OFFSET: u64 = 4 * FRAME_SIZE;
 pub const FRAMEBUFFER_OFFSET: u64 = 5 * FRAME_SIZE;
 pub const VIRTUAL_OFFSET: u64 = 6 * FRAME_SIZE;
+
+fn page_allocator(page: VirtAddr) {
+    map_page_auto(page, true, false);
+}
 
 pub fn init_memory(memory_regions: &MemoryRegions) {
     unsafe {
@@ -98,9 +100,11 @@ pub fn init_memory(memory_regions: &MemoryRegions) {
     for page in bitset_first_page..bitset_last_page {
         map_page((page * PAGE_SIZE + VIRTUAL_OFFSET) as VirtAddr, page * PAGE_SIZE, true, false);
     }
+
+    init_std_memory(&page_allocator, HEAP_TREE_ADDR, HEAP_BASE_ADDR);
 }
 
-pub fn map_framebuffer(width: u32, height: u32, stride: u32, bytes_per_pixel: u32) {
+pub fn map_framebuffer(height: u32, stride: u32, bytes_per_pixel: u32) {
     let start_addr = 0xA0000u64;
     let end_addr = start_addr + (height * stride * bytes_per_pixel) as u64;
     let start_page = start_addr / PAGE_SIZE;

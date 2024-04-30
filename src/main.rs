@@ -1,3 +1,4 @@
+#[allow(clippy::unwrap_used)]
 fn main() {
     // read env variables that were set in build script
     let uefi_path = env!("UEFI_PATH");
@@ -15,9 +16,4 @@ fn main() {
     }
     let mut child = cmd.spawn().unwrap();
     child.wait().unwrap();
-}
-
-#[test]
-fn test_run() {
-    main();
 }

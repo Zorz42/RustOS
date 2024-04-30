@@ -1,3 +1,4 @@
+#[cfg(feature = "run_tests")]
 use crate::timer::get_ticks;
 
 mod A0_rand;
@@ -12,7 +13,7 @@ static mut FREE_SPACE: [u8; 1032] = [0; 1032];
 
 #[cfg(feature = "run_tests")]
 pub(super) fn get_free_space_addr() -> *mut u8 {
-    unsafe { (FREE_SPACE.as_mut_ptr() as u64 / 8 * 8) as *mut u8 }
+    unsafe { ((FREE_SPACE.as_mut_ptr() as u64 + 7) / 8 * 8) as *mut u8 }
 }
 
 #[cfg(feature = "run_tests")]
@@ -32,11 +33,11 @@ pub fn test_runner() {
 
     set_print_color(TextColor::Pink, TextColor::Black);
     println!("Running {} tests", tests.len());
-    for (test, name) in tests {
+    for (test_fn, name) in tests {
         set_print_color(TextColor::LightCyan, TextColor::Black);
         print!("Testing {name}");
         let start_time = get_ticks();
-        test();
+        test_fn();
         let end_time = get_ticks();
         set_print_color(TextColor::LightGreen, TextColor::Black);
         let width = max_length - name.len();

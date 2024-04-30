@@ -1,9 +1,9 @@
 use kernel_test::{kernel_test, kernel_test_mod};
 
-use crate::memory::{find_free_page, free_page, map_page, map_page_auto, memset_int64, PhysAddr, VirtAddr, PAGE_SIZE, TESTING_OFFSET, VIRTUAL_OFFSET};
-use crate::print;
-use crate::println;
-use crate::rand::Rng;
+#[cfg(feature = "run_tests")]
+use crate::memory::{map_page, VirtAddr, PAGE_SIZE, TESTING_OFFSET, VIRTUAL_OFFSET, find_free_page, PhysAddr, free_page};
+#[cfg(feature = "run_tests")]
+use std::{memset_int64, Rng};
 
 kernel_test_mod!(crate::tests::A3_paging);
 
@@ -79,9 +79,6 @@ fn test_page_write_stays() {
 
     for i in 0..num_pages * PAGE_SIZE as usize / 8 {
         unsafe {
-            if *offset_u64.add(i) != i as u64 {
-                println!("Mismatch at position {} 0x{:x}", i, i);
-            }
             assert_eq!(*offset_u64.add(i), i as u64);
         }
     }

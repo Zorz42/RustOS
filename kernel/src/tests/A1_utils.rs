@@ -1,8 +1,7 @@
 use kernel_test::{kernel_test, kernel_test_mod};
 
-use crate::memory::{memcpy, memcpy_non_aligned, memset, memset_int64};
-use crate::println;
-use crate::rand::Rng;
+#[cfg(feature = "run_tests")]
+use std::{memcpy, memcpy_non_aligned, memset, memset_int64, Rng};
 
 #[cfg(feature = "run_tests")]
 use super::get_free_space_addr;
@@ -184,9 +183,6 @@ fn test_memcpy_u64_exact_bounds() {
             };
 
             unsafe {
-                if *free_addr.add((512 / 8 + i) as usize) != val {
-                    println!("Fail at {t}, [{x1}, {x2}], {i}");
-                }
                 assert_eq!(*free_addr.add((512 / 8 + i) as usize), val);
             }
         }

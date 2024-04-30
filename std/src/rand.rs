@@ -3,7 +3,7 @@ pub struct Rng {
 }
 
 const fn advance(val: u64) -> u64 {
-    return val.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
+    val.wrapping_mul(6_364_136_223_846_793_005).wrapping_add(1_442_695_040_888_963_407)
 }
 
 impl Rng {

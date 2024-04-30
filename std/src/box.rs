@@ -1,17 +1,22 @@
-use crate::memory::{free, malloc};
+use crate::malloc::{free, malloc};
 
 pub struct Box<T> {
     ptr: *mut T,
 }
 
 impl<T> Box<T> {
-    pub fn get_type_size() -> usize {
+    #[must_use]
+    pub const fn get_type_size() -> usize {
         core::mem::size_of::<T>()
     }
 
     pub fn new(val: T) -> Self {
+        let ptr = malloc(Self::get_type_size()) as *mut T;
+        unsafe {
+            *ptr = val;
+        }
         Self {
-            ptr: malloc(Self::get_type_size()) as *mut T,
+            ptr,
         }
     }
 

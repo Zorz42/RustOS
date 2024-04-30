@@ -1,4 +1,5 @@
 use core::arch::asm;
+use std::addr_of;
 
 use crate::ports::byte_out;
 use crate::println;
@@ -105,7 +106,7 @@ pub type HandlerFunc = extern "C" fn() -> !;
 
 pub fn set_idt_entry(index: usize, handler: HandlerFunc) {
     unsafe {
-        IDT[index] = IDTEntry::new(handler as u64, 0x08, create_options(true, false));
+        IDT[index] = IDTEntry::new((handler as usize) as u64, 0x08, create_options(true, false));
     }
 }
 
@@ -116,7 +117,7 @@ static mut IDT_POINTER: IDTPointer = IDTPointer {
 
 pub fn init_idt() {
     unsafe {
-        IDT_POINTER.base = &IDT as *const _ as u64;
+        IDT_POINTER.base = addr_of!(IDT) as *const _ as u64;
     }
 
     set_idt_entry(0, interrupt_message!("Divide by zero"));
@@ -167,7 +168,7 @@ pub fn init_idt() {
     byte_out(0xA1, 0x00);
 
     unsafe {
-        asm!("lidt [{}]", in(reg) &IDT_POINTER);
+        asm!("lidt [{}]", in(reg) addr_of!(IDT_POINTER));
         asm!("sti");
     }
 }

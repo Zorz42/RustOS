@@ -1,5 +1,5 @@
 use crate::font::{CHAR_HEIGHT, CHAR_WIDTH, DEFAULT_FONT};
-use crate::memory::{memcpy, memset_int64, volatile_store_byte};
+use std::{memcpy, memset_int64, volatile_store_byte};
 
 struct VgaBinding {
     width: usize,
