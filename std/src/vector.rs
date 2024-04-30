@@ -8,18 +8,6 @@ pub struct Vec<T> {
 }
 
 impl<T> Vec<T> {
-    pub fn new_with_size(size: usize) -> Self {
-        let mut capacity = 1;
-        while capacity < size {
-            capacity *= 2;
-        }
-        Self {
-            capacity,
-            size,
-            arr: Ptr::new(capacity),
-        }
-    }
-
     pub fn new() -> Self {
         Self::new_with_size(0)
     }
@@ -75,6 +63,26 @@ impl<T> Vec<T> {
         unsafe {
             *self.get_mut_unchecked(self.size - 1) = element;
         }
+    }
+}
+
+impl<T: Default> Vec<T> {
+    pub fn new_with_size(size: usize) -> Self {
+        let mut capacity = 1;
+        while capacity < size {
+            capacity *= 2;
+        }
+        let mut res = Self {
+            capacity,
+            size,
+            arr: Ptr::new(capacity),
+        };
+        for i in 0..size {
+            unsafe {
+                *res.arr.get_mut().add(i) = T::default();
+            }
+        }
+        res
     }
 }
 
