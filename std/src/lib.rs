@@ -4,8 +4,10 @@
 mod heap_tree;
 mod malloc;
 mod utils;
-mod r#box;
+mod boxed;
 mod rand;
+mod pointer;
+mod vector;
 
 #[cfg(feature = "test_includes")]
 pub use heap_tree::HeapTree;
@@ -14,7 +16,8 @@ pub use malloc::{malloc, free};
 
 pub use utils::{memcpy, memcpy_non_aligned, memset, memset_int64, volatile_store_byte, addr_of};
 pub use rand::Rng;
-pub use r#box::Box;
+pub use boxed::Box;
+pub use vector::Vec;
 use crate::malloc::init_malloc;
 
 static mut PAGE_ALLOCATOR: Option<&'static dyn Fn(*mut u8)> = None;
