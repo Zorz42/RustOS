@@ -9,7 +9,13 @@ pub struct Vec<T> {
 
 impl<T> Vec<T> {
     pub fn new() -> Self {
-        Self::new_with_size(0)
+        let mut capacity = 1;
+        let mut res = Self {
+            capacity,
+            size: 0,
+            arr: Ptr::new(capacity),
+        };
+        res
     }
 
     pub unsafe fn get_unchecked(&self, i: usize) -> &T {
