@@ -1,5 +1,5 @@
 use core::mem::MaybeUninit;
-use core::ops::DerefMut;
+use core::ops::{DerefMut, Index, IndexMut};
 use crate::memcpy;
 use crate::pointer::Ptr;
 use crate::utils::swap;
@@ -64,8 +64,8 @@ impl<T> Vec<T> {
     }
 
     pub fn push(&mut self, element: T) {
+        self.reserve(self.size + 1);
         self.size += 1;
-        self.reserve(self.size);
         unsafe {
             *self.get_mut_unchecked(self.size - 1) = element;
         }
@@ -84,6 +84,10 @@ impl<T> Vec<T> {
             swap(&mut val, self.get_mut_unchecked(self.size).deref_mut());
             drop(val);
         }
+    }
+
+    pub fn capacity(&self) -> usize {
+        self.capacity
     }
 }
 
@@ -110,5 +114,29 @@ impl<T: Default> Vec<T> {
 impl<T> Default for Vec<T> {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+impl<T: Clone> Vec<T> {
+    pub fn new_from_slice(slice: &[T]) -> Self {
+        let mut res = Self::new();
+        for i in slice {
+            res.push(i.clone());
+        }
+        res
+    }
+}
+
+impl<T> Index<usize> for Vec<T> {
+    type Output = T;
+
+    fn index(&self, index: usize) -> &Self::Output {
+        self.get(index).unwrap()
+    }
+}
+
+impl<T> IndexMut<usize> for Vec<T> {
+    fn index_mut(&mut self, index: usize) -> &mut Self::Output {
+        self.get_mut(index).unwrap()
     }
 }

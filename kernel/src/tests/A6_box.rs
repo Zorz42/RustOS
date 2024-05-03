@@ -1,4 +1,3 @@
-use core::ops::Deref;
 use kernel_test::{kernel_test, kernel_test_mod};
 use std::{Box, Rng};
 

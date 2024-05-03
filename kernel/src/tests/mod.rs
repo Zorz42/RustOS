@@ -8,6 +8,7 @@ mod A3_paging;
 mod A4_heap_tree;
 mod A5_malloc;
 mod A6_box;
+mod A7_vector;
 
 #[cfg(feature = "run_tests")]
 static mut FREE_SPACE: [u8; 1032] = [0; 1032];
