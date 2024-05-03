@@ -1,11 +1,8 @@
-use core::arch::asm;
-
-use crate::interrupts::set_idt_entry;
+use crate::interrupts::{ExceptionStackFrame, set_idt_entry};
 use crate::ports::byte_out;
-use crate::{interrupt_wrapper};
 
 pub fn init_timer() {
-    set_idt_entry(32, interrupt_wrapper!(timer_handler));
+    set_idt_entry(32, timer_handler);
 
     let frequency = 1000;
     let divisor = 1193180 / frequency;
@@ -17,7 +14,7 @@ pub fn init_timer() {
 
 pub static mut TIMER_TICKS: u32 = 0;
 
-extern "C" fn timer_handler() {
+extern "x86-interrupt" fn timer_handler(_stack_frame: &ExceptionStackFrame) {
     byte_out(0x20, 0x20);
 
     unsafe {

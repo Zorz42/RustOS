@@ -63,12 +63,19 @@ impl<T> Vec<T> {
 
     pub fn push(&mut self, element: T) {
         self.size += 1;
-        if self.size > self.capacity {
-            self.double_capacity();
-        }
+        self.reserve(self.size);
         unsafe {
             *self.get_mut_unchecked(self.size - 1) = element;
         }
+    }
+
+    pub fn size(&self) -> usize {
+        self.size
+    }
+
+    pub fn pop(&mut self) {
+        assert!(self.size > 0);
+        self.size -= 1;
     }
 }
 

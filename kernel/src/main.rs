@@ -3,6 +3,7 @@
 #![feature(naked_functions)]
 #![allow(non_snake_case)]
 #![feature(raw_ref_op)]
+#![feature(abi_x86_interrupt)]
 
 use core::arch::asm;
 use core::panic::PanicInfo;

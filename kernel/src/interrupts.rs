@@ -4,51 +4,30 @@ use std::addr_of;
 use crate::ports::byte_out;
 use crate::println;
 
-#[macro_export]
-macro_rules! interrupt_wrapper {
-    ($name: ident) => {{
-        #[naked]
-        extern "C" fn wrapper() -> ! {
-            unsafe {
-                // call the handler via assembly call
-                // preserve registers
-                asm!("
-                push rax
-                push rcx
-                push rdx
-                push rsi
-                push rdi
-                push r8
-                push r9
-                push r10
-                push r11
-
-                call {}
-
-                pop r11
-                pop r10
-                pop r9
-                pop r8
-                pop rdi
-                pop rsi
-                pop rdx
-                pop rcx
-                pop rax
-
-                iretq
-                ",
-                sym $name,
-                options(noreturn));
-            }
-        }
-        wrapper
-    }}
+#[derive(Debug)]
+#[repr(C)]
+pub struct ExceptionStackFrame {
+    instruction_pointer: u64,
+    code_segment: u64,
+    cpu_flags: u64,
+    stack_pointer: u64,
+    stack_segment: u64,
 }
 
 macro_rules! interrupt_message {
     ($name: expr) => {{
-        extern "C" fn wrapper() -> ! {
+        extern "x86-interrupt" fn wrapper(_stack_frame: &ExceptionStackFrame) {
             println!("{} exception", $name);
+            loop {}
+        }
+        wrapper
+    }};
+}
+
+macro_rules! interrupt_message_ec {
+    ($name: expr) => {{
+        extern "x86-interrupt" fn wrapper(_stack_frame: &ExceptionStackFrame, error_code: u64) {
+            println!("{} exception with error code {error_code}", $name);
             loop {}
         }
         wrapper
@@ -102,9 +81,17 @@ impl IDTEntry {
 const IDT_SIZE: usize = 256;
 static mut IDT: [IDTEntry; IDT_SIZE] = [IDTEntry::new(0, 0, create_options(false, true)); IDT_SIZE];
 
-pub type HandlerFunc = extern "C" fn() -> !;
+pub type HandlerFunc = extern "x86-interrupt" fn(&ExceptionStackFrame);
 
 pub fn set_idt_entry(index: usize, handler: HandlerFunc) {
+    unsafe {
+        IDT[index] = IDTEntry::new((handler as usize) as u64, 0x08, create_options(true, false));
+    }
+}
+
+pub type HandlerFuncEc = extern "x86-interrupt" fn(&ExceptionStackFrame, u64);
+
+pub fn set_idt_entry_ec(index: usize, handler: HandlerFuncEc) {
     unsafe {
         IDT[index] = IDTEntry::new((handler as usize) as u64, 0x08, create_options(true, false));
     }
@@ -128,20 +115,20 @@ pub fn init_idt() {
     set_idt_entry(5, interrupt_message!("Bound range exceeded"));
     set_idt_entry(6, interrupt_message!("Invalid opcode"));
     set_idt_entry(7, interrupt_message!("Device not available"));
-    set_idt_entry(8, interrupt_message!("Double fault"));
+    set_idt_entry_ec(8, interrupt_message_ec!("Double fault"));
     set_idt_entry(9, interrupt_message!("Coprocessor segment overrun"));
-    set_idt_entry(10, interrupt_message!("Invalid TSS"));
-    set_idt_entry(11, interrupt_message!("Segment not present"));
-    set_idt_entry(12, interrupt_message!("Stack-segment fault"));
-    set_idt_entry(13, interrupt_message!("General protection fault"));
-    set_idt_entry(14, interrupt_message!("Page fault"));
+    set_idt_entry_ec(10, interrupt_message_ec!("Invalid TSS"));
+    set_idt_entry_ec(11, interrupt_message_ec!("Segment not present"));
+    set_idt_entry_ec(12, interrupt_message_ec!("Stack-segment fault"));
+    set_idt_entry_ec(13, interrupt_message_ec!("General protection fault"));
+    set_idt_entry_ec(14, interrupt_message_ec!("Page fault"));
     set_idt_entry(15, interrupt_message!("Reserved"));
     set_idt_entry(16, interrupt_message!("x87 FPU floating-point error"));
-    set_idt_entry(17, interrupt_message!("Alignment check"));
+    set_idt_entry_ec(17, interrupt_message_ec!("Alignment check"));
     set_idt_entry(18, interrupt_message!("Machine check"));
     set_idt_entry(19, interrupt_message!("SIMD floating-point"));
     set_idt_entry(20, interrupt_message!("Virtualization"));
-    set_idt_entry(21, interrupt_message!("Control"));
+    set_idt_entry_ec(21, interrupt_message_ec!("Control"));
     set_idt_entry(22, interrupt_message!("Reserved"));
     set_idt_entry(23, interrupt_message!("Reserved"));
     set_idt_entry(24, interrupt_message!("Reserved"));
