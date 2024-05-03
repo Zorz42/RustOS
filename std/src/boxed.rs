@@ -2,6 +2,7 @@ use core::ops::{Deref, DerefMut};
 use crate::pointer::Ptr;
 use crate::swap;
 
+#[derive(Debug)]
 pub struct Box<T> {
     ptr: Ptr<T>,
 }
@@ -17,8 +18,8 @@ impl<T> Box<T> {
         }
     }
 
-    pub fn new_uninit() -> Self {
-        Self { ptr: Ptr::new_empty() }
+    pub unsafe fn new_uninit() -> Self {
+        Self { ptr: Ptr::new(1) }
     }
 
     pub unsafe fn get_raw(&mut self) -> *mut T {
@@ -43,5 +44,17 @@ impl<T> Deref for Box<T> {
 impl<T> DerefMut for Box<T> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         unsafe { &mut (*self.ptr.get_mut()) }
+    }
+}
+
+impl<T: Clone> Clone for Box<T> {
+    fn clone(&self) -> Self {
+        Self::new(self.deref().clone())
+    }
+}
+
+impl<T: PartialEq> PartialEq for Box<T> {
+    fn eq(&self, other: &Box<T>) -> bool {
+        self.deref() == other.deref()
     }
 }

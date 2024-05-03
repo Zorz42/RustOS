@@ -1,16 +1,11 @@
 use crate::{free, malloc};
 
+#[derive(Debug)]
 pub struct Ptr<T> {
     ptr: *mut T,
 }
 
 impl<T> Ptr<T> {
-    pub const fn new_empty() -> Self {
-        Self {
-            ptr: 0 as *mut T,
-        }
-    }
-
     pub fn new(size: usize) -> Self {
         Self {
             ptr: malloc(size * core::mem::size_of::<T>()) as *mut T,
@@ -45,7 +40,7 @@ impl<T: Default> Ptr<T> {
 impl<T> Drop for Ptr<T> {
     fn drop(&mut self) {
         unsafe {
-            //free(self.ptr as *mut u8);
+            free(self.ptr as *mut u8);
         }
     }
 }
