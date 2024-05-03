@@ -228,9 +228,25 @@ fn test_memcpy_exact_bounds() {
 
 #[kernel_test]
 fn test_swap() {
-    let mut val1 = 67862423u64;
-    let mut val2 = 43262436u64;
-    swap(&mut val1, &mut val2);
-    assert_eq!(val1, 43262436u64);
-    assert_eq!(val2, 67862423u64);
+    let mut rng = Rng::new(5643758643287);
+    for _ in 0..1000 {
+        let mut arr1 = [0; 512];
+        let mut arr2 = [0; 512];
+        let mut arr3 = [0; 512];
+        let mut arr4 = [0; 512];
+
+        for i in 0..512 {
+            arr1[i] = rng.get(0, 256) as u8;
+            arr2[i] = rng.get(0, 256) as u8;
+        }
+        arr3 = arr1;
+        arr4 = arr2;
+        unsafe {
+            swap(&mut arr3, &mut arr4);
+        }
+        for i in 0..512 {
+            assert_eq!(arr1[i], arr4[i]);
+            assert_eq!(arr2[i], arr3[i]);
+        }
+    }
 }

@@ -1,15 +1,16 @@
 use core::ops::{Deref, DerefMut};
 use crate::pointer::Ptr;
+use crate::swap;
 
 pub struct Box<T> {
     ptr: Ptr<T>,
 }
 
 impl<T> Box<T> {
-    pub fn new(val: T) -> Self {
+    pub fn new(mut val: T) -> Self {
         let mut ptr = Ptr::new(1);
         unsafe {
-            *ptr.get_mut() = val;
+            swap(&mut *ptr.get_mut(), &mut val);
         }
         Self {
             ptr,
