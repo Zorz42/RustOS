@@ -14,7 +14,7 @@ pub use heap_tree::HeapTree;
 #[cfg(feature = "test_includes")]
 pub use malloc::{malloc, free};
 
-pub use utils::{memcpy, memcpy_non_aligned, memset, memset_int64, volatile_store_byte, addr_of};
+pub use utils::{memcpy, memcpy_non_aligned, memset, memset_int64, volatile_store_byte, addr_of, swap};
 pub use rand::Rng;
 pub use boxed::Box;
 pub use vector::Vec;

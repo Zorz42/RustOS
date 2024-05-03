@@ -1,5 +1,8 @@
+use core::mem::MaybeUninit;
+use core::ops::DerefMut;
 use crate::memcpy;
 use crate::pointer::Ptr;
+use crate::utils::swap;
 
 pub struct Vec<T> {
     arr: Ptr<T>,
@@ -9,13 +12,12 @@ pub struct Vec<T> {
 
 impl<T> Vec<T> {
     pub fn new() -> Self {
-        let mut capacity = 1;
-        let mut res = Self {
+        let capacity = 1;
+        Self {
             capacity,
             size: 0,
             arr: Ptr::new(capacity),
-        };
-        res
+        }
     }
 
     pub unsafe fn get_unchecked(&self, i: usize) -> &T {
@@ -76,6 +78,12 @@ impl<T> Vec<T> {
     pub fn pop(&mut self) {
         assert!(self.size > 0);
         self.size -= 1;
+        // just swap 
+        unsafe {
+            let mut val: T = MaybeUninit::uninit().assume_init();
+            swap(&mut val, self.get_mut_unchecked(self.size).deref_mut());
+            drop(val);
+        }
     }
 }
 

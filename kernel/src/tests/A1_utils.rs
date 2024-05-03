@@ -2,6 +2,7 @@ use kernel_test::{kernel_test, kernel_test_mod};
 
 #[cfg(feature = "run_tests")]
 use std::{memcpy, memcpy_non_aligned, memset, memset_int64, Rng};
+use std::swap;
 
 #[cfg(feature = "run_tests")]
 use super::get_free_space_addr;
@@ -223,4 +224,13 @@ fn test_memcpy_exact_bounds() {
             }
         }
     }
+}
+
+#[kernel_test]
+fn test_swap() {
+    let mut val1 = 67862423u64;
+    let mut val2 = 43262436u64;
+    swap(&mut val1, &mut val2);
+    assert_eq!(val1, 43262436u64);
+    assert_eq!(val2, 67862423u64);
 }

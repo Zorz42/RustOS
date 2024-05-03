@@ -1,7 +1,33 @@
 use core::arch::asm;
+use core::mem::size_of;
 
 pub macro addr_of($place:expr) {
 &raw const $place
+}
+
+pub fn drop<T>(_val: T) {}
+
+pub fn swap<T>(val1: &mut T, val2: &mut T) {
+    let ptr1 = val1 as *mut T;
+    let ptr2 = val2 as *mut T;
+
+    unsafe {
+        asm!("
+        mov r11, r8
+        add r11, r10
+        2:
+        mov r10b, [r8]
+        xor [r9], r10b
+        xor r10b, [r9]
+        xor [r9], r10b
+        mov [r8], r10b
+        add r8, 1
+        add r9, 1
+        cmp r8, r11
+        jne 2b
+        
+        ", in("r8") ptr1, in("r9") ptr2, in("r10") size_of::<T>(), lateout("r8") _, lateout("r9") _, lateout("r10") _, out("r11") _, options(preserves_flags, nostack));
+    }
 }
 
 pub unsafe fn volatile_store_byte(ptr: *mut u8, value: u8) {
