@@ -11,19 +11,23 @@ impl<T> Box<T> {
     pub fn new(mut val: T) -> Self {
         let mut ptr = Ptr::new(1);
         unsafe {
-            swap(&mut *ptr.get_mut(), &mut val);
+            core::ptr::write(ptr.get_mut(), val);
         }
         Self {
             ptr,
         }
     }
 
-    pub unsafe fn new_uninit() -> Self {
-        Self { ptr: Ptr::new(1) }
-    }
-
     pub unsafe fn get_raw(&mut self) -> *mut T {
         self.ptr.get_mut()
+    }
+}
+
+impl<T> Drop for Box<T> {
+    fn drop(&mut self) {
+        unsafe {
+            drop(core::ptr::read(self.ptr.get_mut()));
+        }
     }
 }
 

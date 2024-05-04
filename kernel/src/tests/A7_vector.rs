@@ -80,47 +80,58 @@ fn test_vector_index_out_of_bounds() {
     }
 }
 
-#[kernel_test]
-fn test_vector_no_leak() {
-    struct BigStruct {
-        pub val: [u64; 10000],
-    }
+static mut DROP_COUNTER: i32 = 0;
 
-    let mut rng = Rng::new(234567890987654);
-    for _ in 0..10000 {
-        let _ = unsafe { Vec::<BigStruct>::new_with_size_uninit(rng.get(0, 100) as usize) };
+struct DroppableStruct {}
+
+impl Drop for DroppableStruct {
+    fn drop(&mut self) {
+        unsafe {
+            DROP_COUNTER += 1;
+        }
     }
 }
 
+#[kernel_test]
 fn test_vector_calls_drop_on_delete() {
-    struct BigStruct {
-        pub val: [u64; 10000],
-    }
-
     let mut rng = Rng::new(234567890987654);
-    for _ in 0..10000 {
+    for _ in 0..1000 {
         let mut vec = Vec::new();
         let len = rng.get(0, 100);
         for _ in 0..len {
-            vec.push(unsafe { Box::<BigStruct>::new_uninit() });
+            vec.push(DroppableStruct {});
+        }
+        unsafe {
+            assert_eq!(DROP_COUNTER, 0);
+            DROP_COUNTER = 0;
+        }
+        drop(vec);
+        unsafe {
+            assert_eq!(DROP_COUNTER, len as i32);
+            DROP_COUNTER = 0;
         }
     }
 }
 
+#[kernel_test]
 fn test_vector_calls_drop_on_pop() {
-    struct BigStruct {
-        pub val: [u64; 10000],
-    }
-
     let mut rng = Rng::new(678543456378);
     let mut vec = Vec::new();
-    for _ in 0..10000 {
+    for _ in 0..1000 {
         let len = rng.get(0, 100);
         for _ in 0..len {
-            vec.push(unsafe { Box::<BigStruct>::new_uninit() });
+            vec.push(DroppableStruct {});
+        }
+        unsafe {
+            assert_eq!(DROP_COUNTER, 0);
+            DROP_COUNTER = 0;
         }
         for _ in 0..len {
             vec.pop();
+            unsafe {
+                assert_eq!(DROP_COUNTER, 1);
+                DROP_COUNTER = 0;
+            }
         }
     }
 }

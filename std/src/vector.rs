@@ -1,8 +1,6 @@
-use core::mem::MaybeUninit;
 use core::ops::{DerefMut, Index, IndexMut};
 use crate::memcpy;
 use crate::pointer::Ptr;
-use crate::utils::swap;
 
 pub struct Vec<T> {
     arr: Ptr<T>,
@@ -16,20 +14,16 @@ impl<T> Vec<T> {
         while capacity < size {
             capacity *= 2;
         }
-        let mut res = Self {
+        Self {
             capacity,
             size,
             arr: Ptr::new(capacity),
-        };
-        res
+        }
     }
 
     pub fn new() -> Self {
-        let capacity = 1;
-        Self {
-            capacity,
-            size: 0,
-            arr: Ptr::new(capacity),
+        unsafe {
+            Self::new_with_size_uninit(0)
         }
     }
 
@@ -80,7 +74,7 @@ impl<T> Vec<T> {
         self.reserve(self.size + 1);
         self.size += 1;
         unsafe {
-            *self.get_mut_unchecked(self.size - 1) = element;
+            core::ptr::write(self.get_mut_unchecked(self.size - 1), element);
         }
     }
 
@@ -91,11 +85,8 @@ impl<T> Vec<T> {
     pub fn pop(&mut self) {
         assert!(self.size > 0);
         self.size -= 1;
-        // just swap 
         unsafe {
-            let mut val: T = MaybeUninit::uninit().assume_init();
-            swap(&mut val, self.get_mut_unchecked(self.size).deref_mut());
-            // val automatically drops
+            drop(core::ptr::read(self.get_mut_unchecked(self.size).deref_mut()));
         }
     }
 
@@ -113,6 +104,14 @@ impl<T: Default> Vec<T> {
             }
         }
         res
+    }
+}
+
+impl<T> Drop for Vec<T> {
+    fn drop(&mut self) {
+        while self.size() > 0 {
+            self.pop();
+        }
     }
 }
 

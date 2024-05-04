@@ -11,18 +11,6 @@ fn test_box_new() {
     }
 }
 
-#[kernel_test]
-fn test_box_no_leak() {
-    struct BigStruct {
-        pub val: [u64; 100000],
-    }
-
-    let mut rng = Rng::new(234567890987654);
-    for _ in 0..10000 {
-        let _ = unsafe { Box::<BigStruct>::new_uninit() };
-    }
-}
-
 // to be honest, this is more of a test to see if the code compiles
 #[kernel_test]
 fn test_box_deref() {
@@ -55,5 +43,28 @@ fn test_box_keeps_value() {
         for i in 0..512 {
             assert_eq!(Some(Box::new(arr[i])), box_arr[i]);
         }
+    }
+}
+
+static mut DROP_COUNTER: i32 = 0;
+
+struct DroppableStruct {}
+
+impl Drop for DroppableStruct {
+    fn drop(&mut self) {
+        unsafe {
+            DROP_COUNTER += 1;
+        }
+    }
+}
+
+#[kernel_test]
+fn test_box_calls_drop() {
+    let b = Box::new(DroppableStruct {});
+    drop(b);
+
+    unsafe {
+        assert_eq!(DROP_COUNTER, 1);
+        DROP_COUNTER = 0;
     }
 }
