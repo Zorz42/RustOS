@@ -11,6 +11,19 @@ pub struct Vec<T> {
 }
 
 impl<T> Vec<T> {
+    pub unsafe fn new_with_size_uninit(size: usize) -> Self {
+        let mut capacity = 1;
+        while capacity < size {
+            capacity *= 2;
+        }
+        let mut res = Self {
+            capacity,
+            size,
+            arr: Ptr::new(capacity),
+        };
+        res
+    }
+
     pub fn new() -> Self {
         let capacity = 1;
         Self {
@@ -82,7 +95,7 @@ impl<T> Vec<T> {
         unsafe {
             let mut val: T = MaybeUninit::uninit().assume_init();
             swap(&mut val, self.get_mut_unchecked(self.size).deref_mut());
-            drop(val);
+            // val automatically drops
         }
     }
 
@@ -93,15 +106,7 @@ impl<T> Vec<T> {
 
 impl<T: Default> Vec<T> {
     pub fn new_with_size(size: usize) -> Self {
-        let mut capacity = 1;
-        while capacity < size {
-            capacity *= 2;
-        }
-        let mut res = Self {
-            capacity,
-            size,
-            arr: Ptr::new(capacity),
-        };
+        let mut res = unsafe { Self::new_with_size_uninit(size) };
         for i in 0..size {
             unsafe {
                 *res.arr.get_mut().add(i) = T::default();
