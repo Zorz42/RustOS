@@ -11,6 +11,7 @@ use core::panic::PanicInfo;
 use bootloader_api::config::Mapping;
 use bootloader_api::info::PixelFormat;
 use bootloader_api::{entry_point, BootInfo, BootloaderConfig};
+use crate::disk::scan_for_disks;
 
 use crate::interrupts::init_idt;
 use crate::memory::{check_page_table_integrity, init_memory, map_framebuffer, FRAMEBUFFER_OFFSET, KERNEL_STACK_ADDR, KERNEL_STACK_SIZE, VIRTUAL_OFFSET};
@@ -26,6 +27,7 @@ mod print;
 mod tests;
 mod timer;
 mod vga_driver;
+mod disk;
 
 const CONFIG: BootloaderConfig = {
     let mut config = BootloaderConfig::new_default();
@@ -62,15 +64,23 @@ fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
         reset_print_color();
     }
 
+    println!("Initializing IDT");
     init_idt();
     init_timer();
 
+    println!("Initializing memory");
     init_memory(&boot_info.memory_regions);
-
     // make sure that framebuffer ram has also occupied pages
     map_framebuffer(height as u32, stride as u32, bytes_per_pixel as u32);
-
+    // make sure that the page table setup by bootloader has a few properties that we want
     check_page_table_integrity();
+
+    println!("Initializing disk");
+    let disks = scan_for_disks();
+    println!("All {} disks:", disks.size());
+    for disk in &disks {
+        println!("{:?}", disk);
+    }
 
     #[cfg(feature = "run_tests")]
     {

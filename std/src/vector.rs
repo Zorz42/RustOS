@@ -8,6 +8,16 @@ pub struct Vec<T> {
     capacity: usize,
 }
 
+pub struct VecIntoIterator<T> {
+    vec: Vec<T>,
+    index: usize,
+}
+
+pub struct VecIterator<'a, T> {
+    vec: &'a Vec<T>,
+    index: usize,
+}
+
 impl<T> Vec<T> {
     pub unsafe fn new_with_size_uninit(size: usize) -> Self {
         let mut capacity = 1;
@@ -142,5 +152,58 @@ impl<T> Index<usize> for Vec<T> {
 impl<T> IndexMut<usize> for Vec<T> {
     fn index_mut(&mut self, index: usize) -> &mut Self::Output {
         self.get_mut(index).unwrap()
+    }
+}
+
+impl<T> Iterator for VecIntoIterator<T> {
+    type Item = T;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.index == self.vec.size() {
+            None
+        } else {
+            let res = unsafe { core::ptr::read(self.vec.get_mut_unchecked(self.index)) };
+            self.index += 1;
+            Some(res)
+        }
+    }
+}
+
+impl<'a, T> Iterator for VecIterator<'a, T> {
+    type Item = &'a T;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.index == self.vec.size() {
+            None
+        } else {
+            let res = unsafe { self.vec.get_unchecked(self.index) };
+            self.index += 1;
+            Some(res)
+        }
+    }
+}
+
+
+impl<T> IntoIterator for Vec<T> {
+    type Item = T;
+    type IntoIter = VecIntoIterator<T>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        VecIntoIterator {
+            vec: self,
+            index: 0,
+        }
+    }
+}
+
+impl<'a, T> IntoIterator for &'a Vec<T> {
+    type Item = &'a T;
+    type IntoIter = VecIterator<'a, T>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        VecIterator {
+            vec: self,
+            index: 0,
+        }
     }
 }

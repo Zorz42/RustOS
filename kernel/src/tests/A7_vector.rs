@@ -1,5 +1,5 @@
 use kernel_test::{kernel_test, kernel_test_mod};
-use std::{Box, Rng, Vec};
+use std::{Rng, Vec};
 kernel_test_mod!(crate::tests::A7_vector);
 
 
