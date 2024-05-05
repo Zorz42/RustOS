@@ -48,13 +48,12 @@ pub fn scan_for_disks() -> Vec<Disk> {
                 println!("Scanning new disk");
                 let started_waiting = get_ticks();
                 let timed_out = loop {
-                    println!("0b{:b}", get_disk_status(base));
-                    if (get_disk_status(base) & 0b10000000) != 0 {
+                    if (get_disk_status(base) & 0b10000000) == 0 {
                         break false;
                     }
 
                     if get_ticks() > started_waiting + 10 {
-                        break false;
+                        break true;
                     }
                 };
                 if !timed_out {
