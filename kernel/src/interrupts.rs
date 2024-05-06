@@ -27,7 +27,7 @@ macro_rules! interrupt_message {
 macro_rules! interrupt_message_ec {
     ($name: expr) => {{
         extern "x86-interrupt" fn wrapper(_stack_frame: &ExceptionStackFrame, error_code: u64) {
-            println!("{} exception with error code {error_code}", $name);
+            println!("{} exception with error code {error_code} 0x{error_code:x} 0b{error_code:b}", $name);
             loop {}
         }
         wrapper

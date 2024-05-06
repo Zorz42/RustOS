@@ -1,6 +1,8 @@
 use std::Vec;
+use crate::interrupts::{ExceptionStackFrame, set_idt_entry};
 use crate::ports::{byte_in, byte_out, word_in, word_out};
-use crate::timer::get_ticks;
+use crate::println;
+use crate::timer::{get_ticks, TIMER_TICKS};
 
 const ATA_DATA: u16 = 0;
 const ATA_ERROR: u16 = 1;
@@ -10,11 +12,11 @@ const ATA_SECTORNUMBER2: u16 = 4;
 const ATA_SECTORNUMBER3: u16 = 5;
 const ATA_DRIVEHEAD: u16 = 6;
 const ATA_STATUS: u16 = 7;
-const ATA_COMMAND: u16 = 8;
+const ATA_COMMAND: u16 = 7;
 
 const SECTOR_SIZE: usize = 512;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Disk {
     base: u16,
     h: u8,
@@ -31,7 +33,7 @@ pub fn get_disk_status(base: u16) -> Option<u8> {
 }
 
 impl Disk {
-    pub fn read(&self, sector: i32) -> [u8; 512] {
+    pub fn read(&self, sector: i32) -> [u8; SECTOR_SIZE] {
         debug_assert!((sector as usize) < self.size);
         byte_out(self.base | ATA_SECTORCOUNT, 1);
         byte_out(self.base | ATA_SECTORNUMBER1, ((sector >> 0) & 0xFF) as u8);
@@ -40,7 +42,7 @@ impl Disk {
         byte_out(self.base | ATA_DRIVEHEAD, ((sector >> 24) & 0x0F) as u8 | 0b11100000 | (self.h << 4));
         byte_out(self.base | ATA_COMMAND, 0x20); // read with retry
 
-        let mut data = [0; 512];
+        let mut data = [0; SECTOR_SIZE];
 
         loop {
             let status = get_disk_status(self.base);
@@ -49,8 +51,8 @@ impl Disk {
                     break;
                 }
 
-                if (status & 0b100001) != 0 {
-                    panic!("Error reading disk 0b{:b}", byte_in(self.base | ATA_ERROR));
+                if (status & 0b100000) != 0 {
+                    panic!("Drive fault error");
                 }
             } else {
                 panic!("Error on read");
@@ -68,7 +70,7 @@ impl Disk {
         data
     }
 
-    pub fn write(&self, sector: i32, data: [u8; 512]) {
+    pub fn write(&self, sector: i32, data: &[u8; SECTOR_SIZE]) {
         debug_assert!((sector as usize) < self.size);
         byte_out(self.base | ATA_SECTORCOUNT, 1);
         byte_out(self.base | ATA_SECTORNUMBER1, ((sector >> 0) & 0xFF) as u8);
@@ -101,7 +103,11 @@ impl Disk {
     }
 }
 
+extern "x86-interrupt" fn disk_handler(_stack_frame: &ExceptionStackFrame) {}
+
 pub fn scan_for_disks() -> Vec<Disk> {
+    set_idt_entry(46, disk_handler);
+
     const BASES: [u16; 8] = [0x1F0, 0x3F0, 0x170, 0x370, 0x1E8, 0x3E0, 0x168, 0x360];
 
     let mut vec = Vec::new();

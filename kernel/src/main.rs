@@ -77,15 +77,11 @@ fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
 
     println!("Initializing disk");
     let disks = scan_for_disks();
-    println!("All {} disks:", disks.size());
-    for disk in &disks {
-        println!("{:?}", disk);
-    }
 
     #[cfg(feature = "run_tests")]
     {
         use crate::tests::test_runner;
-        test_runner();
+        test_runner(&disks);
     }
 
     println!("Going to infinite loop...");
