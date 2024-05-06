@@ -20,13 +20,13 @@ pub struct Disk {
     size: usize,
 }
 
-pub fn get_disk_status(base: u16) -> u8 {
+pub fn get_disk_status(base: u16) -> Option<u8> {
     let res = byte_in(base | ATA_STATUS);
     if (res & 1) == 1 {
-        let err = byte_in(base | ATA_ERROR);
-        println!("Disk error: 0b{:b}", err);
+        None
+    } else {
+        Some(res)
     }
-    res
 }
 
 pub fn scan_for_disks() -> Vec<Disk> {
@@ -35,39 +35,54 @@ pub fn scan_for_disks() -> Vec<Disk> {
     let mut vec = Vec::new();
 
     for base in BASES {
-        for h in 0..2 {
+        'outer_for: for h in 0..2 {
             byte_out(base | ATA_DRIVEHEAD, 0xA0 | (h << 4));
 
-            if (get_disk_status(base) & 0b1110001) == 0b1010000 {
-                byte_out(base | ATA_DRIVEHEAD, 0x40 | (h << 4));
+            if let Some(status) = get_disk_status(base) {
+                if (status & 0b1110001) == 0b1010000 {
+                    byte_out(base | ATA_DRIVEHEAD, 0x40 | (h << 4));
 
-                while (get_disk_status(base) & 0x40) == 0 {}
-
-                byte_out(base | ATA_STATUS, 0xF8);
-
-                println!("Scanning new disk");
-                let started_waiting = get_ticks();
-                let timed_out = loop {
-                    if (get_disk_status(base) & 0b10000000) == 0 {
-                        break false;
+                    loop {
+                        let status = get_disk_status(base);
+                        if let Some(status) = status {
+                            if (status & 0x40) != 0 {
+                                break;
+                            }
+                        } else {
+                            continue 'outer_for;
+                        }
                     }
 
-                    if get_ticks() > started_waiting + 10 {
-                        break true;
-                    }
-                };
-                if !timed_out {
-                    let sectors_size =
-                        ((byte_in(base + ATA_SECTORNUMBER1) as usize) << 0) +
-                            ((byte_in(base + ATA_SECTORNUMBER2) as usize) << 8) +
-                            ((byte_in(base + ATA_SECTORNUMBER3) as usize) << 16) +
-                            ((byte_in(base + ATA_DRIVEHEAD) as usize) << 24) & 0xF;
+                    byte_out(base | ATA_STATUS, 0xF8);
 
-                    vec.push(Disk {
-                        base,
-                        h,
-                        size: sectors_size,
-                    });
+                    let started_waiting = get_ticks();
+                    let timed_out = loop {
+                        let status = get_disk_status(base);
+                        if let Some(status) = status {
+                            if (status & 0b10000000) == 0 {
+                                break false;
+                            }
+                        } else {
+                            break 'outer_for;
+                        }
+
+                        if get_ticks() > started_waiting + 10 {
+                            break true;
+                        }
+                    };
+                    if !timed_out {
+                        let sectors_size =
+                            ((byte_in(base | ATA_SECTORNUMBER1) as usize) << 0) +
+                                ((byte_in(base | ATA_SECTORNUMBER2) as usize) << 8) +
+                                ((byte_in(base | ATA_SECTORNUMBER3) as usize) << 16) +
+                                (((byte_in(base | ATA_DRIVEHEAD) as usize) & 0xF) << 24);
+
+                        vec.push(Disk {
+                            base,
+                            h,
+                            size: sectors_size,
+                        });
+                    }
                 }
             }
         }
