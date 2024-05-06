@@ -1,5 +1,5 @@
 use std::Vec;
-use crate::ports::{byte_in, byte_out};
+use crate::ports::{byte_in, byte_out, word_in};
 use crate::timer::get_ticks;
 
 const ATA_DATA: u16 = 0;
@@ -31,11 +31,41 @@ pub fn get_disk_status(base: u16) -> Option<u8> {
 }
 
 impl Disk {
-    pub fn read(&self, sector: i32, sector_count: usize) -> Vec<u8> {
-        todo!();
+    pub fn read(&self, sector: i32) -> [u8; 512] {
+        debug_assert!((sector as usize) < self.size);
+        byte_out(self.base | ATA_SECTORCOUNT, 1);
+        byte_out(self.base | ATA_SECTORNUMBER1, ((sector >> 0) & 0xFF) as u8);
+        byte_out(self.base | ATA_SECTORNUMBER2, ((sector >> 8) & 0xFF) as u8);
+        byte_out(self.base | ATA_SECTORNUMBER3, ((sector >> 16) & 0xFF) as u8);
+        byte_out(self.base | ATA_DRIVEHEAD, ((sector >> 24) & 0x0F) as u8 | 0b11100000 | (self.h << 4));
+
+        let mut data = [0; 512];
+
+        loop {
+            let status = get_disk_status(self.base);
+            if let Some(status) = status {
+                if (status & 0b10001000) == 0b10000000 {
+                    break;
+                }
+
+                if (status & 0b100001) != 0 {
+                    panic!("Error reading disk 0b{:b}", byte_in(self.base | ATA_ERROR));
+                }
+            } else {
+                panic!("Error on read");
+            }
+        }
+
+        for i in 0..SECTOR_SIZE / 2 {
+            let word = word_in(self.base | ATA_DATA);
+            data[2 * i] = (word & 0xFF) as u8;
+            data[2 * i + 1] = ((word >> 8) & 0xFF) as u8;
+        }
+
+        data
     }
 
-    pub fn write(&self, sector: i32, data: Vec<u8>) {
+    pub fn write(&self, sector: i32, data: [u8; 512]) {
         todo!();
     }
 }
