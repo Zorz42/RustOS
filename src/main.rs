@@ -11,10 +11,12 @@ fn main() {
     if uefi {
         cmd.arg("-bios").arg(ovmf_prebuilt::ovmf_pure_efi());
         cmd.arg("-drive").arg(format!("format=raw,file={uefi_path}"));
-        cmd.arg("-drive").arg("file=disk.img,format=raw");
+        cmd.arg("-drive").arg("file=rootdisk.img,format=raw");
+        cmd.arg("-drive").arg("file=testdisk.img,format=raw");
     } else {
         cmd.arg("-drive").arg(format!("format=raw,file={bios_path}"));
-        cmd.arg("-drive").arg("file=disk.img,format=raw");
+        cmd.arg("-drive").arg("file=rootdisk.img,format=raw");
+        cmd.arg("-drive").arg("file=testdisk.img,format=raw");
     }
     let mut child = cmd.spawn().unwrap();
     child.wait().unwrap();

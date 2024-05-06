@@ -19,4 +19,13 @@ fn main() {
     // pass the disk image paths as env variables to the `main.rs`
     println!("cargo:rustc-env=UEFI_PATH={}", uefi_path.display());
     println!("cargo:rustc-env=BIOS_PATH={}", bios_path.display());
+
+    const NUM_SECTORS: usize = 1000;
+    let mut testdisk_data = [0u8; NUM_SECTORS * 512];
+    const MAGIC_CODE: u32 = 0x61732581;
+    for i in 0..4 {
+        testdisk_data[512 - 4 - i] = ((MAGIC_CODE >> (8 * i)) & 0xFF) as u8;
+    }
+
+    std::fs::write("./testdisk.img", testdisk_data).expect("Error writing disk data");
 }

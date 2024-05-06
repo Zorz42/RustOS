@@ -2,6 +2,7 @@
 **/.DS_Store
 .idea/
 kernel/target/
+testdisk.img
 
 # Added by cargo
 #

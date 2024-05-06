@@ -1,5 +1,5 @@
 use std::Vec;
-use crate::ports::{byte_in, byte_out, word_in};
+use crate::ports::{byte_in, byte_out, word_in, word_out};
 use crate::timer::get_ticks;
 
 const ATA_DATA: u16 = 0;
@@ -38,13 +38,14 @@ impl Disk {
         byte_out(self.base | ATA_SECTORNUMBER2, ((sector >> 8) & 0xFF) as u8);
         byte_out(self.base | ATA_SECTORNUMBER3, ((sector >> 16) & 0xFF) as u8);
         byte_out(self.base | ATA_DRIVEHEAD, ((sector >> 24) & 0x0F) as u8 | 0b11100000 | (self.h << 4));
+        byte_out(self.base | ATA_COMMAND, 0x20); // read with retry
 
         let mut data = [0; 512];
 
         loop {
             let status = get_disk_status(self.base);
             if let Some(status) = status {
-                if (status & 0b10001000) == 0b10000000 {
+                if (status & 0b10001000) == 0b00001000 {
                     break;
                 }
 
@@ -62,11 +63,41 @@ impl Disk {
             data[2 * i + 1] = ((word >> 8) & 0xFF) as u8;
         }
 
+        assert!(get_disk_status(self.base).is_some());
+
         data
     }
 
     pub fn write(&self, sector: i32, data: [u8; 512]) {
-        todo!();
+        debug_assert!((sector as usize) < self.size);
+        byte_out(self.base | ATA_SECTORCOUNT, 1);
+        byte_out(self.base | ATA_SECTORNUMBER1, ((sector >> 0) & 0xFF) as u8);
+        byte_out(self.base | ATA_SECTORNUMBER2, ((sector >> 8) & 0xFF) as u8);
+        byte_out(self.base | ATA_SECTORNUMBER3, ((sector >> 16) & 0xFF) as u8);
+        byte_out(self.base | ATA_DRIVEHEAD, ((sector >> 24) & 0x0F) as u8 | 0b11100000 | (self.h << 4));
+        byte_out(self.base | ATA_COMMAND, 0x30); // write
+
+        loop {
+            let status = get_disk_status(self.base);
+            if let Some(status) = status {
+                if (status & 0b10001000) == 0b00001000 {
+                    break;
+                }
+
+                if (status & 0b100001) != 0 {
+                    panic!("Error writing disk 0b{:b}", byte_in(self.base | ATA_ERROR));
+                }
+            } else {
+                panic!("Error on write");
+            }
+        }
+
+        for i in 0..SECTOR_SIZE / 2 {
+            let word = data[2 * i] as u16 + ((data[2 * i + 1] as u16) << 8);
+            word_out(self.base | ATA_DATA, word);
+        }
+
+        assert!(get_disk_status(self.base).is_some());
     }
 }
 
