@@ -1,6 +1,5 @@
 use std::Vec;
 use crate::ports::{byte_in, byte_out};
-use crate::println;
 use crate::timer::get_ticks;
 
 const ATA_DATA: u16 = 0;
@@ -12,6 +11,8 @@ const ATA_SECTORNUMBER3: u16 = 5;
 const ATA_DRIVEHEAD: u16 = 6;
 const ATA_STATUS: u16 = 7;
 const ATA_COMMAND: u16 = 8;
+
+const SECTOR_SIZE: usize = 512;
 
 #[derive(Debug)]
 pub struct Disk {
@@ -26,6 +27,16 @@ pub fn get_disk_status(base: u16) -> Option<u8> {
         None
     } else {
         Some(res)
+    }
+}
+
+impl Disk {
+    pub fn read(&self, sector: i32, sector_count: usize) -> Vec<u8> {
+        todo!();
+    }
+
+    pub fn write(&self, sector: i32, data: Vec<u8>) {
+        todo!();
     }
 }
 
