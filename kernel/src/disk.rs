@@ -1,8 +1,8 @@
-use std::Vec;
-use crate::interrupts::{ExceptionStackFrame, set_idt_entry};
+use crate::interrupts::{set_idt_entry, ExceptionStackFrame};
 use crate::ports::{byte_in, byte_out, word_in, word_out};
 use crate::println;
 use crate::timer::{get_ticks, TIMER_TICKS};
+use std::Vec;
 
 const ATA_DATA: u16 = 0;
 const ATA_ERROR: u16 = 1;
@@ -130,7 +130,6 @@ pub fn scan_for_disks() -> Vec<Disk> {
                             continue 'outer_for;
                         }
                     }
-
                     byte_out(base | ATA_STATUS, 0xF8);
 
                     let started_waiting = get_ticks();
@@ -149,17 +148,12 @@ pub fn scan_for_disks() -> Vec<Disk> {
                         }
                     };
                     if !timed_out {
-                        let sectors_size =
-                            ((byte_in(base | ATA_SECTORNUMBER1) as usize) << 0) +
-                                ((byte_in(base | ATA_SECTORNUMBER2) as usize) << 8) +
-                                ((byte_in(base | ATA_SECTORNUMBER3) as usize) << 16) +
-                                (((byte_in(base | ATA_DRIVEHEAD) as usize) & 0xF) << 24);
+                        let sectors_size = ((byte_in(base | ATA_SECTORNUMBER1) as usize) << 0)
+                            + ((byte_in(base | ATA_SECTORNUMBER2) as usize) << 8)
+                            + ((byte_in(base | ATA_SECTORNUMBER3) as usize) << 16)
+                            + (((byte_in(base | ATA_DRIVEHEAD) as usize) & 0xF) << 24);
 
-                        vec.push(Disk {
-                            base,
-                            h,
-                            size: sectors_size,
-                        });
+                        vec.push(Disk { base, h, size: sectors_size });
                     }
                 }
             }

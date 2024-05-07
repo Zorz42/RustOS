@@ -1,7 +1,7 @@
 use kernel_test::{kernel_test, kernel_test_mod};
 
 #[cfg(feature = "run_tests")]
-use crate::memory::{map_page, VirtAddr, PAGE_SIZE, TESTING_OFFSET, VIRTUAL_OFFSET, find_free_page, PhysAddr, free_page};
+use crate::memory::{find_free_page, free_page, map_page, PhysAddr, VirtAddr, PAGE_SIZE, TESTING_OFFSET, VIRTUAL_OFFSET};
 #[cfg(feature = "run_tests")]
 use std::{memset_int64, Rng};
 

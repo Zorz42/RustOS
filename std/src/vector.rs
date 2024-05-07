@@ -1,6 +1,6 @@
-use core::ops::{DerefMut, Index, IndexMut};
 use crate::memcpy;
 use crate::pointer::Ptr;
+use core::ops::{DerefMut, Index, IndexMut};
 
 pub struct Vec<T> {
     arr: Ptr<T>,
@@ -32,9 +32,7 @@ impl<T> Vec<T> {
     }
 
     pub fn new() -> Self {
-        unsafe {
-            Self::new_with_size_uninit(0)
-        }
+        unsafe { Self::new_with_size_uninit(0) }
     }
 
     pub unsafe fn get_unchecked(&self, i: usize) -> &T {
@@ -47,9 +45,7 @@ impl<T> Vec<T> {
 
     pub fn get(&self, i: usize) -> Option<&T> {
         if i < self.size {
-            unsafe {
-                Some(self.get_unchecked(i))
-            }
+            unsafe { Some(self.get_unchecked(i)) }
         } else {
             None
         }
@@ -57,9 +53,7 @@ impl<T> Vec<T> {
 
     pub fn get_mut(&mut self, i: usize) -> Option<&mut T> {
         if i < self.size {
-            unsafe {
-                Some(self.get_mut_unchecked(i))
-            }
+            unsafe { Some(self.get_mut_unchecked(i)) }
         } else {
             None
         }
@@ -183,16 +177,12 @@ impl<'a, T> Iterator for VecIterator<'a, T> {
     }
 }
 
-
 impl<T> IntoIterator for Vec<T> {
     type Item = T;
     type IntoIter = VecIntoIterator<T>;
 
     fn into_iter(self) -> Self::IntoIter {
-        VecIntoIterator {
-            vec: self,
-            index: 0,
-        }
+        VecIntoIterator { vec: self, index: 0 }
     }
 }
 
@@ -201,9 +191,6 @@ impl<'a, T> IntoIterator for &'a Vec<T> {
     type IntoIter = VecIterator<'a, T>;
 
     fn into_iter(self) -> Self::IntoIter {
-        VecIterator {
-            vec: self,
-            index: 0,
-        }
+        VecIterator { vec: self, index: 0 }
     }
 }

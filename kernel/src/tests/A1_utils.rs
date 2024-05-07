@@ -1,8 +1,8 @@
 use kernel_test::{kernel_test, kernel_test_mod};
 
+use std::swap;
 #[cfg(feature = "run_tests")]
 use std::{memcpy, memcpy_non_aligned, memset, memset_int64, Rng};
-use std::swap;
 
 #[cfg(feature = "run_tests")]
 use super::get_free_space_addr;

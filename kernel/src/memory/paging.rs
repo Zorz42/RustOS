@@ -1,7 +1,7 @@
-use std::memset_int64;
 use crate::memory::bitset::BitSetRaw;
 use crate::memory::{PAGE_SIZE, VIRTUAL_OFFSET};
 use crate::{print, println};
+use std::memset_int64;
 
 pub type PhysAddr = u64;
 pub type VirtAddr = *mut u8;

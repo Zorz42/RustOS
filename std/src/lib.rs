@@ -1,24 +1,24 @@
 #![no_std]
 #![feature(decl_macro)]
 
+mod boxed;
 mod heap_tree;
 mod malloc;
-mod utils;
-mod boxed;
-mod rand;
 mod pointer;
+mod rand;
+mod utils;
 mod vector;
 
 #[cfg(feature = "test_includes")]
 pub use heap_tree::HeapTree;
 #[cfg(feature = "test_includes")]
-pub use malloc::{malloc, free};
+pub use malloc::{free, malloc};
 
-pub use utils::{memcpy, memcpy_non_aligned, memset, memset_int64, volatile_store_byte, addr_of, swap};
-pub use rand::Rng;
-pub use boxed::Box;
-pub use vector::Vec;
 use crate::malloc::init_malloc;
+pub use boxed::Box;
+pub use rand::Rng;
+pub use utils::{addr_of, memcpy, memcpy_non_aligned, memset, memset_int64, swap, volatile_store_byte};
+pub use vector::Vec;
 
 static mut PAGE_ALLOCATOR: Option<&'static dyn Fn(*mut u8)> = None;
 static mut HEAP_TREE_ADDR: u64 = 0;

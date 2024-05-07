@@ -1,5 +1,6 @@
 #[cfg(feature = "run_tests")]
 use std::Vec;
+
 #[cfg(feature = "run_tests")]
 use crate::disk::Disk;
 #[cfg(feature = "run_tests")]
@@ -13,6 +14,7 @@ mod A4_heap_tree;
 mod A5_malloc;
 mod A6_box;
 mod A7_vector;
+mod A8_disk;
 
 const TESTDISK_MAGIC_CODE: u32 = 0x61732581;
 
@@ -24,12 +26,12 @@ pub(super) fn get_free_space_addr() -> *mut u8 {
     unsafe { ((FREE_SPACE.as_mut_ptr() as u64 + 7) / 8 * 8) as *mut u8 }
 }
 
+#[cfg(feature = "run_tests")]
 static mut TEST_DISK: Option<Disk> = None;
 
+#[cfg(feature = "run_tests")]
 pub fn get_test_disk() -> Disk {
-    unsafe {
-        TEST_DISK.as_ref().unwrap().clone()
-    }
+    unsafe { TEST_DISK.as_ref().unwrap().clone() }
 }
 
 #[cfg(feature = "run_tests")]
@@ -43,11 +45,7 @@ pub fn test_runner(disks: &Vec<Disk>) {
     for disk in disks {
         println!("Reading disk");
         let first_sector = disk.read(0);
-        let magic =
-            ((first_sector[511] as u32) << 0) +
-            ((first_sector[510] as u32) << 8) +
-            ((first_sector[509] as u32) << 16) +
-            ((first_sector[508] as u32) << 24);
+        let magic = ((first_sector[511] as u32) << 0) + ((first_sector[510] as u32) << 8) + ((first_sector[509] as u32) << 16) + ((first_sector[508] as u32) << 24);
 
         if magic == TESTDISK_MAGIC_CODE {
             test_disk = Some(disk.clone());

@@ -2,7 +2,7 @@ use core::arch::asm;
 use core::mem::size_of;
 
 pub macro addr_of($place:expr) {
-&raw const $place
+    &raw const $place
 }
 
 pub fn drop<T>(_val: T) {}

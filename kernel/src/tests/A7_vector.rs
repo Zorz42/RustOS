@@ -2,7 +2,6 @@ use kernel_test::{kernel_test, kernel_test_mod};
 use std::{Rng, Vec};
 kernel_test_mod!(crate::tests::A7_vector);
 
-
 #[kernel_test]
 fn test_vector_new() {
     for _ in 0..1000 {

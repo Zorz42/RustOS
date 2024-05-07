@@ -8,10 +8,10 @@
 use core::arch::asm;
 use core::panic::PanicInfo;
 
+use crate::disk::scan_for_disks;
 use bootloader_api::config::Mapping;
 use bootloader_api::info::PixelFormat;
 use bootloader_api::{entry_point, BootInfo, BootloaderConfig};
-use crate::disk::scan_for_disks;
 
 use crate::interrupts::init_idt;
 use crate::memory::{check_page_table_integrity, init_memory, map_framebuffer, FRAMEBUFFER_OFFSET, KERNEL_STACK_ADDR, KERNEL_STACK_SIZE, VIRTUAL_OFFSET};
@@ -19,6 +19,7 @@ use crate::print::{reset_print_color, set_print_color, TextColor};
 use crate::timer::init_timer;
 use crate::vga_driver::clear_screen;
 
+mod disk;
 mod font;
 mod interrupts;
 mod memory;
@@ -27,7 +28,6 @@ mod print;
 mod tests;
 mod timer;
 mod vga_driver;
-mod disk;
 
 const CONFIG: BootloaderConfig = {
     let mut config = BootloaderConfig::new_default();

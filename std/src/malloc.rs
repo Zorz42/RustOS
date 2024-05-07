@@ -1,5 +1,5 @@
-use crate::{allocate_page, HEAP_ADDR, HEAP_TREE_ADDR};
 use crate::heap_tree::HeapTree;
+use crate::{allocate_page, HEAP_ADDR, HEAP_TREE_ADDR};
 
 const PAGE_SIZE: u64 = 4096;
 
