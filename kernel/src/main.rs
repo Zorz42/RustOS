@@ -14,7 +14,7 @@ use bootloader_api::info::PixelFormat;
 
 use crate::disk::scan_for_disks;
 use crate::interrupts::init_idt;
-use crate::memory::{check_page_table_integrity, FRAMEBUFFER_OFFSET, init_memory, KERNEL_STACK_ADDR, KERNEL_STACK_SIZE, map_framebuffer, VIRTUAL_OFFSET};
+use crate::memory::{check_page_table_integrity, FRAMEBUFFER_OFFSET, init_memory, KERNEL_STACK_ADDR, KERNEL_STACK_SIZE, map_framebuffer, map_page_auto, PAGE_SIZE, VirtAddr, VIRTUAL_OFFSET};
 use crate::print::{reset_print_color, set_print_color, TextColor};
 use crate::timer::init_timer;
 use crate::vga_driver::clear_screen;
@@ -98,6 +98,23 @@ fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
 
     let program_offset = 1u64 << (12 + 3 * 9 + 2);
     println!("Offset: 0x{program_offset:x}");
+
+    println!("Mapping pages");
+    for i in 0..10 {
+        map_page_auto((program_offset + PAGE_SIZE * i) as VirtAddr, true, true);
+    }
+
+    println!("Loading program");
+    unsafe {
+        let mut addr = program_offset as *mut u8;
+        for byte in testing_program {
+            *addr = *byte;
+            addr = addr.add(1);
+        }
+
+        println!("Jumping into program");
+        asm!("jmp {}", in(reg) entry);
+    }
 
     println!("Going to infinite loop...");
     loop {
