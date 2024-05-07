@@ -1,8 +1,8 @@
-use crate::interrupts::{set_idt_entry, ExceptionStackFrame};
-use crate::ports::{byte_in, byte_out, word_in, word_out};
-use crate::println;
-use crate::timer::{get_ticks, TIMER_TICKS};
 use std::Vec;
+
+use crate::interrupts::{ExceptionStackFrame, set_idt_entry};
+use crate::ports::{byte_in, byte_out, word_in, word_out};
+use crate::timer::get_ticks;
 
 const ATA_DATA: u16 = 0;
 const ATA_ERROR: u16 = 1;
@@ -32,9 +32,36 @@ pub fn get_disk_status(base: u16) -> Option<u8> {
     }
 }
 
+pub fn wait_for_disk(base: u16) -> bool {
+    let started_waiting = get_ticks();
+    loop {
+        let status = get_disk_status(base);
+        if let Some(status) = status {
+            if (status & 0b10000000) == 0 {
+                break true;
+            }
+        } else {
+            break false;
+        }
+
+        if get_ticks() > started_waiting + 10 {
+            break false;
+        }
+    }
+}
+
 impl Disk {
     pub fn read(&self, sector: i32) -> [u8; SECTOR_SIZE] {
         debug_assert!((sector as usize) < self.size);
+
+        if (get_disk_status(self.base).unwrap() & 0b1000) != 0 {
+            panic!("Disk had data to transfer before read");
+        }
+
+        if !wait_for_disk(self.base) {
+            panic!("Timed out on read");
+        }
+
         byte_out(self.base | ATA_SECTORCOUNT, 1);
         byte_out(self.base | ATA_SECTORNUMBER1, ((sector >> 0) & 0xFF) as u8);
         byte_out(self.base | ATA_SECTORNUMBER2, ((sector >> 8) & 0xFF) as u8);
@@ -72,6 +99,15 @@ impl Disk {
 
     pub fn write(&self, sector: i32, data: &[u8; SECTOR_SIZE]) {
         debug_assert!((sector as usize) < self.size);
+
+        if (get_disk_status(self.base).unwrap() & 0b1000) != 0 {
+            panic!("Disk had data to transfer before write");
+        }
+
+        if !wait_for_disk(self.base) {
+            panic!("Timed out on write");
+        }
+
         byte_out(self.base | ATA_SECTORCOUNT, 1);
         byte_out(self.base | ATA_SECTORNUMBER1, ((sector >> 0) & 0xFF) as u8);
         byte_out(self.base | ATA_SECTORNUMBER2, ((sector >> 8) & 0xFF) as u8);
@@ -101,6 +137,10 @@ impl Disk {
 
         assert!(get_disk_status(self.base).is_some());
     }
+
+    pub const fn size(&self) -> usize {
+        self.size
+    }
 }
 
 extern "x86-interrupt" fn disk_handler(_stack_frame: &ExceptionStackFrame) {}
@@ -123,7 +163,7 @@ pub fn scan_for_disks() -> Vec<Disk> {
                     loop {
                         let status = get_disk_status(base);
                         if let Some(status) = status {
-                            if (status & 0x40) != 0 {
+                            if (status & 0b1000000) != 0 {
                                 break;
                             }
                         } else {
@@ -132,22 +172,7 @@ pub fn scan_for_disks() -> Vec<Disk> {
                     }
                     byte_out(base | ATA_STATUS, 0xF8);
 
-                    let started_waiting = get_ticks();
-                    let timed_out = loop {
-                        let status = get_disk_status(base);
-                        if let Some(status) = status {
-                            if (status & 0b10000000) == 0 {
-                                break false;
-                            }
-                        } else {
-                            break 'outer_for;
-                        }
-
-                        if get_ticks() > started_waiting + 10 {
-                            break true;
-                        }
-                    };
-                    if !timed_out {
+                    if wait_for_disk(base) {
                         let sectors_size = ((byte_in(base | ATA_SECTORNUMBER1) as usize) << 0)
                             + ((byte_in(base | ATA_SECTORNUMBER2) as usize) << 8)
                             + ((byte_in(base | ATA_SECTORNUMBER3) as usize) << 16)
