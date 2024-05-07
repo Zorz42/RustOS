@@ -43,7 +43,6 @@ pub fn test_runner(disks: &Vec<Disk>) {
 
     let mut test_disk = None;
     for disk in disks {
-        println!("Reading disk");
         let first_sector = disk.read(0);
         let magic = ((first_sector[511] as u32) << 0) + ((first_sector[510] as u32) << 8) + ((first_sector[509] as u32) << 16) + ((first_sector[508] as u32) << 24);
 

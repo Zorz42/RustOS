@@ -16,7 +16,7 @@ mod bitset;
 mod paging;
 
 pub const PAGE_SIZE: u64 = 4096;
-const FRAME_SIZE: u64 = 1u64 << 30;
+const FRAME_SIZE: u64 = 1u64 << 35;
 pub const KERNEL_STACK_SIZE: u64 = 100 * 1024; // 100 KiB
 pub const KERNEL_STACK_ADDR: u64 = FRAME_SIZE - KERNEL_STACK_SIZE;
 pub const HEAP_BASE_ADDR: u64 = 2 * FRAME_SIZE;
@@ -24,7 +24,8 @@ pub const HEAP_TREE_ADDR: u64 = 3 * FRAME_SIZE;
 #[allow(dead_code)]
 pub const TESTING_OFFSET: u64 = 4 * FRAME_SIZE;
 pub const FRAMEBUFFER_OFFSET: u64 = 5 * FRAME_SIZE;
-pub const VIRTUAL_OFFSET: u64 = 6 * FRAME_SIZE;
+pub const DISK_OFFSET: u64 = 6 * FRAME_SIZE;
+pub const VIRTUAL_OFFSET: u64 = 7 * FRAME_SIZE;
 
 fn page_allocator(page: VirtAddr) {
     map_page_auto(page, true, false);
