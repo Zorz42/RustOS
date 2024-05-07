@@ -28,4 +28,21 @@ fn main() {
     }
 
     std::fs::write("./testdisk.img", testdisk_data).expect("Error writing disk data");
+
+    std::fs::create_dir_all("compiled_projects").unwrap();
+
+    for file in std::fs::read_dir("projects").unwrap() {
+        let file = file.unwrap();
+        let name = file.file_name().to_str().unwrap().to_owned();
+        let file = file.path();
+        let mut command = std::process::Command::new("cargo");
+        command
+            .current_dir(file)
+            .arg("build")
+            .arg("--target x64_64-unknown-none")
+            .env("RUSTFLAGS", "-C link-arg=-Tprogram_link.ld")
+            .spawn()
+            .unwrap();
+        std::fs::copy(format!("./target/x86_64-unknown-none/debug/{name}"), format!("./compiled_projects/{name}")).unwrap();
+    }
 }

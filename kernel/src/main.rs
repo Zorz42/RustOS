@@ -85,6 +85,20 @@ fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
         test_runner(&disks);
     }
 
+    let testing_program = include_bytes!("../../compiled_projects/testing_project");
+    assert_eq!(testing_program[1] as char, 'E');
+    assert_eq!(testing_program[2] as char, 'L');
+    assert_eq!(testing_program[3] as char, 'F');
+
+    let mut entry = 0;
+    for i in 0..8 {
+        entry += (testing_program[24 + i] as u64) << (i * 8);
+    }
+    println!("Entry:  0x{entry:x}");
+
+    let program_offset = 1u64 << (12 + 3 * 9 + 2);
+    println!("Offset: 0x{program_offset:x}");
+
     println!("Going to infinite loop...");
     loop {
         unsafe {
