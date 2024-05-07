@@ -90,7 +90,7 @@ fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
     assert_eq!(testing_program[2] as char, 'L');
     assert_eq!(testing_program[3] as char, 'F');
 
-    let mut entry = 0;
+    let mut entry = 0x1000;
     for i in 0..8 {
         entry += (testing_program[24 + i] as u64) << (i * 8);
     }
@@ -112,8 +112,14 @@ fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
             addr = addr.add(1);
         }
 
-        println!("Jumping into program");
-        asm!("jmp {}", in(reg) entry);
+        println!("Jumping into program (to 0x{entry:x})");
+        asm!("call {}", in(reg) entry);
+
+        let rax: u64;
+        unsafe {
+            asm!("mov {}, rax", out(reg) rax);
+        }
+        println!("Returned {rax}");
     }
 
     println!("Going to infinite loop...");

@@ -1,4 +1,5 @@
 use core::arch::asm;
+
 use std::addr_of;
 
 use crate::ports::byte_out;
@@ -121,7 +122,6 @@ pub fn init_idt() {
     set_idt_entry_ec(11, interrupt_message_ec!("Segment not present"));
     set_idt_entry_ec(12, interrupt_message_ec!("Stack-segment fault"));
     set_idt_entry_ec(13, interrupt_message_ec!("General protection fault"));
-    set_idt_entry_ec(14, interrupt_message_ec!("Page fault"));
     set_idt_entry(15, interrupt_message!("Reserved"));
     set_idt_entry(16, interrupt_message!("x87 FPU floating-point error"));
     set_idt_entry_ec(17, interrupt_message_ec!("Alignment check"));
@@ -139,6 +139,8 @@ pub fn init_idt() {
     set_idt_entry(29, interrupt_message!("Reserved"));
     set_idt_entry(30, interrupt_message!("Security"));
     set_idt_entry(31, interrupt_message!("Reserved"));
+
+    set_idt_entry_ec(14, page_fault_handler);
 
     // remap irq table to 0x20-0x2F
     // master PIC
@@ -158,4 +160,13 @@ pub fn init_idt() {
         asm!("lidt [{}]", in(reg) addr_of!(IDT_POINTER));
         asm!("sti");
     }
+}
+
+extern "x86-interrupt" fn page_fault_handler(_stack_frame: &ExceptionStackFrame, error_code: u64) {
+    let cr2: u64;
+    unsafe {
+        asm!("mov {}, cr2", out(reg) cr2);
+    }
+    println!("Page fault exception with error code {error_code} 0x{error_code:x} 0b{error_code:b} at address 0x{cr2:x}");
+    loop {}
 }
