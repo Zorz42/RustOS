@@ -1,4 +1,5 @@
 use std::Vec;
+
 use crate::disk::Disk;
 
 struct MemoryDisk {
@@ -18,14 +19,12 @@ impl MemoryDisk {
     pub fn get_num_pages(&self) {
         self.disk.size() / 4;
     }
-
-    
 }
 
 static mut MOUNTED_DISK: Option<MemoryDisk> = None;
 
 pub fn unmount_disk() {
-    let mounted_disk = unsafe { MOUNTED_DISK.clone() };
+    let mounted_disk = unsafe { &MOUNTED_DISK };
 
     if let Some(mounted_disk) = mounted_disk {
         unsafe {
