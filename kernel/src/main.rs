@@ -14,7 +14,10 @@ use bootloader_api::info::PixelFormat;
 
 use crate::disk::scan_for_disks;
 use crate::interrupts::init_idt;
-use crate::memory::{check_page_table_integrity, FRAMEBUFFER_OFFSET, init_memory, KERNEL_STACK_ADDR, KERNEL_STACK_SIZE, map_framebuffer, map_page_auto, PAGE_SIZE, VirtAddr, VIRTUAL_OFFSET};
+use crate::memory::{
+    check_page_table_integrity, DISK_OFFSET, FRAMEBUFFER_OFFSET, init_memory, KERNEL_STACK_ADDR, KERNEL_STACK_SIZE, map_framebuffer, map_page_auto, PAGE_SIZE, VirtAddr, VIRTUAL_OFFSET,
+};
+use crate::memory_disk::mount_disk;
 use crate::print::{reset_print_color, set_print_color, TextColor};
 use crate::timer::init_timer;
 use crate::vga_driver::clear_screen;
@@ -86,6 +89,32 @@ fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
         test_runner(&disks);
     }
 
+    println!("Finding root disk");
+    // find the root disk
+    let mut root_disk = None;
+    for disk in &disks {
+        let first_sector = disk.read(0);
+        let root_magic = 0x63726591;
+
+        let magic = ((first_sector[511] as u32) << 0) + ((first_sector[510] as u32) << 8) + ((first_sector[509] as u32) << 16) + ((first_sector[508] as u32) << 24);
+
+        if root_magic == magic {
+            root_disk = Some(disk.clone());
+        }
+    }
+    let root_disk = root_disk.unwrap();
+
+    mount_disk(root_disk);
+    println!("Root disk is mounted!");
+
+    // try writing/reading from disk
+    for i in 0..10000 {
+        unsafe {
+            *((DISK_OFFSET + i) as *mut u8) = (i & 0xFF) as u8;
+        }
+    }
+
+    // run program
     let testing_program = include_bytes!("../../compiled_projects/testing_project");
     assert_eq!(testing_program[1] as char, 'E');
     assert_eq!(testing_program[2] as char, 'L');

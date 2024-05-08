@@ -2,6 +2,7 @@ use core::arch::asm;
 
 use std::addr_of;
 
+use crate::memory_disk::disk_page_fault_handler;
 use crate::ports::byte_out;
 use crate::println;
 
@@ -167,6 +168,11 @@ extern "x86-interrupt" fn page_fault_handler(_stack_frame: &ExceptionStackFrame,
     unsafe {
         asm!("mov {}, cr2", out(reg) cr2);
     }
+
+    if disk_page_fault_handler(cr2) {
+        return;
+    }
+
     println!("Page fault exception with error code {error_code} 0x{error_code:x} 0b{error_code:b} at address 0x{cr2:x}");
     loop {}
 }
