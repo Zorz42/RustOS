@@ -24,12 +24,12 @@ mod filesystem;
 mod font;
 mod interrupts;
 mod memory;
+mod memory_disk;
 mod ports;
 mod print;
 mod tests;
 mod timer;
 mod vga_driver;
-mod memory_disk;
 
 const CONFIG: BootloaderConfig = {
     let mut config = BootloaderConfig::new_default();
@@ -101,7 +101,7 @@ fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
     println!("Offset: 0x{program_offset:x}");
 
     println!("Mapping pages");
-    for i in 0..10 {
+    for i in 0..1000 {
         map_page_auto((program_offset + PAGE_SIZE * i) as VirtAddr, true, true);
     }
 
@@ -117,9 +117,7 @@ fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
         asm!("call {}", in(reg) entry);
 
         let rax: u64;
-        unsafe {
-            asm!("mov {}, rax", out(reg) rax);
-        }
+        asm!("mov {}, rax", out(reg) rax);
         println!("Returned {rax}");
     }
 
