@@ -20,7 +20,7 @@ use crate::timer::init_timer;
 use crate::vga_driver::clear_screen;
 
 mod disk;
-mod filsystem;
+mod filesystem;
 mod font;
 mod interrupts;
 mod memory;
@@ -29,6 +29,7 @@ mod print;
 mod tests;
 mod timer;
 mod vga_driver;
+mod memory_disk;
 
 const CONFIG: BootloaderConfig = {
     let mut config = BootloaderConfig::new_default();

@@ -1,7 +1,5 @@
 use std::fmt::Debug;
-use std::fs::File;
 use std::path::PathBuf;
-use std::process::{Command, Stdio};
 
 fn trav(dir: PathBuf) {
     for file in std::fs::read_dir(dir).unwrap() {
