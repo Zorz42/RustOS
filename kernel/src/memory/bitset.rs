@@ -15,12 +15,15 @@ impl BitSetRaw {
 
     pub fn new(size: usize, addr: *mut u64) -> BitSetRaw {
         debug_assert_eq!(addr as u64 % 8, 0);
-        let mut res = BitSetRaw {
-            data: addr,
-            size: (size + 63) / 64 * 64,
-            count0: 0,
-        };
+        let mut res = BitSetRaw { data: addr, size, count0: 0 };
         res.clear();
+        res
+    }
+
+    /// Takes from memory, does not clear
+    pub fn new_from(size: usize, addr: *mut u64) -> BitSetRaw {
+        debug_assert_eq!(addr as u64 % 8, 0);
+        let mut res = BitSetRaw { data: addr, size, count0: 0 };
         res
     }
 
@@ -56,8 +59,15 @@ impl BitSetRaw {
         self.size
     }
 
+    fn get_num_u64(&self) -> usize {
+        (self.size + 63) / 64
+    }
+
     pub fn get_zero_element(&self) -> Option<usize> {
-        for i in 0..self.size / 64 {
+        if self.count0 == 0 {
+            return None;
+        }
+        for i in 0..self.get_num_u64() {
             let mut val = unsafe { *self.data.add(i) };
             if val != 0xFFFF_FFFF_FFFF_FFFF {
                 for j in 0..64 {
@@ -73,7 +83,7 @@ impl BitSetRaw {
     }
 
     pub fn clear(&mut self) {
-        for i in 0..self.size / 64 {
+        for i in 0..self.get_num_u64() {
             unsafe {
                 *self.data.add(i) = 0;
             }
