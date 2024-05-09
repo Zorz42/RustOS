@@ -5,7 +5,7 @@ use crate::memory::{DISK_OFFSET, map_page_auto, PAGE_SIZE, VirtAddr};
 
 struct MemoryDisk {
     disk: Disk,
-    mapped_pages: Vec<u64>, // a bitset, 1 if page is mapped
+    mapped_pages: Vec<i32>,
 }
 
 impl MemoryDisk {
@@ -13,7 +13,7 @@ impl MemoryDisk {
         let size = disk.size();
         Self {
             disk,
-            mapped_pages: Vec::new_with_size((size / 4 + 63) / 64),
+            mapped_pages: Vec::new_with_size(size / 4),
         }
     }
 
@@ -57,12 +57,15 @@ pub fn disk_page_fault_handler(addr: u64) -> bool {
     }
 
     let mounted_disk = unsafe {
-        if let Some(mounted_disk) = &MOUNTED_DISK {
+        if let Some(mounted_disk) = &mut MOUNTED_DISK {
             mounted_disk
         } else {
             return false;
         }
     };
+
+    let idx = (addr - DISK_OFFSET) / PAGE_SIZE;
+    mounted_disk.mapped_pages.push(idx as i32);
 
     let addr = addr / PAGE_SIZE * PAGE_SIZE;
     map_page_auto(addr as VirtAddr, true, false);

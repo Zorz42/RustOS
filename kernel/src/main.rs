@@ -124,10 +124,7 @@ fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
     for i in 0..8 {
         entry += (testing_program[24 + i] as u64) << (i * 8);
     }
-    println!("Entry:  0x{entry:x}");
-
     let program_offset = 1u64 << (12 + 3 * 9 + 2);
-    println!("Offset: 0x{program_offset:x}");
 
     println!("Mapping pages");
     for i in 0..1000 {
