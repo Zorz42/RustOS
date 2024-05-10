@@ -1,12 +1,7 @@
 use kernel_test::{kernel_test, kernel_test_mod};
 
-#[cfg(feature = "run_tests")]
 use crate::memory::BitSetRaw;
-
-#[cfg(feature = "run_tests")]
 use std::Rng;
-
-#[cfg(feature = "run_tests")]
 use super::get_free_space_addr;
 
 kernel_test_mod!(crate::tests::A2_bitset);

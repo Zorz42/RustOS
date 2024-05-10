@@ -1,7 +1,5 @@
 use kernel_test::{kernel_test, kernel_test_mod};
 use std::Rng;
-
-#[cfg(feature = "run_tests")]
 use crate::tests::get_test_disk;
 
 kernel_test_mod!(crate::tests::A8_disk);
@@ -29,7 +27,7 @@ fn test_disk_read() {
     let test_disk = get_test_disk();
 
     for i in 0..1000 {
-        let sector = rng.get(1, test_disk.size() as u64) as i32;
+        let sector = rng.get(0, test_disk.size() as u64) as i32;
         data = test_disk.read(sector);
     }
 }

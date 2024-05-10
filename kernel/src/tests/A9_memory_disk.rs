@@ -6,6 +6,12 @@ use std::Vec;
 kernel_test_mod!(crate::tests::A9_memory_disk);
 
 #[kernel_test]
+fn test_disk_mount_erase() {
+    mount_disk(get_test_disk());
+    get_mounted_disk().erase();
+}
+
+#[kernel_test]
 fn test_disk_create_destroy() {
     let disk = get_mounted_disk();
 

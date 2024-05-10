@@ -18,7 +18,7 @@ use crate::interrupts::init_idt;
 use crate::memory::{
     check_page_table_integrity, DISK_OFFSET, FRAMEBUFFER_OFFSET, init_memory, KERNEL_STACK_ADDR, KERNEL_STACK_SIZE, map_framebuffer, map_page_auto, PAGE_SIZE, VirtAddr, VIRTUAL_OFFSET,
 };
-use crate::memory_disk::mount_disk;
+use crate::memory_disk::{mount_disk, unmount_disk};
 use crate::print::{reset_print_color, set_print_color, TextColor};
 use crate::timer::init_timer;
 use crate::vga_driver::clear_screen;
@@ -31,6 +31,7 @@ mod memory;
 mod memory_disk;
 mod ports;
 mod print;
+#[cfg(feature = "run_tests")]
 mod tests;
 mod timer;
 mod vga_driver;
@@ -138,6 +139,7 @@ fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
         println!("Returned {rax}");
     }
 
+    unmount_disk();
     println!("Going to infinite loop...");
     loop {
         unsafe {

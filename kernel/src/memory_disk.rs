@@ -9,6 +9,56 @@ pub struct MemoryDisk {
     bitset: BitSetRaw, // which page is taken
 }
 
+fn get_next_page(page: i32) -> i32 {
+    let addr = (DISK_OFFSET + page as u64 * PAGE_SIZE + PAGE_SIZE - 4) as *const i32;
+    unsafe {
+        *addr
+    }
+}
+
+fn set_next_page(page: i32, next: i32) {
+    let addr = (DISK_OFFSET + page as u64 * PAGE_SIZE + PAGE_SIZE - 4) as *mut i32;
+    unsafe {
+        *addr = next;
+    }
+}
+
+struct PageIterator {
+    addr: *mut u8,
+    is_first: bool,
+    size_left: i32,
+}
+
+impl PageIterator {
+    pub fn new(addr: *mut u8) -> Self {
+        Self {
+            addr,
+            is_first: true,
+            size_left: unsafe { *(addr as *mut i32) },
+        }
+    }
+
+    pub fn get_curr_size(&self) -> i32 {
+        (if self.is_first {PAGE_SIZE - 8} else {PAGE_SIZE - 4}) as i32
+    }
+
+    pub fn get_curr_addr(&self) -> *mut u8 {
+        if self.is_first {unsafe { self.addr.add(4) }} else {self.addr}
+    }
+
+    pub fn advance(&mut self) -> bool {
+        let curr_size = self.get_curr_size();
+        if curr_size >= self.size_left {
+            return false;
+        }
+
+        self.size_left -= curr_size;
+        self.addr = (DISK_OFFSET + unsafe { *(self.addr.add(PAGE_SIZE as usize - 4) as *mut i32) } as u64 * PAGE_SIZE) as *mut u8;
+        
+        true
+    }
+}
+
 impl MemoryDisk {
     pub fn new(disk: Disk) -> Self {
         let size = disk.size();
@@ -43,19 +93,38 @@ impl MemoryDisk {
         (self.bitset.get_size_bytes() + PAGE_SIZE as usize - 1) / PAGE_SIZE as usize
     }
 
-    pub fn create(&self) -> i32 {
+    pub fn erase(&mut self) {
+        self.bitset.clear();
+    }
+
+    fn alloc_page(&mut self) -> i32 {
+        let res = self.bitset.get_zero_element();
+        if let Some(res) = res {
+            self.bitset.set(res, true);
+            res as i32
+        } else {
+            panic!("Out of disk space");
+        }
+    }
+
+    pub fn create(&mut self) -> i32 {
+        let page = self.alloc_page();
+        let addr = (DISK_OFFSET + page as u64 * PAGE_SIZE) as *mut i32;
+        unsafe {
+            *addr = 0;
+        }
+        page
+    }
+
+    pub fn destroy(&mut self, id: i32) {
         todo!();
     }
 
-    pub fn destroy(&self, id: i32) {
+    pub fn save(&mut self, id: i32, data: &Vec<u8>) {
         todo!();
     }
 
-    pub fn save(&self, id: i32, data: &Vec<u8>) {
-        todo!();
-    }
-
-    pub fn load(&self, id: i32) -> Vec<u8> {
+    pub fn load(&mut self, id: i32) -> Vec<u8> {
         todo!();
     }
 }

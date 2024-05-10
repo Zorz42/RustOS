@@ -1,6 +1,4 @@
 use kernel_test::{kernel_test, kernel_test_mod};
-
-#[cfg(feature = "run_tests")]
 use std::{free, malloc, memset, Rng};
 
 kernel_test_mod!(crate::tests::A5_malloc);

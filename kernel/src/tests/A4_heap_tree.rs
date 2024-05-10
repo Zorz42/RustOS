@@ -1,16 +1,11 @@
 use kernel_test::{kernel_test, kernel_test_mod};
 
-#[cfg(feature = "run_tests")]
 use crate::memory::TESTING_OFFSET;
-#[cfg(feature = "run_tests")]
 use std::{HeapTree, Rng};
 
 kernel_test_mod!(crate::tests::A4_heap_tree);
 
-#[cfg(feature = "run_tests")]
 const HEAP_TREE_PTR: u64 = TESTING_OFFSET;
-
-#[cfg(feature = "run_tests")]
 fn get_heap_tree() -> HeapTree {
     unsafe { HeapTree::new(HEAP_TREE_PTR as *mut u8) }
 }

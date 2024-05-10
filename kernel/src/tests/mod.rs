@@ -1,9 +1,6 @@
-#[cfg(feature = "run_tests")]
 use std::Vec;
 
-#[cfg(feature = "run_tests")]
 use crate::disk::Disk;
-#[cfg(feature = "run_tests")]
 use crate::timer::get_ticks;
 
 mod A0_rand;
@@ -19,23 +16,18 @@ mod A9_memory_disk;
 
 const TESTDISK_MAGIC_CODE: u32 = 0x61732581;
 
-#[cfg(feature = "run_tests")]
 static mut FREE_SPACE: [u8; 1032] = [0; 1032];
 
-#[cfg(feature = "run_tests")]
 pub(super) fn get_free_space_addr() -> *mut u8 {
     unsafe { ((FREE_SPACE.as_mut_ptr() as u64 + 7) / 8 * 8) as *mut u8 }
 }
 
-#[cfg(feature = "run_tests")]
 static mut TEST_DISK: Option<Disk> = None;
 
-#[cfg(feature = "run_tests")]
 pub fn get_test_disk() -> Disk {
     unsafe { TEST_DISK.as_ref().unwrap().clone() }
 }
 
-#[cfg(feature = "run_tests")]
 pub fn test_runner(disks: &Vec<Disk>) {
     use kernel_test::all_tests;
 
