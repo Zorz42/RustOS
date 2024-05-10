@@ -3,7 +3,7 @@ use std::{memcpy_non_aligned, Vec};
 use crate::disk::Disk;
 use crate::memory::{BitSetRaw, DISK_OFFSET, map_page_auto, PAGE_SIZE, VirtAddr};
 
-struct MemoryDisk {
+pub struct MemoryDisk {
     disk: Disk,
     mapped_pages: Vec<i32>,
     bitset: BitSetRaw, // which page is taken
@@ -40,7 +40,7 @@ impl MemoryDisk {
 
     // bitset size in pages
     pub fn get_bitset_size(&self) -> usize {
-        (self.get_num_pages() + (PAGE_SIZE as usize * 8) - 1) / (PAGE_SIZE as usize * 8)
+        (self.bitset.get_size_bytes() + PAGE_SIZE as usize - 1) / PAGE_SIZE as usize
     }
 
     pub fn create(&self) -> i32 {
@@ -51,7 +51,7 @@ impl MemoryDisk {
         todo!();
     }
 
-    pub fn save(&self, id: i32, data: Vec<u8>) {
+    pub fn save(&self, id: i32, data: &Vec<u8>) {
         todo!();
     }
 

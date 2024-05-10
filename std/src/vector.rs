@@ -194,3 +194,19 @@ impl<'a, T> IntoIterator for &'a Vec<T> {
         VecIterator { vec: self, index: 0 }
     }
 }
+
+impl<T: PartialEq> PartialEq for Vec<T> {
+    fn eq(&self, other: &Self) -> bool {
+        if self.size != other.size {
+            return false;
+        }
+
+        for i in 0..self.size {
+            if unsafe { self.get_unchecked(i) } != unsafe { other.get_unchecked(i) } {
+                return false;
+            }
+        }
+
+        true
+    }
+}
