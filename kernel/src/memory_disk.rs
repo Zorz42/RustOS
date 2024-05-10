@@ -23,6 +23,10 @@ impl MemoryDisk {
         self.disk.size() / 4
     }
 
+    pub fn get_size(&self) -> usize {
+        self.get_num_pages() * PAGE_SIZE as usize
+    }
+
     fn unmap_page(&self, page: i32) {
         let first_sector = page as u64 * 8;
         for sector in first_sector..first_sector + 8 {
@@ -32,6 +36,27 @@ impl MemoryDisk {
             }
             self.disk.write(sector as i32, &data);
         }
+    }
+
+    // bitset size in pages
+    pub fn get_bitset_size(&self) -> usize {
+        (self.get_num_pages() + (PAGE_SIZE as usize * 8) - 1) / (PAGE_SIZE as usize * 8)
+    }
+
+    pub fn create(&self) -> i32 {
+        todo!();
+    }
+
+    pub fn destroy(&self, id: i32) {
+        todo!();
+    }
+
+    pub fn save(&self, id: i32, data: Vec<u8>) {
+        todo!();
+    }
+
+    pub fn load(&self, id: i32) -> Vec<u8> {
+        todo!();
     }
 }
 
@@ -60,18 +85,18 @@ pub fn mount_disk(disk: Disk) {
     }
 }
 
-pub fn get_disk_size_bytes() -> usize {
+pub fn get_mounted_disk() -> &'static mut MemoryDisk {
     unsafe {
-        if let Some(mounted_disk) = &MOUNTED_DISK {
-            mounted_disk.get_num_pages() * PAGE_SIZE as usize
+        if let Some(mounted_disk) = &mut MOUNTED_DISK {
+            mounted_disk
         } else {
-            0
+            panic!("No disk is mounted.");
         }
     }
 }
 
 pub fn disk_page_fault_handler(addr: u64) -> bool {
-    if addr < DISK_OFFSET || addr >= DISK_OFFSET + get_disk_size_bytes() as u64 {
+    if addr < DISK_OFFSET || addr >= DISK_OFFSET + get_mounted_disk().get_size() as u64 {
         return false;
     }
 

@@ -11,6 +11,7 @@ use core::panic::PanicInfo;
 use bootloader_api::{BootInfo, BootloaderConfig, entry_point};
 use bootloader_api::config::Mapping;
 use bootloader_api::info::PixelFormat;
+use std::memcpy_non_aligned;
 
 use crate::disk::scan_for_disks;
 use crate::interrupts::init_idt;
@@ -83,12 +84,6 @@ fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
     println!("Initializing disk");
     let disks = scan_for_disks();
 
-    #[cfg(feature = "run_tests")]
-    {
-        use crate::tests::test_runner;
-        test_runner(&disks);
-    }
-
     println!("Finding root disk");
     // find the root disk
     let mut root_disk = None;
@@ -107,11 +102,10 @@ fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
     mount_disk(root_disk);
     println!("Root disk is mounted!");
 
-    // try writing/reading from disk
-    for i in 0..10000 {
-        unsafe {
-            *((DISK_OFFSET + i) as *mut u8) = (i & 0xFF) as u8;
-        }
+    #[cfg(feature = "run_tests")]
+    {
+        use crate::tests::test_runner;
+        test_runner(&disks);
     }
 
     // run program
@@ -127,17 +121,14 @@ fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
     let program_offset = 1u64 << (12 + 3 * 9 + 2);
 
     println!("Mapping pages");
-    for i in 0..1000 {
+    let num_pages = (testing_program.len() as u64 + PAGE_SIZE - 1) / PAGE_SIZE;
+    for i in 0..num_pages {
         map_page_auto((program_offset + PAGE_SIZE * i) as VirtAddr, true, true);
     }
 
     println!("Loading program");
     unsafe {
-        let mut addr = program_offset as *mut u8;
-        for byte in testing_program {
-            *addr = *byte;
-            addr = addr.add(1);
-        }
+        memcpy_non_aligned(testing_program.as_ptr(), program_offset as *mut u8, testing_program.len());
 
         println!("Jumping into program (to 0x{entry:x})");
         asm!("call {}", in(reg) entry);
