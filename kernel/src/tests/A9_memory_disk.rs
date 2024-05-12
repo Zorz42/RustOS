@@ -55,7 +55,7 @@ fn test_disk_save_load() {
                 vec.push(rng.get(0, 256) as u8);
             }
         }
-
+        
         arr[i] = disk.create();
         if let Some(vec) = &vecs[i] {
             disk.save(arr[i], &vec);
@@ -64,7 +64,8 @@ fn test_disk_save_load() {
 
     for i in 0..1000 {
         if let Some(vec) = &vecs[i] {
-            assert!(*vec == disk.load(arr[i]));
+            let vec2 = disk.load(arr[i]);
+            assert!(*vec == vec2);
         }
     }
 

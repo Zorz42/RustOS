@@ -168,14 +168,17 @@ impl MemoryDisk {
             unsafe {
                 memcpy_non_aligned(data.get_unchecked(i), iter.get_curr_addr(), curr_size);
             }
+
+            let page = (iter.get_curr_addr() as u64 - DISK_OFFSET) / PAGE_SIZE;
+            self.bitset.set(page as usize, true);
             
             i += curr_size;
             if i == data.size() {
                 break;
             }
             
-            let page = (iter.get_curr_addr() as u64 - DISK_OFFSET) / PAGE_SIZE;
             set_next_page(page as i32, self.alloc_page());
+            
             
             assert!(iter.advance());
         }
