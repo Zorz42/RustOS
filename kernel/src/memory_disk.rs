@@ -23,6 +23,10 @@ fn set_next_page(page: i32, next: i32) {
     }
 }
 
+fn id_to_addr(page: i32) -> *mut u8 {
+    (DISK_OFFSET + page as u64 * PAGE_SIZE) as *mut u8
+}
+
 struct PageIterator {
     addr: *mut u8,
     is_first: bool,
@@ -57,6 +61,10 @@ impl PageIterator {
         
         true
     }
+    
+    pub fn get_size_left(&self) -> i32 {
+        self.size_left
+    }
 }
 
 impl MemoryDisk {
@@ -76,7 +84,22 @@ impl MemoryDisk {
     pub fn get_size(&self) -> usize {
         self.get_num_pages() * PAGE_SIZE as usize
     }
+    
+    fn map_page(&mut self, addr: u64) {
+        let idx = (addr - DISK_OFFSET) / PAGE_SIZE;
+        self.mapped_pages.push(idx as i32);
 
+        let addr = addr / PAGE_SIZE * PAGE_SIZE;
+        map_page_auto(addr as VirtAddr, true, false);
+        let first_sector = (addr - DISK_OFFSET) / PAGE_SIZE * 8;
+        for sector in first_sector..first_sector + 8 {
+            let mut data = self.disk.read(sector as i32);
+            unsafe {
+                memcpy_non_aligned(data.as_mut_ptr(), (DISK_OFFSET + sector * 512) as *mut u8, 512);
+            }
+        }
+    }
+    
     fn unmap_page(&self, page: i32) {
         let first_sector = page as u64 * 8;
         for sector in first_sector..first_sector + 8 {
@@ -95,6 +118,9 @@ impl MemoryDisk {
 
     pub fn erase(&mut self) {
         self.bitset.clear();
+        for i in 0..=self.get_bitset_size() {
+            self.bitset.set(i, true);
+        }
     }
 
     fn alloc_page(&mut self) -> i32 {
@@ -109,7 +135,7 @@ impl MemoryDisk {
 
     pub fn create(&mut self) -> i32 {
         let page = self.alloc_page();
-        let addr = (DISK_OFFSET + page as u64 * PAGE_SIZE) as *mut i32;
+        let addr = id_to_addr(page) as *mut i32;
         unsafe {
             *addr = 0;
         }
@@ -117,15 +143,63 @@ impl MemoryDisk {
     }
 
     pub fn destroy(&mut self, id: i32) {
-        todo!();
+        let mut iter = PageIterator::new(id_to_addr(id));
+        loop {
+            let curr_id = (iter.get_curr_addr() as u64 - DISK_OFFSET) / PAGE_SIZE;
+            debug_assert_eq!(self.bitset.get(curr_id as usize), true);
+            self.bitset.set(curr_id as usize, false);
+            
+            if !iter.advance() {
+                break;
+            }
+        }
     }
 
     pub fn save(&mut self, id: i32, data: &Vec<u8>) {
-        todo!();
+        self.destroy(id);
+        let addr = id_to_addr(id);
+        unsafe {
+            *(addr as *mut i32) = data.size() as i32;
+        }
+        let mut iter = PageIterator::new(addr);
+        let mut i = 0;
+        loop {
+            let curr_size = usize::min(data.size() - i, iter.get_curr_size() as usize);
+            unsafe {
+                memcpy_non_aligned(data.get_unchecked(i), iter.get_curr_addr(), curr_size);
+            }
+            
+            i += curr_size;
+            if i == data.size() {
+                break;
+            }
+            
+            let page = (iter.get_curr_addr() as u64 - DISK_OFFSET) / PAGE_SIZE;
+            set_next_page(page as i32, self.alloc_page());
+            
+            assert!(iter.advance());
+        }
     }
 
     pub fn load(&mut self, id: i32) -> Vec<u8> {
-        todo!();
+        let mut res = Vec::new();
+        
+        let mut iter = PageIterator::new(id_to_addr(id));
+        
+        loop {
+            let size = i32::min(iter.get_size_left(), iter.get_curr_size());
+            for i in 0..size {
+                unsafe {
+                    res.push(*iter.get_curr_addr().add(i as usize));
+                }
+            }
+            
+            if !iter.advance() {
+                break;
+            }
+        }
+        
+        res
     }
 }
 
@@ -177,18 +251,7 @@ pub fn disk_page_fault_handler(addr: u64) -> bool {
         }
     };
 
-    let idx = (addr - DISK_OFFSET) / PAGE_SIZE;
-    mounted_disk.mapped_pages.push(idx as i32);
-
-    let addr = addr / PAGE_SIZE * PAGE_SIZE;
-    map_page_auto(addr as VirtAddr, true, false);
-    let first_sector = (addr - DISK_OFFSET) / PAGE_SIZE * 8;
-    for sector in first_sector..first_sector + 8 {
-        let mut data = mounted_disk.disk.read(sector as i32);
-        unsafe {
-            memcpy_non_aligned(data.as_mut_ptr(), (DISK_OFFSET + sector * 512) as *mut u8, 512);
-        }
-    }
+    mounted_disk.map_page(addr);
 
     true
 }
