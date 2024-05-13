@@ -1,5 +1,5 @@
 use kernel_test::{kernel_test, kernel_test_mod};
-use std::{Rng, Vec};
+use std::{Rng, Serial, Vec};
 kernel_test_mod!(crate::tests::A7_vector);
 
 #[kernel_test]
@@ -154,4 +154,40 @@ fn test_vector_partial_eq() {
         assert!(vec1 != vec2);
         assert!(vec2 != vec1);
     }
+}
+
+fn test_serialize<T: Serial + TryFrom<u64> + PartialEq>() where <T as TryFrom<u64>>::Error: core::fmt::Debug {
+    let mut rng = Rng::new(57438295724389);
+    for _ in 0..100 {
+        let size = rng.get(0, 100) as usize;
+        let mut vec1 = Vec::new();
+        let mut bits = 0;
+        for _ in 0..core::mem::size_of::<T>() {
+            bits = 2 * bits + 1;
+        }
+        for _ in 0..size {
+            vec1.push(T::try_from(rng.get(0, 1u64 << 63) & bits).unwrap());
+        }
+        let mut data = Vec::new();
+        vec1.serialize(&mut data);
+        let mut vec2 = Vec::new();
+        let mut idx = 0;
+        vec2.deserialize(&mut data, &mut idx);
+        
+        assert!(vec1 == vec2);
+    }
+}
+
+#[kernel_test]
+fn test_vector_serialize() {
+    test_serialize::<i8>();
+    test_serialize::<u8>();
+    test_serialize::<i16>();
+    test_serialize::<u16>();
+    test_serialize::<i32>();
+    test_serialize::<u32>();
+    test_serialize::<i64>();
+    test_serialize::<u64>();
+    test_serialize::<isize>();
+    test_serialize::<usize>();
 }

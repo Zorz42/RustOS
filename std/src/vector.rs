@@ -1,6 +1,7 @@
 use crate::memcpy;
 use crate::pointer::Ptr;
 use core::ops::{DerefMut, Index, IndexMut};
+use crate::serial::Serial;
 
 pub struct Vec<T> {
     arr: Ptr<T>,
@@ -219,5 +220,21 @@ impl<T: Clone> Clone for Vec<T> {
             res.push(i.clone());
         }
         res
+    }
+}
+
+impl<T: Serial> Serial for Vec<T> {
+    fn serialize(&mut self, vec: &mut Vec<u8>) {
+        self.size.serialize(vec);
+        for i in 0..self.size {
+            self[i].serialize(vec);
+        }
+    }
+
+    fn deserialize(&mut self, vec: &Vec<u8>, idx: &mut usize) {
+        self.size.deserialize(vec, idx);
+        for i in 0..self.size {
+            self[i].deserialize(vec, idx);
+        }
     }
 }
