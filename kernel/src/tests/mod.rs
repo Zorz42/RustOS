@@ -13,6 +13,7 @@ mod A6_box;
 mod A7_vector;
 mod A8_disk;
 mod A9_memory_disk;
+mod B0_filesystem;
 
 const TESTDISK_MAGIC_CODE: u32 = 0x61732581;
 

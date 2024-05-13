@@ -112,7 +112,7 @@ impl MemoryDisk {
     }
 
     // bitset size in pages
-    pub fn get_bitset_size(&self) -> usize {
+    fn get_bitset_size(&self) -> usize {
         (self.bitset.get_size_bytes() + PAGE_SIZE as usize - 1) / PAGE_SIZE as usize
     }
 
