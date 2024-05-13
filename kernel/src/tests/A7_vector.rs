@@ -134,3 +134,24 @@ fn test_vector_calls_drop_on_pop() {
         }
     }
 }
+
+#[kernel_test]
+fn test_vector_partial_eq() {
+    let mut rng = Rng::new(46378596243);
+
+    for _ in 0..1000 {
+        let mut vec1 = Vec::new();
+        let len = rng.get(0, 1000) as usize;
+        for _ in 0..len {
+            vec1.push(rng.get(0, 1u64 << 63));
+        }
+        let mut vec2 = vec1.clone();
+        assert!(vec1 == vec2);
+        assert!(vec2 == vec1);
+        let idx = rng.get(0, len as u64) as usize;
+        // this is almost certainly not going to change the value
+        vec1[idx] = rng.get(0, 1u64 << 63);
+        assert!(vec1 != vec2);
+        assert!(vec2 != vec1);
+    }
+}

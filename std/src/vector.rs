@@ -210,3 +210,14 @@ impl<T: PartialEq> PartialEq for Vec<T> {
         true
     }
 }
+
+impl<T: Clone> Clone for Vec<T> {
+    fn clone(&self) -> Self {
+        let mut res = Vec::new();
+        res.reserve(self.size);
+        for i in self {
+            res.push(i.clone());
+        }
+        res
+    }
+}

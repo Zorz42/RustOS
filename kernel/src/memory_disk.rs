@@ -77,6 +77,10 @@ impl MemoryDisk {
         }
     }
 
+    pub fn get_master_page(&self) -> i32 {
+        unsafe { *(DISK_OFFSET as *const i32) }
+    }
+
     pub fn get_num_pages(&self) -> usize {
         self.disk.size() / 4
     }
@@ -99,7 +103,7 @@ impl MemoryDisk {
             }
         }
     }
-    
+
     fn unmap_page(&self, page: i32) {
         let first_sector = page as u64 * 8;
         for sector in first_sector..first_sector + 8 {
@@ -120,6 +124,9 @@ impl MemoryDisk {
         self.bitset.clear();
         for i in 0..=self.get_bitset_size() {
             self.bitset.set(i, true);
+        }
+        unsafe {
+            *(DISK_OFFSET as *mut i32) = self.create();
         }
     }
 
