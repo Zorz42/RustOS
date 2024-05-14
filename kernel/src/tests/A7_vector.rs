@@ -175,6 +175,25 @@ fn test_serialize<T: Serial + TryFrom<u64> + PartialEq>() where <T as TryFrom<u6
     }
 }
 
+#[derive(std::derive::Serial, PartialEq)]
+struct Sample {
+    a: i32,
+    b: u8,
+    c: i32,
+}
+
+impl TryFrom<u64> for Sample {
+    type Error = ();
+
+    fn try_from(value: u64) -> Result<Self, Self::Error> {
+        Ok(Self{
+            a: ((value >> 0) & 0xFFFFFFFF) as i32,
+            b: ((value >> 5) & 0xFF) as u8,
+            c: ((value >> 32) & 0xFFFFFFFF) as i32,
+        })
+    }
+}
+
 #[kernel_test]
 fn test_vector_serialize() {
     test_serialize::<i8>();
@@ -187,4 +206,5 @@ fn test_vector_serialize() {
     test_serialize::<u64>();
     test_serialize::<isize>();
     test_serialize::<usize>();
+    test_serialize::<Sample>();
 }
