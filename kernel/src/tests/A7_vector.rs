@@ -1,5 +1,5 @@
 use kernel_test::{kernel_test, kernel_test_mod};
-use std::{Rng, Serial, Vec};
+use std::{deserialize, Rng, Serial, serialize, Vec};
 kernel_test_mod!(crate::tests::A7_vector);
 
 #[kernel_test]
@@ -168,11 +168,8 @@ fn test_serialize<T: Serial + TryFrom<u64> + PartialEq>() where <T as TryFrom<u6
         for _ in 0..size {
             vec1.push(T::try_from(rng.get(0, 1u64 << 63) & bits).unwrap());
         }
-        let mut data = Vec::new();
-        vec1.serialize(&mut data);
-        let mut vec2 = Vec::new();
-        let mut idx = 0;
-        vec2.deserialize(&mut data, &mut idx);
+        let data = serialize(&vec1);
+        let vec2 = deserialize(&data);
         
         assert!(vec1 == vec2);
     }
