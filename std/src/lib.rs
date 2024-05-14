@@ -23,6 +23,7 @@ pub use utils::{addr_of, memcpy, memcpy_non_aligned, memset, memset_int64, swap,
 pub use vector::Vec;
 pub use serial::{Serial, serialize, deserialize};
 pub use derive;
+pub use string::String;
 
 static mut PAGE_ALLOCATOR: Option<&'static dyn Fn(*mut u8)> = None;
 static mut HEAP_TREE_ADDR: u64 = 0;

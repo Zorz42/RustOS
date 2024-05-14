@@ -1,34 +1,45 @@
 // always operates with the currently mounted disk
 
-use std::Vec;
+use std::{Serial, String, Vec};
+use crate::memory_disk::{DiskBox, get_mounted_disk};
 
 #[derive(std::derive::Serial)]
 struct File {
-    
+    name: String,
+    page: i32,
 }
 
 #[derive(std::derive::Serial)]
 struct Directory {
-    
+    name: String,
+    files: Vec::<File>,
+    subdirs: Vec::<DiskBox<Directory>>,
+}
+
+impl Directory {
+    pub fn new(name: String) -> Self {
+        Self {
+            name,
+            files: Vec::new(),
+            subdirs: Vec::new(),
+        }
+    }
 }
 
 pub struct FileSystem {
-
+    root: DiskBox<Directory>,
 }
 
 impl FileSystem {
-    pub const fn new() -> Self {
+    pub fn new() -> Self {
         Self {
-
+            root: DiskBox::new_at_page(get_mounted_disk().get_master_page()),
         }
     }
 
-    pub fn init(&self) {
-        todo!();
-    }
-
-    pub fn erase(&self) {
-        todo!();
+    pub fn erase(&mut self) {
+        get_mounted_disk().erase();
+        *self.root.get() = Directory::new(String::new());
     }
 
     pub fn read_file(&self, path: &str) -> Vec<u8> {
@@ -60,10 +71,16 @@ impl FileSystem {
     }
 }
 
-static mut FILESYSTEM: FileSystem = FileSystem::new();
+static mut FILESYSTEM: Option<FileSystem> = None;
+
+pub fn init_fs() {
+    unsafe {
+        FILESYSTEM = Some(FileSystem::new());
+    }
+}
 
 pub fn get_fs() -> &'static mut FileSystem {
     unsafe {
-        &mut FILESYSTEM
+        FILESYSTEM.as_mut().unwrap()
     }
 }

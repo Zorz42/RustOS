@@ -1,4 +1,4 @@
-use std::{memcpy_non_aligned, Vec};
+use std::{deserialize, memcpy_non_aligned, Serial, serialize, Vec};
 
 use crate::disk::Disk;
 use crate::memory::{BitSetRaw, DISK_OFFSET, map_page_auto, PAGE_SIZE, VirtAddr};
@@ -153,7 +153,7 @@ impl MemoryDisk {
         let mut iter = PageIterator::new(id_to_addr(id));
         loop {
             let curr_id = (iter.get_curr_addr() as u64 - DISK_OFFSET) / PAGE_SIZE;
-            debug_assert_eq!(self.bitset.get(curr_id as usize), true);
+            debug_assert!(self.bitset.get(curr_id as usize));
             self.bitset.set(curr_id as usize, false);
             
             if !iter.advance() {
@@ -265,3 +265,58 @@ pub fn disk_page_fault_handler(addr: u64) -> bool {
 
     true
 }
+
+pub struct DiskBox<T: Serial> {
+    page: i32,
+    obj: Option<T>,
+}
+
+impl<T: Serial> Serial for DiskBox<T> {
+    fn serialize(&self, vec: &mut Vec<u8>) {
+        self.page.serialize(vec);
+    }
+
+    fn deserialize(vec: &Vec<u8>, idx: &mut usize) -> Self {
+        Self::new_at_page(i32::deserialize(vec, idx))
+    }
+}
+
+impl<T: Serial> DiskBox<T> {
+    pub fn new(obj: T) -> Self {
+        Self {
+            page: get_mounted_disk().create(),
+            obj: Some(obj),
+        }
+    }
+    
+    pub fn new_at_page(page: i32) -> Self {
+        Self {
+            page,
+            obj: None,
+        }
+    }
+    
+    pub fn get(&mut self) -> &mut T {
+        if self.obj.is_some() {
+            self.obj.as_mut().unwrap()
+        } else {
+            let obj = deserialize(&get_mounted_disk().load(self.page));
+            self.obj = Some(obj);
+            self.obj.as_mut().unwrap()
+        }
+    }
+    
+    pub fn delete(mut self) {
+        get_mounted_disk().destroy(self.page);
+        self.obj = None;
+    }
+}
+
+impl<T: Serial> Drop for DiskBox<T> {
+    fn drop(&mut self) {
+        if let Some(obj) = &self.obj {
+            get_mounted_disk().save(self.page, &serialize(obj));
+        }
+    }
+}
+ 

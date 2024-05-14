@@ -14,6 +14,7 @@ use bootloader_api::info::PixelFormat;
 use std::memcpy_non_aligned;
 
 use crate::disk::scan_for_disks;
+use crate::filesystem::init_fs;
 use crate::interrupts::init_idt;
 use crate::memory::{
     check_page_table_integrity, DISK_OFFSET, FRAMEBUFFER_OFFSET, init_memory, KERNEL_STACK_ADDR, KERNEL_STACK_SIZE, map_framebuffer, map_page_auto, PAGE_SIZE, VirtAddr, VIRTUAL_OFFSET,
@@ -101,6 +102,7 @@ fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
     let root_disk = root_disk.unwrap();
 
     mount_disk(root_disk);
+    init_fs();
     println!("Root disk is mounted!");
 
     #[cfg(feature = "run_tests")]
