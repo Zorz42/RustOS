@@ -164,6 +164,14 @@ impl<T> Iterator for VecIntoIterator<T> {
     }
 }
 
+impl<T> Drop for VecIntoIterator<T> {
+    fn drop(&mut self) {
+        // make sure to drop all remaining
+        while self.next().is_some() {}
+        self.vec.size = 0;
+    }
+}
+
 impl<'a, T> Iterator for VecIterator<'a, T> {
     type Item = &'a T;
 
