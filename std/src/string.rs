@@ -1,0 +1,85 @@
+use core::ops::{Index, IndexMut};
+use crate::Vec;
+use crate as std;
+use crate::vector::{VecIntoIterator, VecIterator};
+
+#[derive(derive::Serial, Default, PartialEq, Clone)]
+pub struct String {
+    vec: Vec::<char>,
+}
+
+impl String {
+    pub fn new() -> Self {
+        Self {
+            vec: Vec::new(),
+        }
+    }
+
+    pub unsafe fn get_unchecked(&self, i: usize) -> char {
+       *self.vec.get_unchecked(i)
+    }
+
+    pub unsafe fn get_mut_unchecked(&mut self, i: usize) -> &mut char {
+        self.vec.get_mut_unchecked(i)
+    }
+
+    pub fn get(&self, i: usize) -> Option<char> {
+        self.vec.get(i).map(|x| *x)
+    }
+
+    pub fn get_mut(&mut self, i: usize) -> Option<&mut char> {
+        self.vec.get_mut(i)
+    }
+
+    pub fn reserve(&mut self, size: usize) {
+        self.vec.reserve(size);
+    }
+
+    pub fn push(&mut self, element: char) {
+        self.vec.push(element)
+    }
+
+    pub fn size(&self) -> usize {
+        self.vec.size()
+    }
+
+    pub fn pop(&mut self) {
+        self.vec.pop();
+    }
+
+    pub fn capacity(&self) -> usize {
+        self.vec.capacity()
+    }
+}
+
+impl Index<usize> for String {
+    type Output = char;
+
+    fn index(&self, index: usize) -> &Self::Output {
+        &self.vec[index]
+    }
+}
+
+impl IndexMut<usize> for String {
+    fn index_mut(&mut self, index: usize) -> &mut Self::Output {
+        &mut self.vec[index]
+    }
+}
+
+impl IntoIterator for String {
+    type Item = char;
+    type IntoIter = VecIntoIterator<char>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.vec.into_iter()
+    }
+}
+
+impl<'a> IntoIterator for &'a String {
+    type Item = &'a char;
+    type IntoIter = VecIterator<'a, char>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        (&self.vec).into_iter()
+    }
+}

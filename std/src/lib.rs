@@ -9,6 +9,7 @@ mod rand;
 mod utils;
 mod vector;
 mod serial;
+mod string;
 
 #[cfg(feature = "test_includes")]
 pub use heap_tree::HeapTree;

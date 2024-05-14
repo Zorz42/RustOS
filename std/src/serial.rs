@@ -53,3 +53,4 @@ implement_serial_direct!(u64);
 implement_serial_direct!(i64);
 implement_serial_direct!(isize);
 implement_serial_direct!(usize);
+implement_serial_direct!(char);

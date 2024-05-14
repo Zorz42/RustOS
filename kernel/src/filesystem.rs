@@ -2,6 +2,16 @@
 
 use std::Vec;
 
+#[derive(std::derive::Serial)]
+struct File {
+    
+}
+
+#[derive(std::derive::Serial)]
+struct Directory {
+    
+}
+
 pub struct FileSystem {
 
 }
