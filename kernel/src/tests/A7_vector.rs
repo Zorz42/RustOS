@@ -208,3 +208,28 @@ fn test_vector_serialize() {
     test_serialize::<usize>();
     test_serialize::<Sample>();
 }
+
+#[kernel_test]
+fn test_vector_drop_on_iter() {
+    unsafe {
+        assert_eq!(DROP_COUNTER, 0);
+        DROP_COUNTER = 0;
+    }
+    {
+        let mut vec = Vec::new();
+        for _ in 0..4 {
+            vec.push(DroppableStruct {});
+        }
+
+        let mut iter = vec.into_iter();
+        assert!(iter.next().is_some());
+        assert!(iter.next().is_some());
+        unsafe {
+            assert_eq!(DROP_COUNTER, 2);
+        }
+    }
+    unsafe {
+        assert_eq!(DROP_COUNTER, 4);
+        DROP_COUNTER = 0;
+    }
+}

@@ -305,6 +305,11 @@ impl<T: Serial> DiskBox<T> {
             self.obj.as_mut().unwrap()
         }
     }
+
+    // same as *get() = obj, but does not load it from disk
+    pub fn set(&mut self, obj: T) {
+        self.obj = Some(obj);
+    }
     
     pub fn delete(mut self) {
         get_mounted_disk().destroy(self.page);

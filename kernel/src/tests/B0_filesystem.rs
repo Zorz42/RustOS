@@ -5,5 +5,7 @@ kernel_test_mod!(crate::tests::B0_filesystem);
 
 #[kernel_test]
 fn test_erase_fs() {
-    get_fs().erase();
+    for _ in 0..100 {
+        get_fs().erase();
+    }
 }

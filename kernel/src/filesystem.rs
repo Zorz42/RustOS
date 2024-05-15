@@ -39,7 +39,7 @@ impl FileSystem {
 
     pub fn erase(&mut self) {
         get_mounted_disk().erase();
-        *self.root.get() = Directory::new(String::new());
+        self.root.set(Directory::new(String::new()));
     }
 
     pub fn read_file(&self, path: &str) -> Vec<u8> {
