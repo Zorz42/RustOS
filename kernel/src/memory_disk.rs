@@ -1,3 +1,4 @@
+use core::ops::Add;
 use std::{deserialize, memcpy_non_aligned, Serial, serialize, Vec};
 
 use crate::disk::Disk;
@@ -27,46 +28,6 @@ fn id_to_addr(page: i32) -> *mut u8 {
     (DISK_OFFSET + page as u64 * PAGE_SIZE) as *mut u8
 }
 
-struct PageIterator {
-    addr: *mut u8,
-    is_first: bool,
-    size_left: i32,
-}
-
-impl PageIterator {
-    pub fn new(addr: *mut u8) -> Self {
-        Self {
-            addr,
-            is_first: true,
-            size_left: unsafe { *(addr as *mut i32) },
-        }
-    }
-
-    pub fn get_curr_size(&self) -> i32 {
-        (if self.is_first {PAGE_SIZE - 8} else {PAGE_SIZE - 4}) as i32
-    }
-
-    pub fn get_curr_addr(&self) -> *mut u8 {
-        if self.is_first {unsafe { self.addr.add(4) }} else {self.addr}
-    }
-
-    pub fn advance(&mut self) -> bool {
-        let curr_size = self.get_curr_size();
-        if curr_size >= self.size_left {
-            return false;
-        }
-
-        self.size_left -= curr_size;
-        self.addr = (DISK_OFFSET + unsafe { *(self.addr.add(PAGE_SIZE as usize - 4) as *mut i32) } as u64 * PAGE_SIZE) as *mut u8;
-        
-        true
-    }
-    
-    pub fn get_size_left(&self) -> i32 {
-        self.size_left
-    }
-}
-
 impl MemoryDisk {
     pub fn new(disk: Disk) -> Self {
         let size = disk.size();
@@ -75,10 +36,6 @@ impl MemoryDisk {
             mapped_pages: Vec::new(),
             bitset: BitSetRaw::new_from(size / 8, (DISK_OFFSET + PAGE_SIZE) as *mut u64),
         }
-    }
-
-    pub fn get_master_page(&self) -> i32 {
-        unsafe { *(DISK_OFFSET as *const i32) }
     }
 
     pub fn get_num_pages(&self) -> usize {
@@ -125,12 +82,35 @@ impl MemoryDisk {
         for i in 0..=self.get_bitset_size() {
             self.bitset.set(i, true);
         }
+    }
+    
+    pub fn get_head(&mut self) -> Vec<u8> {
+        let size = unsafe { *(DISK_OFFSET as *mut i32) } as usize;
+        let mut data = Vec::new();
+        
+        let ptr = (DISK_OFFSET + 4) as *mut u8;
+        for i in 0..size {
+            data.push(unsafe { *ptr.add(i) });
+        }
+        
+        data
+    }
+    
+    pub fn set_head(&mut self, data: &Vec<u8>) {
         unsafe {
-            *(DISK_OFFSET as *mut i32) = self.create();
+            *(DISK_OFFSET as *mut i32) = data.size() as i32;
+        }
+
+        let mut ptr = (DISK_OFFSET + 4) as *mut u8;
+        for i in data {
+            unsafe {
+                *ptr = *i;
+                ptr = ptr.add(1);
+            }
         }
     }
 
-    fn alloc_page(&mut self) -> i32 {
+    pub fn alloc_page(&mut self) -> i32 {
         let res = self.bitset.get_zero_element();
         if let Some(res) = res {
             self.bitset.set(res, true);
@@ -139,77 +119,10 @@ impl MemoryDisk {
             panic!("Out of disk space");
         }
     }
-
-    pub fn create(&mut self) -> i32 {
-        let page = self.alloc_page();
-        let addr = id_to_addr(page) as *mut i32;
-        unsafe {
-            *addr = 0;
-        }
-        page
-    }
-
-    pub fn destroy(&mut self, id: i32) {
-        let mut iter = PageIterator::new(id_to_addr(id));
-        loop {
-            let curr_id = (iter.get_curr_addr() as u64 - DISK_OFFSET) / PAGE_SIZE;
-            debug_assert!(self.bitset.get(curr_id as usize));
-            self.bitset.set(curr_id as usize, false);
-            
-            if !iter.advance() {
-                break;
-            }
-        }
-    }
-
-    pub fn save(&mut self, id: i32, data: &Vec<u8>) {
-        self.destroy(id);
-        let addr = id_to_addr(id);
-        unsafe {
-            *(addr as *mut i32) = data.size() as i32;
-        }
-        let mut iter = PageIterator::new(addr);
-        let mut i = 0;
-        loop {
-            let curr_size = usize::min(data.size() - i, iter.get_curr_size() as usize);
-            unsafe {
-                memcpy_non_aligned(data.get_unchecked(i), iter.get_curr_addr(), curr_size);
-            }
-
-            let page = (iter.get_curr_addr() as u64 - DISK_OFFSET) / PAGE_SIZE;
-            self.bitset.set(page as usize, true);
-            
-            i += curr_size;
-            if i == data.size() {
-                break;
-            }
-            
-            set_next_page(page as i32, self.alloc_page());
-            
-            
-            assert!(iter.advance());
-        }
-    }
-
-    pub fn load(&mut self, id: i32) -> Vec<u8> {
-        let mut res = Vec::new();
-        
-        let mut iter = PageIterator::new(id_to_addr(id));
-        
-        loop {
-            let size = i32::min(iter.get_size_left(), iter.get_curr_size());
-            for i in 0..size {
-                unsafe {
-                    res.push(*iter.get_curr_addr().add(i as usize));
-                }
-            }
-            
-            if !iter.advance() {
-                break;
-            }
-        }
-        
-        res
+    
+    pub fn free_page(&mut self, page: i32) {
+        debug_assert!(self.bitset.get(page as usize));
+        self.bitset.set(page as usize, false);
     }
 }
 
@@ -267,32 +180,65 @@ pub fn disk_page_fault_handler(addr: u64) -> bool {
 }
 
 pub struct DiskBox<T: Serial> {
-    page: i32,
+    size: i32,
+    pages: Vec<i32>,
     obj: Option<T>,
 }
 
 impl<T: Serial> Serial for DiskBox<T> {
-    fn serialize(&self, vec: &mut Vec<u8>) {
-        self.page.serialize(vec);
+    fn serialize(&mut self, vec: &mut Vec<u8>) {
+        self.save();
+        self.size.serialize(vec);
+        self.pages.serialize(vec);
     }
 
     fn deserialize(vec: &Vec<u8>, idx: &mut usize) -> Self {
-        Self::new_at_page(i32::deserialize(vec, idx))
+        let size = i32::deserialize(vec, idx);
+        let pages = Vec::<i32>::deserialize(vec, idx);
+        
+        Self {
+            size,
+            pages,
+            obj: None,
+        }
     }
 }
 
 impl<T: Serial> DiskBox<T> {
     pub fn new(obj: T) -> Self {
         Self {
-            page: get_mounted_disk().create(),
+            pages: Vec::new(),
+            size: 0,
             obj: Some(obj),
         }
     }
     
-    pub fn new_at_page(page: i32) -> Self {
-        Self {
-            page,
-            obj: None,
+    fn save(&mut self) {
+        for page in &self.pages {
+            get_mounted_disk().free_page(*page);
+        }
+        self.pages = Vec::new();
+        let data = serialize(self.obj.as_mut().unwrap());
+        self.size = data.size() as i32;
+        
+        let mut idx = 0;
+        while idx != data.size() {
+            let curr_size = usize::min(PAGE_SIZE as usize, data.size() - idx);
+            let page = get_mounted_disk().alloc_page();
+            self.pages.push(page);
+            unsafe {
+                memcpy_non_aligned(data.get_unchecked(idx), (DISK_OFFSET + page as u64 * PAGE_SIZE) as *mut u8, curr_size);
+            }
+            idx += curr_size;
+        }
+    }
+    
+    // translate idx-th byte to its ram location
+    fn translate(&self, idx: usize) -> *mut u8 {
+        let page_id = self.pages[idx / (PAGE_SIZE as usize)];
+        let page_addr = (DISK_OFFSET + PAGE_SIZE * page_id as u64) as *mut u8;
+        unsafe {
+            page_addr.add(idx % (PAGE_SIZE as usize))
         }
     }
     
@@ -300,7 +246,12 @@ impl<T: Serial> DiskBox<T> {
         if self.obj.is_some() {
             self.obj.as_mut().unwrap()
         } else {
-            let obj = deserialize(&get_mounted_disk().load(self.page));
+            let mut data = Vec::new();
+            for i in 0..self.size {
+                data.push(unsafe { *self.translate(i as usize) });
+            }
+            
+            let obj = deserialize(&data);
             self.obj = Some(obj);
             self.obj.as_mut().unwrap()
         }
@@ -312,15 +263,17 @@ impl<T: Serial> DiskBox<T> {
     }
     
     pub fn delete(mut self) {
-        get_mounted_disk().destroy(self.page);
+        for page in &self.pages {
+            get_mounted_disk().free_page(*page);
+        }
         self.obj = None;
     }
 }
 
 impl<T: Serial> Drop for DiskBox<T> {
     fn drop(&mut self) {
-        if let Some(obj) = &self.obj {
-            get_mounted_disk().save(self.page, &serialize(obj));
+        if self.obj.is_some() {
+            self.save();
         }
     }
 }

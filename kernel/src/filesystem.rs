@@ -1,6 +1,6 @@
 // always operates with the currently mounted disk
 
-use std::{Serial, String, Vec};
+use std::{deserialize, Serial, serialize, String, Vec};
 use crate::memory_disk::{DiskBox, get_mounted_disk};
 
 #[derive(std::derive::Serial)]
@@ -32,8 +32,12 @@ pub struct FileSystem {
 
 impl FileSystem {
     pub fn new() -> Self {
+        if get_mounted_disk().get_head().size() == 0 {
+            get_mounted_disk().set_head(&serialize(&mut DiskBox::new(Directory::new(String::new()))));
+        }
+        
         Self {
-            root: DiskBox::new_at_page(get_mounted_disk().get_master_page()),
+            root: deserialize(&get_mounted_disk().get_head()),
         }
     }
 

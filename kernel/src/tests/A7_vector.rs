@@ -168,7 +168,7 @@ fn test_serialize<T: Serial + TryFrom<u64> + PartialEq>() where <T as TryFrom<u6
         for _ in 0..size {
             vec1.push(T::try_from(rng.get(0, 1u64 << 63) & bits).unwrap());
         }
-        let data = serialize(&vec1);
+        let data = serialize(&mut vec1);
         let vec2 = deserialize(&data);
         
         assert!(vec1 == vec2);

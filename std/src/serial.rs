@@ -1,14 +1,14 @@
 use crate::Vec;
 
 pub trait Serial {
-    fn serialize(&self, vec: &mut Vec<u8>);
+    fn serialize(&mut self, vec: &mut Vec<u8>);
     fn deserialize(vec: &Vec<u8>, idx: &mut usize) -> Self;
 }
 
 macro_rules! implement_serial_direct {
     ($T:ident) => {
         impl Serial for $T {
-            fn serialize(&self, vec: &mut Vec<u8>) {
+            fn serialize(&mut self, vec: &mut Vec<u8>) {
                 for i in 0..core::mem::size_of::<$T>() {
                     unsafe {
                         let ptr = core::ptr::from_ref(self) as *const u8;
@@ -32,7 +32,7 @@ macro_rules! implement_serial_direct {
     };
 }
 
-pub fn serialize<T: Serial>(obj: &T) -> Vec<u8> {
+pub fn serialize<T: Serial>(obj: &mut T) -> Vec<u8> {
     let mut vec = Vec::new();
     obj.serialize(&mut vec);
     vec

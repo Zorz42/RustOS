@@ -232,7 +232,7 @@ impl<T: Clone> Clone for Vec<T> {
 }
 
 impl<T: Serial> Serial for Vec<T> {
-    fn serialize(&self, vec: &mut Vec<u8>) {
+    fn serialize(&mut self, vec: &mut Vec<u8>) {
         self.size.serialize(vec);
         for i in 0..self.size {
             self[i].serialize(vec);
