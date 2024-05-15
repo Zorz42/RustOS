@@ -14,6 +14,14 @@ impl String {
             vec: Vec::new(),
         }
     }
+    
+    pub fn from(s: &str) -> Self {
+        let mut res = Self::new();
+        for c in s.chars() {
+            res.push(c);
+        }
+        res
+    }
 
     pub unsafe fn get_unchecked(&self, i: usize) -> char {
        *self.vec.get_unchecked(i)
@@ -49,6 +57,21 @@ impl String {
 
     pub fn capacity(&self) -> usize {
         self.vec.capacity()
+    }
+    
+    pub fn split(&self, c: char) -> Vec<String> {
+        let mut curr = String::new();
+        let mut res = Vec::new();
+        for i in self {
+            if *i == c {
+                res.push(curr.clone());
+                curr = String::new();
+            } else {
+                curr.push(*i);
+            }
+        }
+        res.push(curr);
+        res
     }
 }
 

@@ -87,16 +87,27 @@ impl<T> Vec<T> {
         self.size
     }
 
-    pub fn pop(&mut self) {
-        assert!(self.size > 0);
-        self.size -= 1;
-        unsafe {
-            drop(core::ptr::read(self.get_mut_unchecked(self.size).deref_mut()));
+    pub fn pop(&mut self) -> Option<T> {
+        if self.size == 0 {
+            None
+        } else {
+            self.size -= 1;
+            unsafe {
+                Some(core::ptr::read(self.get_mut_unchecked(self.size).deref_mut()))
+            }
         }
     }
 
     pub fn capacity(&self) -> usize {
         self.capacity
+    }
+    
+    pub fn reverse(&mut self) {
+        let mut new_vec = Vec::new();
+        while let Some(el) = self.pop() {
+            new_vec.push(el);
+        }
+        *self = new_vec;
     }
 }
 

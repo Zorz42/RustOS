@@ -1,5 +1,5 @@
 use kernel_test::{kernel_test, kernel_test_mod};
-use std::{deserialize, Rng, Serial, serialize, Vec};
+use std::{deserialize, Rng, Serial, serialize, String, Vec};
 kernel_test_mod!(crate::tests::A7_vector);
 
 #[kernel_test]
@@ -232,4 +232,33 @@ fn test_vector_drop_on_iter() {
         assert_eq!(DROP_COUNTER, 4);
         DROP_COUNTER = 0;
     }
+}
+
+#[kernel_test]
+fn test_vector_reverse() {
+    let mut rng = Rng::new(56743852);
+    
+    for _ in 0..100 {
+        let size = rng.get(0, 1000) as usize;
+        let mut vec1 = Vec::new();
+        
+        for _ in 0..size {
+            vec1.push(rng.get(0, 1u64 << 63));
+        }
+        
+        let mut vec2 = vec1.clone();
+        vec2.reverse();
+        
+        for i in 0..size {
+            assert_eq!(vec1[i], vec2[size - i - 1]);
+        }
+    }
+}
+
+#[kernel_test]
+fn test_string_split() {
+    let str1 = String::from("/home/jakob/directory/file");
+    let parts = str1.split('/');
+    
+    assert!(parts == Vec::new_from_slice(&[String::from(""), String::from("home"), String::from("jakob"), String::from("directory"), String::from("file")]))
 }

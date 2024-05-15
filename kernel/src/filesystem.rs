@@ -6,7 +6,16 @@ use crate::memory_disk::{DiskBox, get_mounted_disk};
 #[derive(std::derive::Serial)]
 struct File {
     name: String,
-    page: i32,
+    pages: Vec::<i32>,
+}
+
+impl File {
+    fn new(name: String) -> Self {
+        Self {
+            name,
+            pages: Vec::new(),
+        }
+    }
 }
 
 #[derive(std::derive::Serial)]
@@ -17,7 +26,7 @@ struct Directory {
 }
 
 impl Directory {
-    pub fn new(name: String) -> Self {
+    fn new(name: String) -> Self {
         Self {
             name,
             files: Vec::new(),
@@ -46,11 +55,11 @@ impl FileSystem {
         self.root.set(Directory::new(String::new()));
     }
 
-    pub fn read_file(&self, path: &str) -> Vec<u8> {
+    pub fn get_file(&mut self, path: &String) -> &mut File {
         todo!();
     }
 
-    pub fn write_file(&self, path: &str, data: &Vec<u8>) {
+    pub fn get_directory(&mut self, path: &String) -> &mut Directory {
         todo!();
     }
 

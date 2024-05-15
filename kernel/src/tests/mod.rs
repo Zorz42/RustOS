@@ -64,8 +64,10 @@ pub fn test_runner(disks: &Vec<Disk>) {
     set_print_color(TextColor::Pink, TextColor::Black);
     println!("Running {} tests", tests.len());
     for (test_fn, name) in tests {
+        set_print_color(TextColor::DarkGray, TextColor::Black);
+        print!("Testing");
         set_print_color(TextColor::LightCyan, TextColor::Black);
-        print!("Testing {name}");
+        print!(" {name}");
         let start_time = get_ticks();
         test_fn();
         let end_time = get_ticks();
