@@ -15,7 +15,7 @@ fn create_random_string(rng: &mut Rng) -> String {
     let len = rng.get(10, 30);
     let mut res = String::new();
     for _ in 0..len {
-        res.push((rng.get(0, 1 << 8) as u8) as char);
+        res.push((rng.get(48, 127) as u8) as char);
     }
     res
 }

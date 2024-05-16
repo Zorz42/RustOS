@@ -34,17 +34,47 @@ impl Directory {
         }
     }
 
-    fn get_directory(&mut self, mut path: Vec<String>) -> Option<&mut Directory> {
+    // path is reversed, so you can pop it when going to the next folder
+    fn get_directory_full(&mut self, mut path: Vec<String>) -> Option<&mut Directory> {
         if let Some(dir) = path.pop() {
-            for mut subdir in &mut self.subdirs {
-                if subdir.get().name == dir {
-                    return subdir.get().get_directory(path)
-                }
+            if let Some(subdir) = self.get_directory(&dir) {
+                subdir.get_directory_full(path)
+            } else {
+                None
             }
-            None
         } else {
             Some(self)
         }
+    }
+
+    pub fn get_directory(&mut self, name: &String) -> Option<&mut Directory> {
+        for mut subdir in &mut self.subdirs {
+            if subdir.get().name == *name {
+                return Some(subdir.get());
+            }
+        }
+        None
+    }
+
+    pub fn get_file(&mut self, name: &String) -> Option<&mut File> {
+        for mut file in &mut self.files {
+            if file.name == *name {
+                return Some(file);
+            }
+        }
+        None
+    }
+
+    pub fn create_directory(&mut self, name: &String) -> &mut Directory {
+        todo!();
+    }
+
+    pub fn create_file(&mut self, name: &String) -> &mut File {
+        todo!();
+    }
+
+    fn create_dirs_fill(&mut self, mut dirs: Vec<String>) -> &mut Directory {
+        todo!();
     }
 }
 
@@ -68,7 +98,6 @@ impl FileSystem {
         if get_mounted_disk().get_head().size() == 0 {
             get_mounted_disk().set_head(&serialize(&mut DiskBox::new(Directory::new(String::new()))));
         }
-        
         Self {
             root: deserialize(&get_mounted_disk().get_head()),
         }
@@ -80,22 +109,44 @@ impl FileSystem {
     }
 
     pub fn get_directory(&mut self, path: &String) -> Option<&mut Directory> {
-        todo!();
+        let mut parts = path.split('/');
+        parts.retain(&|x| x.size() != 0);
+        parts.reverse();
+        self.root.get().get_directory_full(parts)
     }
 
     pub fn get_file(&mut self, path: &String) -> Option<&mut File> {
-        todo!();
+        let mut parts = path.split('/');
+        parts.retain(&|x| x.size() != 0);
+        if let Some(file_name) = parts.pop() {
+            parts.reverse();
+            if let Some(directory) = self.root.get().get_directory_full(parts) {
+                directory.get_file(&file_name)
+            } else {
+                None
+            }
+        } else {
+            None
+        }
     }
 
     pub fn create_file(&mut self, path: &String) -> &mut File {
+        let mut parts = path.split('/');
+        parts.retain(&|x| x.size() != 0);
+        if let Some(file_name) = parts.pop() {
+            parts.reverse();
+            let parent = self.root.get().create_dirs_fill(parts);
+            parent.create_file(&file_name)
+        } else {
+            panic!("No file name specified!");
+        }
+    }
+
+    pub fn create_directory(&mut self, path: &String) -> &mut Directory {
         todo!();
     }
 
     pub fn delete_file(&mut self, path: &String) {
-        todo!();
-    }
-
-    pub fn create_directory(&mut self, path: &String) -> &mut File {
         todo!();
     }
 
