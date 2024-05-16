@@ -82,11 +82,16 @@ impl Directory {
     }
 
     fn create_directory_full(&mut self, mut dirs: Vec<String>) -> &mut Directory {
-        todo!();
+        if let Some(dir_name) = dirs.pop() {
+            let dir = self.create_directory(dir_name);
+            dir.create_directory_full(dirs)
+        } else {
+            self
+        }
     }
     
     pub fn delete_file(&mut self, name: &String) {
-        todo!();
+        self.files.retain(&|file| file.name != *name);
     }
 }
 
