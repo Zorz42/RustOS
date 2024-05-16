@@ -65,15 +65,27 @@ impl Directory {
         None
     }
 
-    pub fn create_directory(&mut self, name: &String) -> &mut Directory {
-        todo!();
+    pub fn create_directory(&mut self, name: String) -> &mut Directory {
+        if self.get_directory(&name).is_some() {
+            self.get_directory(&name).unwrap()
+        } else {
+            self.subdirs.push(DiskBox::new(Directory::new(name))).get()
+        }
     }
 
-    pub fn create_file(&mut self, name: &String) -> &mut File {
-        todo!();
+    pub fn create_file(&mut self, name: String) -> &mut File {
+        if self.get_file(&name).is_some() {
+            self.get_file(&name).unwrap()
+        } else {
+            self.files.push(File::new(name))
+        }
     }
 
-    fn create_dirs_fill(&mut self, mut dirs: Vec<String>) -> &mut Directory {
+    fn create_directory_full(&mut self, mut dirs: Vec<String>) -> &mut Directory {
+        todo!();
+    }
+    
+    pub fn delete_file(&mut self, name: &String) {
         todo!();
     }
 }
@@ -135,8 +147,8 @@ impl FileSystem {
         parts.retain(&|x| x.size() != 0);
         if let Some(file_name) = parts.pop() {
             parts.reverse();
-            let parent = self.root.get().create_dirs_fill(parts);
-            parent.create_file(&file_name)
+            let parent = self.root.get().create_directory_full(parts);
+            parent.create_file(file_name)
         } else {
             panic!("No file name specified!");
         }
@@ -147,7 +159,15 @@ impl FileSystem {
     }
 
     pub fn delete_file(&mut self, path: &String) {
-        todo!();
+        let mut parts = path.split('/');
+        parts.retain(&|x| x.size() != 0);
+        if let Some(file_name) = parts.pop() {
+            parts.reverse();
+            let parent = self.root.get().get_directory_full(parts).unwrap();
+            parent.delete_file(&file_name);
+        } else {
+            panic!("No file name specified!");
+        }
     }
 
     pub fn delete_directory(&mut self, path: &String) {

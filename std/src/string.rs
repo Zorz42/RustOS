@@ -44,7 +44,7 @@ impl String {
     }
 
     pub fn push(&mut self, element: char) {
-        self.vec.push(element)
+        self.vec.push(element);
     }
 
     pub fn size(&self) -> usize {

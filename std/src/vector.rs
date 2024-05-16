@@ -80,11 +80,12 @@ impl<T> Vec<T> {
         }
     }
 
-    pub fn push(&mut self, element: T) {
+    pub fn push(&mut self, element: T) -> &mut T {
         self.reserve(self.size + 1);
         self.size += 1;
         unsafe {
             core::ptr::write(self.get_mut_unchecked(self.size - 1), element);
+            self.get_mut_unchecked(self.size - 1)
         }
     }
 
