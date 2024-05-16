@@ -114,6 +114,17 @@ impl<T> Vec<T> {
         }
         *self = new_vec;
     }
+
+    pub fn retain(&mut self, filter: &dyn Fn(&T) -> bool) {
+        let mut new_vec = Vec::new();
+        self.reverse();
+        while let Some(el) = self.pop() {
+            if filter(&el) {
+                new_vec.push(el);
+            }
+        }
+        *self = new_vec;
+    }
 }
 
 impl<T: Default> Vec<T> {

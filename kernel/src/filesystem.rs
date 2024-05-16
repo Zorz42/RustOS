@@ -4,7 +4,7 @@ use std::{deserialize, Serial, serialize, String, Vec};
 use crate::memory_disk::{DiskBox, get_mounted_disk};
 
 #[derive(std::derive::Serial)]
-struct File {
+pub struct File {
     name: String,
     pages: Vec::<i32>,
 }
@@ -19,7 +19,7 @@ impl File {
 }
 
 #[derive(std::derive::Serial)]
-struct Directory {
+pub struct Directory {
     name: String,
     files: Vec::<File>,
     subdirs: Vec::<DiskBox<Directory>>,

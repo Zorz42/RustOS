@@ -1,11 +1,51 @@
 use kernel_test::{kernel_test, kernel_test_mod};
+use std::{Rng, String, Vec};
 use crate::filesystem::get_fs;
 
 kernel_test_mod!(crate::tests::B0_filesystem);
 
 #[kernel_test]
-fn test_erase_fs() {
+fn test_fs_erase() {
     for _ in 0..100 {
         get_fs().erase();
+    }
+}
+
+fn create_random_string(rng: &mut Rng) -> String {
+    let len = rng.get(10, 30);
+    let mut res = String::new();
+    for _ in 0..len {
+        res.push((rng.get(0, 1 << 8) as u8) as char);
+    }
+    res
+}
+
+#[kernel_test]
+fn test_fs_create_delete_exists_file() {
+    get_fs().erase();
+
+    let mut existing_files = Vec::new();
+    let mut rng = Rng::new(4637894352678);
+
+    for _ in 0..1000 {
+        if rng.get(0, 2) == 0 || existing_files.size() == 0 {
+            // create file
+            let file_name = create_random_string(&mut rng);
+            get_fs().create_file(&file_name);
+            existing_files.push(file_name);
+        } else {
+            // destroy file
+            let file_name = existing_files[rng.get(0, existing_files.size() as u64) as usize].clone();
+            get_fs().delete_file(&file_name);
+            existing_files.retain(&|x| *x != file_name);
+        }
+
+        for _ in 0..10 {
+            assert!(get_fs().get_file(&create_random_string(&mut rng)).is_none());
+        }
+
+        for file_name in &existing_files {
+            assert!(get_fs().get_file(&create_random_string(&mut rng)).is_some());
+        }
     }
 }
