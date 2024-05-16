@@ -33,10 +33,34 @@ impl Directory {
             subdirs: Vec::new(),
         }
     }
+
+    fn get_directory(&mut self, mut path: Vec<String>) -> Option<&mut Directory> {
+        if let Some(dir) = path.pop() {
+            for mut subdir in &mut self.subdirs {
+                if subdir.get().name == dir {
+                    return subdir.get().get_directory(path)
+                }
+            }
+            None
+        } else {
+            Some(self)
+        }
+    }
 }
 
 pub struct FileSystem {
     root: DiskBox<Directory>,
+}
+
+fn parse_path(path: &String) -> Vec<String> {
+    let parts = path.split('/');
+    let mut res = Vec::new();
+    for i in parts {
+        if i.size() != 0 {
+            res.push(i);
+        }
+    }
+    res
 }
 
 impl FileSystem {
@@ -55,31 +79,27 @@ impl FileSystem {
         self.root.set(Directory::new(String::new()));
     }
 
-    pub fn get_file(&mut self, path: &String) -> &mut File {
+    pub fn get_directory(&mut self, path: &String) -> Option<&mut Directory> {
         todo!();
     }
 
-    pub fn get_directory(&mut self, path: &String) -> &mut Directory {
+    pub fn get_file(&mut self, path: &String) -> Option<&mut File> {
         todo!();
     }
 
-    pub fn program_name_to_id(&self, name: &str) -> i32 {
+    pub fn create_file(&mut self, path: &String) -> &mut File {
         todo!();
     }
 
-    pub fn read_program(&self, id: i32) -> Vec<u8> {
+    pub fn delete_file(&mut self, path: &String) {
         todo!();
     }
 
-    pub fn write_program(&self, id: i32, data: &Vec<u8>) {
+    pub fn create_directory(&mut self, path: &String) -> &mut File {
         todo!();
     }
 
-    pub fn get_program_mapped_pages(&self, id: i32) -> Vec<(i32, i32)> {
-        todo!();
-    }
-
-    pub fn map_new_page_for_program(&self, id: i32, page_addr: *mut u8) {
+    pub fn delete_directory(&mut self, path: &String) {
         todo!();
     }
 }

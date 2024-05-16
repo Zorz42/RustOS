@@ -19,6 +19,11 @@ pub struct VecIterator<'a, T> {
     index: usize,
 }
 
+pub struct VecMutIterator<'a, T> {
+    vec: &'a mut Vec<T>,
+    index: usize,
+}
+
 impl<T> Vec<T> {
     pub unsafe fn new_with_size_uninit(size: usize) -> Self {
         let mut capacity = 1;
@@ -197,6 +202,21 @@ impl<'a, T> Iterator for VecIterator<'a, T> {
     }
 }
 
+impl<'a, T> Iterator for VecMutIterator<'a, T> {
+    type Item = &'a mut T;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.index == self.vec.size() {
+            None
+        } else {
+            // I hope this is safe.
+            let res = unsafe { self.vec.get_mut_unchecked(self.index) as *mut T };
+            self.index += 1;
+            Some(unsafe { &mut *res })
+        }
+    }
+}
+
 impl<T> IntoIterator for Vec<T> {
     type Item = T;
     type IntoIter = VecIntoIterator<T>;
@@ -212,6 +232,15 @@ impl<'a, T> IntoIterator for &'a Vec<T> {
 
     fn into_iter(self) -> Self::IntoIter {
         VecIterator { vec: self, index: 0 }
+    }
+}
+
+impl<'a, T> IntoIterator for &'a mut Vec<T> {
+    type Item = &'a mut T;
+    type IntoIter = VecMutIterator<'a, T>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        VecMutIterator { vec: self, index: 0 }
     }
 }
 
