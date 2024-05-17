@@ -3,7 +3,7 @@ use std::{deserialize, memcpy_non_aligned, Serial, serialize, Vec};
 
 use crate::disk::Disk;
 use crate::memory::{BitSetRaw, DISK_OFFSET, map_page_auto, PAGE_SIZE, VirtAddr};
-use crate::println;
+use crate::{print, println};
 
 pub struct MemoryDisk {
     disk: Disk,
@@ -264,7 +264,7 @@ impl<T: Serial> DiskBox<T> {
             for i in 0..self.size {
                 data.push(unsafe { *self.translate(i as usize) });
             }
-            
+
             let obj = deserialize(&data);
             self.obj = Some(obj);
             self.obj.as_mut().unwrap()
