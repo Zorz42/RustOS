@@ -180,6 +180,12 @@ impl FileSystem {
     }
 }
 
+impl Drop for FileSystem {
+    fn drop(&mut self) {
+        get_mounted_disk().set_head(&serialize(&mut self.root));
+    }
+}
+
 static mut FILESYSTEM: Option<FileSystem> = None;
 
 pub fn init_fs() {

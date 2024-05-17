@@ -201,7 +201,9 @@ pub struct DiskBox<T: Serial> {
 
 impl<T: Serial> Serial for DiskBox<T> {
     fn serialize(&mut self, vec: &mut Vec<u8>) {
-        self.save();
+        if self.obj.is_some() {
+            self.save();
+        }
         self.size.serialize(vec);
         self.pages.serialize(vec);
     }
