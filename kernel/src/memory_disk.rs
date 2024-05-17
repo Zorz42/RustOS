@@ -3,11 +3,12 @@ use std::{deserialize, memcpy_non_aligned, Serial, serialize, Vec};
 
 use crate::disk::Disk;
 use crate::memory::{BitSetRaw, DISK_OFFSET, map_page_auto, PAGE_SIZE, VirtAddr};
+use crate::println;
 
 pub struct MemoryDisk {
     disk: Disk,
     mapped_pages: Vec<i32>,
-    bitset: BitSetRaw, // which page is taken
+    bitset: Option<BitSetRaw>, // which page is taken
 }
 
 fn get_next_page(page: i32) -> i32 {
@@ -30,12 +31,23 @@ fn id_to_addr(page: i32) -> *mut u8 {
 
 impl MemoryDisk {
     pub fn new(disk: Disk) -> Self {
-        let size = disk.size();
         Self {
             disk,
             mapped_pages: Vec::new(),
-            bitset: BitSetRaw::new_from(size / 8, (DISK_OFFSET + PAGE_SIZE) as *mut u64),
+            bitset: None,
         }
+    }
+
+    pub fn init(&mut self) {
+        self.bitset = Some(BitSetRaw::new_from(self.disk.size() / 8, (DISK_OFFSET + PAGE_SIZE) as *mut u64));
+    }
+
+    fn get_bitset(&self) -> &BitSetRaw {
+        self.bitset.as_ref().unwrap()
+    }
+
+    fn get_bitset_mut(&mut self) -> &mut BitSetRaw {
+        self.bitset.as_mut().unwrap()
     }
 
     pub fn get_num_pages(&self) -> usize {
@@ -74,14 +86,15 @@ impl MemoryDisk {
 
     // bitset size in pages
     fn get_bitset_size(&self) -> usize {
-        (self.bitset.get_size_bytes() + PAGE_SIZE as usize - 1) / PAGE_SIZE as usize
+        (self.get_bitset().get_size_bytes() + PAGE_SIZE as usize - 1) / PAGE_SIZE as usize
     }
 
     pub fn erase(&mut self) {
-        self.bitset.clear();
+        self.get_bitset_mut().clear();
         for i in 0..=self.get_bitset_size() {
-            self.bitset.set(i, true);
+            self.get_bitset_mut().set(i, true);
         }
+        self.set_head(&Vec::new());
     }
     
     pub fn get_head(&mut self) -> Vec<u8> {
@@ -111,9 +124,9 @@ impl MemoryDisk {
     }
 
     pub fn alloc_page(&mut self) -> i32 {
-        let res = self.bitset.get_zero_element();
+        let res = self.get_bitset().get_zero_element();
         if let Some(res) = res {
-            self.bitset.set(res, true);
+            self.get_bitset_mut().set(res, true);
             res as i32
         } else {
             panic!("Out of disk space");
@@ -121,8 +134,8 @@ impl MemoryDisk {
     }
     
     pub fn free_page(&mut self, page: i32) {
-        debug_assert!(self.bitset.get(page as usize));
-        self.bitset.set(page as usize, false);
+        debug_assert!(self.get_bitset().get(page as usize));
+        self.get_bitset_mut().set(page as usize, false);
     }
 }
 
@@ -148,6 +161,7 @@ pub fn mount_disk(disk: Disk) {
     let mounted_disk = MemoryDisk::new(disk);
     unsafe {
         MOUNTED_DISK = Some(mounted_disk);
+        MOUNTED_DISK.as_mut().unwrap().init();
     }
 }
 

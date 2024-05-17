@@ -71,7 +71,7 @@ fn test_fs_persists() {
             get_fs().delete_file(&file_name);
             existing_files.retain(&|x| *x != file_name);
         }
-        
+
         unmount_disk();
         mount_disk(get_test_disk());
         init_fs();

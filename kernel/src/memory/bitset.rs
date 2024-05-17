@@ -24,6 +24,11 @@ impl BitSetRaw {
     pub fn new_from(size: usize, addr: *mut u64) -> BitSetRaw {
         debug_assert_eq!(addr as u64 % 8, 0);
         let mut res = BitSetRaw { data: addr, size, count0: 0 };
+        for i in 0..size {
+            if !res.get(i) {
+                res.count0 += 1;
+            }
+        }
         res
     }
 
@@ -91,7 +96,7 @@ impl BitSetRaw {
         self.count0 = self.size;
     }
 
-    pub fn get_count0(&mut self) -> usize {
+    pub fn get_count0(&self) -> usize {
         self.count0
     }
 }

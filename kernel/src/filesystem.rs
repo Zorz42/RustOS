@@ -1,7 +1,9 @@
 // always operates with the currently mounted disk
 
 use std::{deserialize, Serial, serialize, String, Vec};
+use crate::memory::DISK_OFFSET;
 use crate::memory_disk::{DiskBox, get_mounted_disk};
+use crate::println;
 
 #[derive(std::derive::Serial)]
 pub struct File {
