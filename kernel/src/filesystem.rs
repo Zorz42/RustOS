@@ -1,9 +1,7 @@
 // always operates with the currently mounted disk
 
 use std::{deserialize, Serial, serialize, String, Vec};
-use crate::memory::DISK_OFFSET;
 use crate::memory_disk::{DiskBox, get_mounted_disk};
-use crate::println;
 
 #[derive(std::derive::Serial)]
 pub struct File {
@@ -124,7 +122,7 @@ impl FileSystem {
 
     pub fn erase(&mut self) {
         get_mounted_disk().erase();
-        self.root.set(Directory::new(String::new()));
+        self.root = DiskBox::new(Directory::new(String::new()));
     }
 
     pub fn get_directory(&mut self, path: &String) -> Option<&mut Directory> {
@@ -187,6 +185,12 @@ static mut FILESYSTEM: Option<FileSystem> = None;
 pub fn init_fs() {
     unsafe {
         FILESYSTEM = Some(FileSystem::new());
+    }
+}
+
+pub fn close_fs() {
+    unsafe {
+        FILESYSTEM = None;
     }
 }
 
