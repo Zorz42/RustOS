@@ -63,7 +63,7 @@ impl Disk {
         }
 
         byte_out(self.base | ATA_SECTORCOUNT, 1);
-        byte_out(self.base | ATA_SECTORNUMBER1, ((sector >> 0) & 0xFF) as u8);
+        byte_out(self.base | ATA_SECTORNUMBER1, (sector & 0xFF) as u8);
         byte_out(self.base | ATA_SECTORNUMBER2, ((sector >> 8) & 0xFF) as u8);
         byte_out(self.base | ATA_SECTORNUMBER3, ((sector >> 16) & 0xFF) as u8);
         byte_out(self.base | ATA_DRIVEHEAD, ((sector >> 24) & 0x0F) as u8 | 0b11100000 | (self.h << 4));
@@ -109,7 +109,7 @@ impl Disk {
         }
 
         byte_out(self.base | ATA_SECTORCOUNT, 1);
-        byte_out(self.base | ATA_SECTORNUMBER1, ((sector >> 0) & 0xFF) as u8);
+        byte_out(self.base | ATA_SECTORNUMBER1, (sector & 0xFF) as u8);
         byte_out(self.base | ATA_SECTORNUMBER2, ((sector >> 8) & 0xFF) as u8);
         byte_out(self.base | ATA_SECTORNUMBER3, ((sector >> 16) & 0xFF) as u8);
         byte_out(self.base | ATA_DRIVEHEAD, ((sector >> 24) & 0x0F) as u8 | 0b11100000 | (self.h << 4));
@@ -173,7 +173,7 @@ pub fn scan_for_disks() -> Vec<Disk> {
                     byte_out(base | ATA_STATUS, 0xF8);
 
                     if wait_for_disk(base) {
-                        let sectors_size = ((byte_in(base | ATA_SECTORNUMBER1) as usize) << 0)
+                        let sectors_size = (byte_in(base | ATA_SECTORNUMBER1) as usize)
                             + ((byte_in(base | ATA_SECTORNUMBER2) as usize) << 8)
                             + ((byte_in(base | ATA_SECTORNUMBER3) as usize) << 16)
                             + (((byte_in(base | ATA_DRIVEHEAD) as usize) & 0xF) << 24);

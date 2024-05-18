@@ -94,9 +94,9 @@ fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
         let root_magic = 0x63726591;
 
         let mut magic = 0;
-        
+
         for i in 0..4 {
-            magic += ((first_sector[511 - i] as u32) << (8 * i));
+            magic += (first_sector[511 - i] as u32) << (8 * i);
         }
 
         if root_magic == magic {

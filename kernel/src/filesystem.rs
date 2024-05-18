@@ -57,12 +57,7 @@ impl Directory {
     }
 
     pub fn get_file(&mut self, name: &String) -> Option<&mut File> {
-        for file in &mut self.files {
-            if file.name == *name {
-                return Some(file);
-            }
-        }
-        None
+        (&mut self.files).into_iter().find(|file| file.name == *name)
     }
 
     pub fn create_directory(&mut self, name: String) -> &mut Directory {
