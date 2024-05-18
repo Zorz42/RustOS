@@ -294,7 +294,7 @@ impl<T: Serial> Serial for Vec<T> {
     fn deserialize(vec: &Vec<u8>, idx: &mut usize) -> Self {
         let mut obj = Vec::new();
         let size = usize::deserialize(vec, idx);
-        for i in 0..size {
+        for _ in 0..size {
             obj.push(T::deserialize(vec, idx));
         }
         obj

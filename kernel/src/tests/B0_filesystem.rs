@@ -1,7 +1,7 @@
 use kernel_test::{kernel_test, kernel_test_mod};
 use std::{Rng, String, Vec};
 use crate::filesystem::{close_fs, get_fs, init_fs};
-use crate::memory_disk::{get_mounted_disk, mount_disk, unmount_disk};
+use crate::memory_disk::{mount_disk, unmount_disk};
 use crate::tests::get_test_disk;
 
 kernel_test_mod!(crate::tests::B0_filesystem);
@@ -83,6 +83,45 @@ fn test_fs_persists() {
 
         for file_name in &existing_files {
             assert!(get_fs().get_file(file_name).is_some());
+        }
+    }
+}
+
+fn join(vec: &Vec<String>, c: char) -> String {
+    let mut res = String::new();
+    for i in vec {
+        for c in i {
+            res.push(*c);
+        }
+        res.push(c);
+    }
+    res.pop();
+    res
+}
+
+#[kernel_test]
+fn test_fs_create_dir() {
+    let mut rng = Rng::new(54738524637825);
+
+    for _ in 0..20 {
+        let depth = rng.get(1, 20);
+        let mut dirs = Vec::new();
+        for _ in 0..depth {
+            dirs.push(create_random_string(&mut rng));
+        }
+
+        let path = join(&dirs, '/');
+        get_fs().create_directory(&path);
+
+        close_fs();
+        unmount_disk();
+        mount_disk(get_test_disk());
+        init_fs();
+
+        let mut curr_dirs = Vec::new();
+        for i in dirs {
+            curr_dirs.push(i);
+            assert!(get_fs().get_directory(&join(&curr_dirs, '/')).is_some());
         }
     }
 }

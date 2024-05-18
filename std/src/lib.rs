@@ -19,7 +19,7 @@ pub use malloc::{free, malloc};
 use crate::malloc::init_malloc;
 pub use boxed::Box;
 pub use rand::Rng;
-pub use utils::{addr_of, memcpy, memcpy_non_aligned, memset, memset_int64, swap, volatile_store_byte};
+pub use utils::{memcpy, memcpy_non_aligned, memset, memset_int64, swap, volatile_store_byte};
 pub use vector::Vec;
 pub use serial::{Serial, serialize, deserialize};
 pub use derive;

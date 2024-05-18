@@ -1,16 +1,4 @@
-use std::fmt::Debug;
 use std::path::PathBuf;
-
-fn trav(dir: PathBuf) {
-    for file in std::fs::read_dir(dir).unwrap() {
-        let file = file.unwrap();
-        if file.path().is_dir() {
-            trav(file.path());
-        } else {
-            println!("cargo:rerun-if-changed={}", file.path().to_str().unwrap());
-        }
-    }
-}
 
 #[allow(clippy::unwrap_used)]
 fn main() {

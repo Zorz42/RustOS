@@ -1,6 +1,5 @@
 use core::arch::asm;
-
-use std::addr_of;
+use core::ptr::addr_of;
 
 use crate::memory_disk::disk_page_fault_handler;
 use crate::ports::byte_out;

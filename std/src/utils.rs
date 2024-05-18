@@ -1,12 +1,6 @@
 use core::arch::asm;
 use core::mem::size_of;
 
-pub macro addr_of($place:expr) {
-    &raw const $place
-}
-
-pub fn drop<T>(_val: T) {}
-
 pub fn swap<T>(val1: &mut T, val2: &mut T) {
     let ptr1 = val1 as *mut T;
     let ptr2 = val2 as *mut T;
@@ -83,7 +77,7 @@ pub unsafe fn memcpy_non_aligned(src: *const u8, dst: *mut u8, len: usize) {
     ", in("r8") src, in("r9") dst, in("r10") len, lateout("r8") _, lateout("r9") _, lateout("r10") _, out("r11") _, options(preserves_flags, nostack));
 }
 
-pub unsafe fn memset_int64(ptr: *mut u8, val: u64, mut len: usize) {
+pub unsafe fn memset_int64(ptr: *mut u8, val: u64, len: usize) {
     debug_assert_eq!(len % 8, 0);
     debug_assert_eq!(len as u64 % 8, 0);
     if len == 0 {

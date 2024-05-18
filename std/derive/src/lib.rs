@@ -1,7 +1,7 @@
-use proc_macro::{Span, TokenStream};
+use proc_macro::{TokenStream};
 use quote::quote;
 use syn;
-use syn::{DeriveInput, Ident, parse_macro_input};
+use syn::{DeriveInput, parse_macro_input};
 
 #[proc_macro_derive(Serial)]
 pub fn serial_derive(input: TokenStream) -> TokenStream {
@@ -16,7 +16,6 @@ pub fn serial_derive(input: TokenStream) -> TokenStream {
 
     let fields1 = data.fields.iter().map(|f| {
         let field_name = &f.ident;
-        let ty = &f.ty;
         quote! {
             self.#field_name.serialize(vec);
         }

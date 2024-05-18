@@ -18,7 +18,7 @@ macro_rules! implement_serial_direct {
             }
         
             fn deserialize(vec: &Vec<u8>, idx: &mut usize) -> Self {
-                let mut obj = Self::default();
+                let obj = Self::default();
                 for i in 0..core::mem::size_of::<$T>() {
                     unsafe {
                         let ptr = core::ptr::from_ref(&obj) as *mut u8;

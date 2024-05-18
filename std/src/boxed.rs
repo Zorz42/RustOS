@@ -1,5 +1,4 @@
 use crate::pointer::Ptr;
-use crate::swap;
 use core::ops::{Deref, DerefMut};
 
 #[derive(Debug)]
@@ -8,7 +7,7 @@ pub struct Box<T> {
 }
 
 impl<T> Box<T> {
-    pub fn new(mut val: T) -> Self {
+    pub fn new(val: T) -> Self {
         let mut ptr = Ptr::new(1);
         unsafe {
             core::ptr::write(ptr.get_mut(), val);

@@ -1,28 +1,13 @@
-use core::ops::Add;
+use core::ptr::{addr_of, addr_of_mut};
 use std::{deserialize, memcpy_non_aligned, Serial, serialize, Vec};
 
 use crate::disk::Disk;
 use crate::memory::{BitSetRaw, DISK_OFFSET, map_page_auto, PAGE_SIZE, VirtAddr};
-use crate::{print, println};
 
 pub struct MemoryDisk {
     disk: Disk,
     mapped_pages: Vec<i32>,
     bitset: Option<BitSetRaw>, // which page is taken
-}
-
-fn get_next_page(page: i32) -> i32 {
-    let addr = (DISK_OFFSET + page as u64 * PAGE_SIZE + PAGE_SIZE - 4) as *const i32;
-    unsafe {
-        *addr
-    }
-}
-
-fn set_next_page(page: i32, next: i32) {
-    let addr = (DISK_OFFSET + page as u64 * PAGE_SIZE + PAGE_SIZE - 4) as *mut i32;
-    unsafe {
-        *addr = next;
-    }
 }
 
 fn id_to_addr(page: i32) -> *mut u8 {
@@ -39,7 +24,7 @@ impl MemoryDisk {
     }
 
     pub fn init(&mut self) {
-        self.bitset = Some(BitSetRaw::new_from(self.disk.size() / 8, (DISK_OFFSET + PAGE_SIZE) as *mut u64));
+        self.bitset = Some(BitSetRaw::new_from(self.disk.size() / 8, id_to_addr(1) as *mut u64));
     }
 
     fn get_bitset(&self) -> &BitSetRaw {
@@ -142,7 +127,7 @@ impl MemoryDisk {
 static mut MOUNTED_DISK: Option<MemoryDisk> = None;
 
 pub fn unmount_disk() {
-    let mounted_disk = unsafe { &MOUNTED_DISK };
+    let mounted_disk = unsafe { &*addr_of!(MOUNTED_DISK) };
 
     if let Some(mounted_disk) = mounted_disk {
         for page in &mounted_disk.mapped_pages {
@@ -167,7 +152,7 @@ pub fn mount_disk(disk: Disk) {
 
 pub fn get_mounted_disk() -> &'static mut MemoryDisk {
     unsafe {
-        if let Some(mounted_disk) = &mut MOUNTED_DISK {
+        if let Some(mounted_disk) = &mut *addr_of_mut!(MOUNTED_DISK) {
             mounted_disk
         } else {
             panic!("No disk is mounted.");
@@ -181,7 +166,7 @@ pub fn disk_page_fault_handler(addr: u64) -> bool {
     }
 
     let mounted_disk = unsafe {
-        if let Some(mounted_disk) = &mut MOUNTED_DISK {
+        if let Some(mounted_disk) = &mut *addr_of_mut!(MOUNTED_DISK) {
             mounted_disk
         } else {
             return false;
@@ -243,7 +228,7 @@ impl<T: Serial> DiskBox<T> {
             let page = get_mounted_disk().alloc_page();
             self.pages.push(page);
             unsafe {
-                memcpy_non_aligned(data.get_unchecked(idx), (DISK_OFFSET + page as u64 * PAGE_SIZE) as *mut u8, curr_size);
+                memcpy_non_aligned(data.get_unchecked(idx), id_to_addr(page), curr_size);
             }
             idx += curr_size;
         }
@@ -252,7 +237,7 @@ impl<T: Serial> DiskBox<T> {
     // translate idx-th byte to its ram location
     fn translate(&self, idx: usize) -> *mut u8 {
         let page_id = self.pages[idx / (PAGE_SIZE as usize)];
-        let page_addr = (DISK_OFFSET + PAGE_SIZE * page_id as u64) as *mut u8;
+        let page_addr = id_to_addr(page_id);
         unsafe {
             page_addr.add(idx % (PAGE_SIZE as usize))
         }

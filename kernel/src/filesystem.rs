@@ -1,6 +1,6 @@
 // always operates with the currently mounted disk
 
-use std::{deserialize, Serial, serialize, String, Vec};
+use std::{deserialize, serialize, String, Vec};
 use crate::memory_disk::{DiskBox, get_mounted_disk};
 
 #[derive(std::derive::Serial)]
@@ -48,7 +48,7 @@ impl Directory {
     }
 
     pub fn get_directory(&mut self, name: &String) -> Option<&mut Directory> {
-        for mut subdir in &mut self.subdirs {
+        for subdir in &mut self.subdirs {
             if subdir.get().name == *name {
                 return Some(subdir.get());
             }
@@ -57,7 +57,7 @@ impl Directory {
     }
 
     pub fn get_file(&mut self, name: &String) -> Option<&mut File> {
-        for mut file in &mut self.files {
+        for file in &mut self.files {
             if file.name == *name {
                 return Some(file);
             }
@@ -99,17 +99,6 @@ pub struct FileSystem {
     root: DiskBox<Directory>,
 }
 
-fn parse_path(path: &String) -> Vec<String> {
-    let parts = path.split('/');
-    let mut res = Vec::new();
-    for i in parts {
-        if i.size() != 0 {
-            res.push(i);
-        }
-    }
-    res
-}
-
 impl FileSystem {
     pub fn new() -> Self {
         if get_mounted_disk().get_head().size() == 0 {
@@ -135,16 +124,10 @@ impl FileSystem {
     pub fn get_file(&mut self, path: &String) -> Option<&mut File> {
         let mut parts = path.split('/');
         parts.retain(&|x| x.size() != 0);
-        if let Some(file_name) = parts.pop() {
-            parts.reverse();
-            if let Some(directory) = self.root.get().get_directory_full(parts) {
-                directory.get_file(&file_name)
-            } else {
-                None
-            }
-        } else {
-            None
-        }
+        let file_name = parts.pop()?;
+        parts.reverse();
+        let directory = self.root.get().get_directory_full(parts)?;
+        directory.get_file(&file_name)
     }
 
     pub fn create_file(&mut self, path: &String) -> &mut File {

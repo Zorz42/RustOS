@@ -17,7 +17,7 @@ use crate::disk::scan_for_disks;
 use crate::filesystem::{close_fs, get_fs, init_fs};
 use crate::interrupts::init_idt;
 use crate::memory::{
-    check_page_table_integrity, DISK_OFFSET, FRAMEBUFFER_OFFSET, init_memory, KERNEL_STACK_ADDR, KERNEL_STACK_SIZE, map_framebuffer, map_page_auto, PAGE_SIZE, VirtAddr, VIRTUAL_OFFSET,
+    check_page_table_integrity, FRAMEBUFFER_OFFSET, init_memory, KERNEL_STACK_ADDR, KERNEL_STACK_SIZE, map_framebuffer, map_page_auto, PAGE_SIZE, VirtAddr, VIRTUAL_OFFSET,
 };
 use crate::memory_disk::{get_mounted_disk, mount_disk, unmount_disk};
 use crate::print::{reset_print_color, set_print_color, TextColor};
