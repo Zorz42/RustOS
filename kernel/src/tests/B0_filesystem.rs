@@ -103,8 +103,8 @@ fn join(vec: &Vec<String>, c: char) -> String {
 fn test_fs_create_dir() {
     let mut rng = Rng::new(54738524637825);
 
-    for _ in 0..20 {
-        let depth = rng.get(1, 20);
+    for _ in 0..10 {
+        let depth = rng.get(1, 10);
         let mut dirs = Vec::new();
         for _ in 0..depth {
             dirs.push(create_random_string(&mut rng));

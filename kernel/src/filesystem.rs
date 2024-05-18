@@ -1,6 +1,6 @@
 // always operates with the currently mounted disk
 
-use std::{deserialize, serialize, String, Vec};
+use std::{deserialize, serialize, String, swap, Vec};
 use crate::memory_disk::{DiskBox, get_mounted_disk};
 
 #[derive(std::derive::Serial)]
@@ -88,6 +88,30 @@ impl Directory {
     pub fn delete_file(&mut self, name: &String) {
         self.files.retain(&|file| file.name != *name);
     }
+
+    pub fn clear(&mut self) {
+        self.files = Vec::new();
+        let mut dirs = Vec::new();
+        swap(&mut self.subdirs, &mut dirs);
+        for mut dir in dirs {
+            dir.get().clear();
+            DiskBox::delete(dir);
+        }
+    }
+
+    pub fn delete_directory(&mut self, name: &String) {
+        let mut old_dirs = Vec::new();
+        swap(&mut self.subdirs, &mut old_dirs);
+
+        for mut dir in old_dirs {
+            if(dir.get().name == *name) {
+                dir.get().clear();
+                DiskBox::delete(dir);
+            } else {
+                self.subdirs.push(dir);
+            }
+        }
+    }
 }
 
 pub struct FileSystem {
@@ -138,7 +162,10 @@ impl FileSystem {
     }
 
     pub fn create_directory(&mut self, path: &String) -> &mut Directory {
-        todo!();
+        let mut parts = path.split('/');
+        parts.retain(&|x| x.size() != 0);
+        parts.reverse();
+        self.root.get().create_directory_full(parts)
     }
 
     pub fn delete_file(&mut self, path: &String) {
@@ -154,7 +181,17 @@ impl FileSystem {
     }
 
     pub fn delete_directory(&mut self, path: &String) {
-        todo!();
+        let mut parts = path.split('/');
+        parts.retain(&|x| x.size() != 0);
+        let mut parts = path.split('/');
+        parts.retain(&|x| x.size() != 0);
+        if let Some(dir_name) = parts.pop() {
+            parts.reverse();
+            let parent = self.root.get().get_directory_full(parts).unwrap();
+            parent.delete_directory(&dir_name);
+        } else {
+            panic!("No directory name specified!");
+        }
     }
 }
 
