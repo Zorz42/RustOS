@@ -173,5 +173,9 @@ extern "x86-interrupt" fn page_fault_handler(_stack_frame: &ExceptionStackFrame,
     }
 
     println!("Page fault exception with error code {error_code} 0x{error_code:x} 0b{error_code:b} at address 0x{cr2:x}");
-    loop {}
+    loop {
+        unsafe {
+            asm!("hlt");
+        }
+    }
 }

@@ -93,7 +93,11 @@ fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
         let first_sector = disk.read(0);
         let root_magic = 0x63726591;
 
-        let magic = ((first_sector[511] as u32) << 0) + ((first_sector[510] as u32) << 8) + ((first_sector[509] as u32) << 16) + ((first_sector[508] as u32) << 24);
+        let mut magic = 0;
+        
+        for i in 0..4 {
+            magic += ((first_sector[511 - i] as u32) << (8 * i));
+        }
 
         if root_magic == magic {
             root_disk = Some(disk.clone());
