@@ -117,11 +117,48 @@ fn test_fs_create_dir() {
         unmount_disk();
         mount_disk(get_test_disk());
         init_fs();
-
+        
         let mut curr_dirs = Vec::new();
-        for i in dirs {
+        for i in dirs.clone() {
             curr_dirs.push(i);
             assert!(get_fs().get_directory(&join(&curr_dirs, '/')).is_some());
         }
+        
+        get_fs().delete_directory(&dirs[0]);
+
+        let mut curr_dirs = Vec::new();
+        for i in dirs.clone() {
+            curr_dirs.push(i);
+            assert!(get_fs().get_directory(&join(&curr_dirs, '/')).is_none());
+        }
+    }
+}
+
+#[kernel_test]
+fn test_fs_read_write_file() {
+    let mut rng = Rng::new(54738524637825);
+    let mut vec = Vec::new();
+    
+    get_fs().create_directory(&String::from("vec"));
+    
+    for i in 0..20 {
+        let mut data = Vec::new();
+        let len = rng.get(0, 10000);
+        for _ in 0..len {
+            data.push(rng.get(0, 1 << 8) as u8);
+        }
+        let mut file_name = String::from("vec/");
+        file_name.push(('A' as u8 + i as u8) as char);
+        let file = get_fs().create_file(&file_name);
+        file.write(&data);
+        vec.push(data);
+    }
+
+    for i in 0..20 {
+        let mut file_name = String::from("vec/");
+        file_name.push(('A' as u8 + i as u8) as char);
+        let file = get_fs().get_file(&file_name).unwrap();
+        let data = file.read();
+        assert!(data == vec[i]);
     }
 }

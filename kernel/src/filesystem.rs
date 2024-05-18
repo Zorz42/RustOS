@@ -1,11 +1,13 @@
 // always operates with the currently mounted disk
 
 use std::{deserialize, serialize, String, swap, Vec};
+use crate::memory::{DISK_OFFSET, PAGE_SIZE};
 use crate::memory_disk::{DiskBox, get_mounted_disk};
 
 #[derive(std::derive::Serial)]
 pub struct File {
     name: String,
+    size: i32,
     pages: Vec::<i32>,
 }
 
@@ -13,6 +15,7 @@ impl File {
     fn new(name: String) -> Self {
         Self {
             name,
+            size: 0,
             pages: Vec::new(),
         }
     }
@@ -22,11 +25,39 @@ impl File {
     }
     
     pub fn read(&self) -> Vec<u8> {
-        todo!();
+        let mut res = Vec::new();
+        for i in 0..self.size {
+            let page = self.pages[(i / (PAGE_SIZE as i32)) as usize];
+            let addr = (DISK_OFFSET + page as u64 * PAGE_SIZE + (i as u64) % PAGE_SIZE) as *const u8;
+            unsafe {
+                res.push(*addr);
+            }
+        }
+        res
     }
     
-    pub fn write(&self, data: &Vec<u8>) {
-        todo!();
+    pub fn write(&mut self, data: &Vec<u8>) {
+        self.clear();
+        self.size = data.size() as i32;
+        let num_pages = (self.size as u64 + PAGE_SIZE - 1) / PAGE_SIZE;
+        for _ in 0..num_pages {
+            self.pages.push(get_mounted_disk().alloc_page());
+        }
+        for i in 0..self.size {
+            let page = self.pages[(i / (PAGE_SIZE as i32)) as usize];
+            let addr = (DISK_OFFSET + page as u64 * PAGE_SIZE + (i as u64) % PAGE_SIZE) as *mut u8;
+            unsafe {
+                *addr = data[i as usize];
+            }
+        }
+    }
+    
+    fn clear(&mut self) {
+        self.size = 0;
+        for page in &self.pages {
+            get_mounted_disk().free_page(*page);
+        }
+        self.pages = Vec::new();
     }
 }
 
@@ -98,10 +129,18 @@ impl Directory {
     }
     
     pub fn delete_file(&mut self, name: &String) {
+        for file in &mut self.files {
+            if file.name == *name {
+                file.clear();
+            }
+        }
         self.files.retain(&|file| file.name != *name);
     }
 
     pub fn clear(&mut self) {
+        for file in &mut self.files {
+            file.clear();
+        }
         self.files = Vec::new();
         let mut dirs = Vec::new();
         swap(&mut self.subdirs, &mut dirs);
