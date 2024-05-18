@@ -16,6 +16,18 @@ impl File {
             pages: Vec::new(),
         }
     }
+
+    pub const fn get_name(&self) -> &String {
+        &self.name
+    }
+    
+    pub fn read(&self) -> Vec<u8> {
+        todo!();
+    }
+    
+    pub fn write(&self, data: &Vec<u8>) {
+        todo!();
+    }
 }
 
 #[derive(std::derive::Serial)]

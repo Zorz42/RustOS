@@ -1,3 +1,5 @@
+extern crate bootloader;
+
 use std::path::PathBuf;
 
 #[allow(clippy::unwrap_used)]
@@ -13,12 +15,12 @@ fn main() {
     bootloader::UefiBoot::new(&kernel).create_disk_image(&uefi_path).unwrap();
 
     // create a BIOS disk image
-    let bios_path = out_dir.join("bios.img");
-    bootloader::BiosBoot::new(&kernel).create_disk_image(&bios_path).unwrap();
+    //let bios_path = out_dir.join("bios.img");
+    //bootloader::BiosBoot::new(&kernel).create_disk_image(&bios_path).unwrap();
 
     // pass the disk image paths as env variables to the `main.rs`
     println!("cargo:rustc-env=UEFI_PATH={}", uefi_path.display());
-    println!("cargo:rustc-env=BIOS_PATH={}", bios_path.display());
+    //println!("cargo:rustc-env=BIOS_PATH={}", bios_path.display());
 
     const NUM_SECTORS: usize = 10000;
     let mut testdisk_data = vec![0u8; NUM_SECTORS * 512];
@@ -27,5 +29,5 @@ fn main() {
         testdisk_data[512 - 1 - i] = ((MAGIC_CODE >> (8 * i)) & 0xFF) as u8;
     }
 
-    std::fs::write("./testdisk.img", testdisk_data).expect("Error writing disk data");
+    std::fs::write("./testdisk.img", testdisk_data).expect("Error writing test disk data");
 }

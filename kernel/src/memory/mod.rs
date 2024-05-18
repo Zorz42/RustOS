@@ -6,7 +6,7 @@ pub use bitset::BitSetRaw;
 pub use paging::{check_page_table_integrity, VirtAddr};
 #[cfg(feature = "run_tests")]
 pub use paging::{find_free_page, free_page, PhysAddr};
-pub use paging::{map_page, map_page_auto};
+pub use paging::{map_page, map_page_auto, get_num_pages, get_num_free_pages};
 use paging::{PageTable, SEGMENTS_BITSET};
 use std::init_std_memory;
 

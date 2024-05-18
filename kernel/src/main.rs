@@ -11,14 +11,11 @@ use core::panic::PanicInfo;
 use bootloader_api::{BootInfo, BootloaderConfig, entry_point};
 use bootloader_api::config::Mapping;
 use bootloader_api::info::PixelFormat;
-use std::memcpy_non_aligned;
 
 use crate::disk::scan_for_disks;
 use crate::filesystem::{close_fs, get_fs, init_fs};
 use crate::interrupts::init_idt;
-use crate::memory::{
-    check_page_table_integrity, FRAMEBUFFER_OFFSET, init_memory, KERNEL_STACK_ADDR, KERNEL_STACK_SIZE, map_framebuffer, map_page_auto, PAGE_SIZE, VirtAddr, VIRTUAL_OFFSET,
-};
+use crate::memory::{check_page_table_integrity, FRAMEBUFFER_OFFSET, get_num_free_pages, get_num_pages, init_memory, KERNEL_STACK_ADDR, KERNEL_STACK_SIZE, map_framebuffer, map_page_auto, PAGE_SIZE, VirtAddr, VIRTUAL_OFFSET};
 use crate::memory_disk::{get_mounted_disk, mount_disk, unmount_disk};
 use crate::print::{reset_print_color, set_print_color, TextColor};
 use crate::timer::init_timer;
@@ -81,7 +78,7 @@ fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
     // make sure that framebuffer ram has also occupied pages
     map_framebuffer(height as u32, stride as u32, bytes_per_pixel as u32);
     // make sure that the page table setup by bootloader has a few properties that we want
-    check_page_table_integrity();
+    //check_page_table_integrity();
 
     println!("Initializing disk");
     let disks = scan_for_disks();
@@ -123,7 +120,7 @@ fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
     }
 
     // run program
-    let testing_program = include_bytes!("../../compiled_projects/testing_project");
+    /*let testing_program = include_bytes!("../../compiled_projects/testing_project");
     assert_eq!(testing_program[1] as char, 'E');
     assert_eq!(testing_program[2] as char, 'L');
     assert_eq!(testing_program[3] as char, 'F');
@@ -150,8 +147,13 @@ fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
         let rax: u64;
         asm!("mov {}, rax", out(reg) rax);
         println!("Returned {rax}");
-    }
+    }*/
 
+    let all_memory = (get_num_pages() * 4) as f32 / 1000.0;
+    let used_memory = ((get_num_pages() - get_num_free_pages()) * 4) as f32 / 1000.0;
+    let portion = used_memory / all_memory * 100.0;
+    println!("{used_memory} MB / {all_memory} MB used ({portion:.1}%)");
+    
     close_fs();
     unmount_disk();
     println!("Going to infinite loop...");
