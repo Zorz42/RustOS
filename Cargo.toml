@@ -13,6 +13,13 @@ kernel = { path = "kernel", artifact = "bin", target = "x86_64-unknown-none" }
 # used for UEFI booting in QEMU
 ovmf-prebuilt = "0.1.0-alpha.1"
 
+[profile.release]
+strip = true
+lto = true
+codegen-units = 1
+opt-level = 3
+panic = "abort"
+
 [workspace]
 members = ["kernel", "kernel_test", "projects/testing_project", "std"]
 
