@@ -23,6 +23,7 @@ use crate::memory::{
     VIRTUAL_OFFSET,
 };
 use crate::memory_disk::{get_mounted_disk, mount_disk, unmount_disk};
+use crate::ports::word_out;
 use crate::print::{move_cursor_back, reset_print_color, set_print_color, TextColor};
 use crate::timer::init_timer;
 use crate::vga_driver::clear_screen;
@@ -168,7 +169,7 @@ fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
     
     print!("\n# _");
     let mut command = String::new();
-    loop {
+    'shell_loop: loop {
         while let Some((key, is_up)) = get_key_event() {
             if !is_up {
                 if let Some(c) = key_to_char(key) {
@@ -180,7 +181,13 @@ fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
                 if key == Key::Enter {
                     move_cursor_back();
                     print!(" \n");
-                    command_callback(command.clone());
+                    if command == String::from("exit") {
+                        break 'shell_loop;
+                    }
+                    
+                    if command.size() != 0 {
+                        command_callback(command.clone());
+                    }
                     print!("# _");
                     command = String::new();
                 }
@@ -203,6 +210,17 @@ fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
 
     close_fs();
     unmount_disk();
+
+    // shutdown qemu
+    word_out(0xB004, 0x2000);
+    word_out(0x604, 0x2000);
+    
+    println!("Going to infinite loop, because QEMU did not shut down");
+    loop {
+        unsafe {
+            asm!("hlt");
+        }
+    }
 }
 
 #[panic_handler]
