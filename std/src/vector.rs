@@ -1,7 +1,7 @@
 use crate::memcpy;
 use crate::pointer::Ptr;
-use core::ops::{DerefMut, Index, IndexMut};
 use crate::serial::Serial;
+use core::ops::{DerefMut, Index, IndexMut};
 
 pub struct Vec<T> {
     arr: Ptr<T>,
@@ -98,16 +98,14 @@ impl<T> Vec<T> {
             None
         } else {
             self.size -= 1;
-            unsafe {
-                Some(core::ptr::read(self.get_mut_unchecked(self.size).deref_mut()))
-            }
+            unsafe { Some(core::ptr::read(self.get_mut_unchecked(self.size).deref_mut())) }
         }
     }
 
     pub fn capacity(&self) -> usize {
         self.capacity
     }
-    
+
     pub fn reverse(&mut self) {
         let mut new_vec = Vec::new();
         while let Some(el) = self.pop() {

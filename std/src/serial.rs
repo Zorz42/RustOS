@@ -16,7 +16,7 @@ macro_rules! implement_serial_direct {
                     }
                 }
             }
-        
+
             fn deserialize(vec: &Vec<u8>, idx: &mut usize) -> Self {
                 let obj = Self::default();
                 for i in 0..core::mem::size_of::<$T>() {

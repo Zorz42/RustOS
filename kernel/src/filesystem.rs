@@ -1,8 +1,8 @@
 // always operates with the currently mounted disk
 
-use std::{deserialize, serialize, String, swap, Vec};
 use crate::memory::{DISK_OFFSET, PAGE_SIZE};
-use crate::memory_disk::{DiskBox, get_mounted_disk};
+use crate::memory_disk::{get_mounted_disk, DiskBox};
+use std::{deserialize, serialize, swap, String, Vec};
 
 #[derive(std::derive::Serial)]
 pub struct File {
@@ -13,17 +13,13 @@ pub struct File {
 
 impl File {
     fn new(name: String) -> Self {
-        Self {
-            name,
-            size: 0,
-            pages: Vec::new(),
-        }
+        Self { name, size: 0, pages: Vec::new() }
     }
 
     pub const fn get_name(&self) -> &String {
         &self.name
     }
-    
+
     pub fn read(&self) -> Vec<u8> {
         let mut res = Vec::new();
         for i in 0..self.size {
@@ -35,7 +31,7 @@ impl File {
         }
         res
     }
-    
+
     pub fn write(&mut self, data: &Vec<u8>) {
         self.clear();
         self.size = data.size() as i32;
@@ -51,7 +47,7 @@ impl File {
             }
         }
     }
-    
+
     fn clear(&mut self) {
         self.size = 0;
         for page in &self.pages {
@@ -127,7 +123,7 @@ impl Directory {
             self
         }
     }
-    
+
     pub fn delete_file(&mut self, name: &String) {
         for file in &mut self.files {
             if file.name == *name {
@@ -155,7 +151,7 @@ impl Directory {
         swap(&mut self.subdirs, &mut old_dirs);
 
         for mut dir in old_dirs {
-            if(dir.get().name == *name) {
+            if (dir.get().name == *name) {
                 dir.get().clear();
                 DiskBox::delete(dir);
             } else {
@@ -267,7 +263,5 @@ pub fn close_fs() {
 }
 
 pub fn get_fs() -> &'static mut FileSystem {
-    unsafe {
-        FILESYSTEM.as_mut().unwrap()
-    }
+    unsafe { FILESYSTEM.as_mut().unwrap() }
 }

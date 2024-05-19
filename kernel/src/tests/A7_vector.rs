@@ -1,5 +1,5 @@
 use kernel_test::{kernel_test, kernel_test_mod};
-use std::{deserialize, Rng, Serial, serialize, String, Vec};
+use std::{deserialize, serialize, Rng, Serial, String, Vec};
 kernel_test_mod!(crate::tests::A7_vector);
 
 #[kernel_test]
@@ -156,7 +156,10 @@ fn test_vector_partial_eq() {
     }
 }
 
-fn test_serialize<T: Serial + TryFrom<u64> + PartialEq>() where <T as TryFrom<u64>>::Error: core::fmt::Debug {
+fn test_serialize<T: Serial + TryFrom<u64> + PartialEq>()
+where
+    <T as TryFrom<u64>>::Error: core::fmt::Debug,
+{
     let mut rng = Rng::new(57438295724389);
     for _ in 0..100 {
         let size = rng.get(0, 100) as usize;
@@ -170,7 +173,7 @@ fn test_serialize<T: Serial + TryFrom<u64> + PartialEq>() where <T as TryFrom<u6
         }
         let data = serialize(&mut vec1);
         let vec2 = deserialize(&data);
-        
+
         assert!(vec1 == vec2);
     }
 }
@@ -186,7 +189,7 @@ impl TryFrom<u64> for Sample {
     type Error = ();
 
     fn try_from(value: u64) -> Result<Self, Self::Error> {
-        Ok(Self{
+        Ok(Self {
             a: ((value >> 0) & 0xFFFFFFFF) as i32,
             b: ((value >> 5) & 0xFF) as u8,
             c: ((value >> 32) & 0xFFFFFFFF) as i32,
@@ -237,18 +240,18 @@ fn test_vector_drop_on_iter() {
 #[kernel_test]
 fn test_vector_reverse() {
     let mut rng = Rng::new(56743852);
-    
+
     for _ in 0..100 {
         let size = rng.get(0, 1000) as usize;
         let mut vec1 = Vec::new();
-        
+
         for _ in 0..size {
             vec1.push(rng.get(0, 1u64 << 63));
         }
-        
+
         let mut vec2 = vec1.clone();
         vec2.reverse();
-        
+
         for i in 0..size {
             assert_eq!(vec1[i], vec2[size - i - 1]);
         }
@@ -259,6 +262,6 @@ fn test_vector_reverse() {
 fn test_string_split() {
     let str1 = String::from("/home/jakob/directory/file");
     let parts = str1.split('/');
-    
+
     assert!(parts == Vec::new_from_slice(&[String::from(""), String::from("home"), String::from("jakob"), String::from("directory"), String::from("file")]))
 }

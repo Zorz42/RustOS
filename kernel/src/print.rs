@@ -84,6 +84,12 @@ impl Writer {
             self.new_line();
         }
     }
+    
+    fn move_cursor_back(&mut self) {
+        if self.x != 0 {
+            self.x -= 1;
+        }
+    }
 }
 
 static mut WRITER: Writer = Writer::new();
@@ -125,5 +131,11 @@ pub fn set_print_color(text_color: TextColor, background_color: TextColor) {
 pub fn reset_print_color() {
     unsafe {
         WRITER.set_color(TextColor::White, TextColor::Black);
+    }
+}
+
+pub fn move_cursor_back() {
+    unsafe {
+        WRITER.move_cursor_back();
     }
 }

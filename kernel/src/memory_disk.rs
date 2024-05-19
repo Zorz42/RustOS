@@ -1,8 +1,8 @@
 use core::ptr::{addr_of, addr_of_mut};
-use std::{deserialize, memcpy_non_aligned, Serial, serialize, Vec};
+use std::{deserialize, memcpy_non_aligned, serialize, Serial, Vec};
 
 use crate::disk::Disk;
-use crate::memory::{BitSetRaw, DISK_OFFSET, map_page_auto, PAGE_SIZE, VirtAddr};
+use crate::memory::{map_page_auto, BitSetRaw, VirtAddr, DISK_OFFSET, PAGE_SIZE};
 
 pub struct MemoryDisk {
     disk: Disk,
@@ -42,7 +42,7 @@ impl MemoryDisk {
     pub fn get_size(&self) -> usize {
         self.get_num_pages() * PAGE_SIZE as usize
     }
-    
+
     fn map_page(&mut self, addr: u64) {
         let idx = (addr - DISK_OFFSET) / PAGE_SIZE;
         self.mapped_pages.push(idx as i32);
@@ -81,19 +81,19 @@ impl MemoryDisk {
         }
         self.set_head(&Vec::new());
     }
-    
+
     pub fn get_head(&mut self) -> Vec<u8> {
         let size = unsafe { *(DISK_OFFSET as *mut i32) } as usize;
         let mut data = Vec::new();
-        
+
         let ptr = (DISK_OFFSET + 4) as *mut u8;
         for i in 0..size {
             data.push(unsafe { *ptr.add(i) });
         }
-        
+
         data
     }
-    
+
     pub fn set_head(&mut self, data: &Vec<u8>) {
         unsafe {
             *(DISK_OFFSET as *mut i32) = data.size() as i32;
@@ -117,7 +117,7 @@ impl MemoryDisk {
             panic!("Out of disk space");
         }
     }
-    
+
     pub fn free_page(&mut self, page: i32) {
         debug_assert!(self.get_bitset().get(page as usize));
         self.get_bitset_mut().set(page as usize, false);
@@ -196,12 +196,8 @@ impl<T: Serial> Serial for DiskBox<T> {
     fn deserialize(vec: &Vec<u8>, idx: &mut usize) -> Self {
         let size = i32::deserialize(vec, idx);
         let pages = Vec::<i32>::deserialize(vec, idx);
-        
-        Self {
-            size,
-            pages,
-            obj: None,
-        }
+
+        Self { size, pages, obj: None }
     }
 }
 
@@ -213,7 +209,7 @@ impl<T: Serial> DiskBox<T> {
             obj: Some(obj),
         }
     }
-    
+
     fn save(&mut self) {
         for page in &self.pages {
             get_mounted_disk().free_page(*page);
@@ -221,7 +217,7 @@ impl<T: Serial> DiskBox<T> {
         self.pages = Vec::new();
         let data = serialize(self.obj.as_mut().unwrap());
         self.size = data.size() as i32;
-        
+
         let mut idx = 0;
         while idx != data.size() {
             let curr_size = usize::min(PAGE_SIZE as usize, data.size() - idx);
@@ -233,16 +229,14 @@ impl<T: Serial> DiskBox<T> {
             idx += curr_size;
         }
     }
-    
+
     // translate idx-th byte to its ram location
     fn translate(&self, idx: usize) -> *mut u8 {
         let page_id = self.pages[idx / (PAGE_SIZE as usize)];
         let page_addr = id_to_addr(page_id);
-        unsafe {
-            page_addr.add(idx % (PAGE_SIZE as usize))
-        }
+        unsafe { page_addr.add(idx % (PAGE_SIZE as usize)) }
     }
-    
+
     pub fn get(&mut self) -> &mut T {
         if self.obj.is_some() {
             self.obj.as_mut().unwrap()
@@ -262,7 +256,7 @@ impl<T: Serial> DiskBox<T> {
     pub fn set(&mut self, obj: T) {
         self.obj = Some(obj);
     }
-    
+
     pub fn delete(mut self) {
         for page in &self.pages {
             get_mounted_disk().free_page(*page);
@@ -278,4 +272,3 @@ impl<T: Serial> Drop for DiskBox<T> {
         }
     }
 }
- 

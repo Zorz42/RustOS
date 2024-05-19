@@ -1,7 +1,7 @@
-use proc_macro::{TokenStream};
+use proc_macro::TokenStream;
 use quote::quote;
 use syn;
-use syn::{DeriveInput, parse_macro_input};
+use syn::{parse_macro_input, DeriveInput};
 
 #[proc_macro_derive(Serial)]
 pub fn serial_derive(input: TokenStream) -> TokenStream {

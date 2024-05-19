@@ -1,8 +1,8 @@
-use kernel_test::{kernel_test, kernel_test_mod};
-use std::{Rng, String, Vec};
 use crate::filesystem::{close_fs, get_fs, init_fs};
 use crate::memory_disk::{mount_disk, unmount_disk};
 use crate::tests::get_test_disk;
+use kernel_test::{kernel_test, kernel_test_mod};
+use std::{Rng, String, Vec};
 
 kernel_test_mod!(crate::tests::B0_filesystem);
 
@@ -71,7 +71,7 @@ fn test_fs_persists() {
             get_fs().delete_file(&file_name);
             existing_files.retain(&|x| *x != file_name);
         }
-        
+
         close_fs();
         unmount_disk();
         mount_disk(get_test_disk());
@@ -117,13 +117,13 @@ fn test_fs_create_dir() {
         unmount_disk();
         mount_disk(get_test_disk());
         init_fs();
-        
+
         let mut curr_dirs = Vec::new();
         for i in dirs.clone() {
             curr_dirs.push(i);
             assert!(get_fs().get_directory(&join(&curr_dirs, '/')).is_some());
         }
-        
+
         get_fs().delete_directory(&dirs[0]);
 
         let mut curr_dirs = Vec::new();
@@ -138,9 +138,9 @@ fn test_fs_create_dir() {
 fn test_fs_read_write_file() {
     let mut rng = Rng::new(54738524637825);
     let mut vec = Vec::new();
-    
+
     get_fs().create_directory(&String::from("vec"));
-    
+
     for i in 0..20 {
         let mut data = Vec::new();
         let len = rng.get(0, 10000);

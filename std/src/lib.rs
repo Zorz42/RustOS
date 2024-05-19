@@ -6,10 +6,10 @@ mod heap_tree;
 mod malloc;
 mod pointer;
 mod rand;
-mod utils;
-mod vector;
 mod serial;
 mod string;
+mod utils;
+mod vector;
 
 #[cfg(feature = "test_includes")]
 pub use heap_tree::HeapTree;
@@ -18,12 +18,12 @@ pub use malloc::{free, malloc};
 
 use crate::malloc::init_malloc;
 pub use boxed::Box;
+pub use derive;
 pub use rand::Rng;
+pub use serial::{deserialize, serialize, Serial};
+pub use string::String;
 pub use utils::{memcpy, memcpy_non_aligned, memset, memset_int64, swap, volatile_store_byte};
 pub use vector::Vec;
-pub use serial::{Serial, serialize, deserialize};
-pub use derive;
-pub use string::String;
 
 static mut PAGE_ALLOCATOR: Option<&'static dyn Fn(*mut u8)> = None;
 static mut HEAP_TREE_ADDR: u64 = 0;

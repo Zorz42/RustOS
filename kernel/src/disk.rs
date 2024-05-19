@@ -1,6 +1,6 @@
 use std::Vec;
 
-use crate::interrupts::{ExceptionStackFrame, set_idt_entry};
+use crate::interrupts::{set_idt_entry, ExceptionStackFrame};
 use crate::ports::{byte_in, byte_out, word_in, word_out};
 use crate::timer::get_ticks;
 

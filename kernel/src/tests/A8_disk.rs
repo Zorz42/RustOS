@@ -1,6 +1,6 @@
+use crate::tests::get_test_disk;
 use kernel_test::{kernel_test, kernel_test_mod};
 use std::Rng;
-use crate::tests::get_test_disk;
 
 kernel_test_mod!(crate::tests::A8_disk);
 

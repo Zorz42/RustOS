@@ -6,19 +6,24 @@
 #![feature(abi_x86_interrupt)]
 
 use core::arch::asm;
+use core::cmp::PartialEq;
 use core::panic::PanicInfo;
 
-use bootloader_api::{BootInfo, BootloaderConfig, entry_point};
 use bootloader_api::config::Mapping;
 use bootloader_api::info::PixelFormat;
+use bootloader_api::{entry_point, BootInfo, BootloaderConfig};
+use std::String;
 
 use crate::disk::scan_for_disks;
 use crate::filesystem::{close_fs, get_fs, init_fs};
 use crate::interrupts::init_idt;
-use crate::keyboard::init_keyboard;
-use crate::memory::{check_page_table_integrity, FRAMEBUFFER_OFFSET, get_num_free_pages, get_num_pages, init_memory, KERNEL_STACK_ADDR, KERNEL_STACK_SIZE, map_framebuffer, map_page_auto, PAGE_SIZE, VirtAddr, VIRTUAL_OFFSET};
+use crate::keyboard::{get_key_event, init_keyboard, Key, key_to_char};
+use crate::memory::{
+    check_page_table_integrity, get_num_free_pages, get_num_pages, init_memory, map_framebuffer, map_page_auto, VirtAddr, FRAMEBUFFER_OFFSET, KERNEL_STACK_ADDR, KERNEL_STACK_SIZE, PAGE_SIZE,
+    VIRTUAL_OFFSET,
+};
 use crate::memory_disk::{get_mounted_disk, mount_disk, unmount_disk};
-use crate::print::{reset_print_color, set_print_color, TextColor};
+use crate::print::{move_cursor_back, reset_print_color, set_print_color, TextColor};
 use crate::timer::init_timer;
 use crate::vga_driver::clear_screen;
 
@@ -26,6 +31,7 @@ mod disk;
 mod filesystem;
 mod font;
 mod interrupts;
+mod keyboard;
 mod memory;
 mod memory_disk;
 mod ports;
@@ -34,7 +40,6 @@ mod print;
 mod tests;
 mod timer;
 mod vga_driver;
-mod keyboard;
 
 const CONFIG: BootloaderConfig = {
     let mut config = BootloaderConfig::new_default();
@@ -45,6 +50,10 @@ const CONFIG: BootloaderConfig = {
     config
 };
 entry_point!(kernel_main, config = &CONFIG);
+
+fn command_callback(command: String) {
+    println!("Echo {command}");
+}
 
 #[no_mangle]
 fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
@@ -86,7 +95,6 @@ fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
     println!("Initializing disk");
     let disks = scan_for_disks();
 
-    println!("Finding root disk");
     // find the root disk
     let mut root_disk = None;
     for disk in &disks {
@@ -104,12 +112,12 @@ fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
         }
     }
     let root_disk = root_disk.unwrap();
-    
+
     mount_disk(root_disk);
 
     // TEMPORARY
     get_mounted_disk().erase();
-    
+
     init_fs();
 
     // TEMPORARY
@@ -156,15 +164,45 @@ fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
     let used_memory = ((get_num_pages() - get_num_free_pages()) * 4) as f32 / 1000.0;
     let portion = used_memory / all_memory * 100.0;
     println!("{used_memory} MB / {all_memory} MB used ({portion:.1}%)");
+    println!("Entering shell");
     
-    close_fs();
-    unmount_disk();
-    println!("Going to infinite loop...");
+    print!("\n# _");
+    let mut command = String::new();
     loop {
+        while let Some((key, is_up)) = get_key_event() {
+            if !is_up {
+                if let Some(c) = key_to_char(key) {
+                    move_cursor_back();
+                    print!("{c}_");
+                    command.push(c);
+                }
+                
+                if key == Key::Enter {
+                    move_cursor_back();
+                    print!(" \n");
+                    command_callback(command.clone());
+                    print!("# _");
+                    command = String::new();
+                }
+                
+                if key == Key::Backspace && command.size() != 0 {
+                    move_cursor_back();
+                    move_cursor_back();
+                    print!("  ");
+                    move_cursor_back();
+                    move_cursor_back();
+                    print!("_");
+                    command.pop();
+                }
+            }
+        }
         unsafe {
             asm!("hlt");
         }
     }
+
+    close_fs();
+    unmount_disk();
 }
 
 #[panic_handler]
