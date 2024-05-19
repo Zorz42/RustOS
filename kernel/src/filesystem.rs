@@ -4,6 +4,34 @@ use crate::memory::{DISK_OFFSET, PAGE_SIZE};
 use crate::memory_disk::{get_mounted_disk, DiskBox};
 use std::{deserialize, serialize, swap, String, Vec};
 
+pub struct Path {
+    dirs: Vec<String>,
+}
+
+impl Path {
+    pub fn from(string: &String) -> Self {
+        let mut dirs = string.split('/');
+        dirs.retain(&|x| x.size() != 0);
+        Self {
+            dirs
+        }
+    }
+    
+    pub fn to_string(&self) -> String {
+        let mut res = String::new();
+        
+        for i in &self.dirs {
+            res.push('/');
+            for c in i {
+                res.push(*c);
+            }
+        }
+        res.push('/');
+        
+        res
+    }
+}
+
 #[derive(std::derive::Serial)]
 pub struct File {
     name: String,
@@ -159,6 +187,18 @@ impl Directory {
             }
         }
     }
+    
+    pub fn get_files(&self) -> &Vec<File> {
+        &self.files
+    }
+
+    pub fn get_directories(&mut self) -> &mut Vec<DiskBox<Directory>> {
+        &mut self.subdirs
+    }
+    
+    pub fn get_name(&self) -> &String {
+        &self.name
+    }
 }
 
 pub struct FileSystem {
@@ -181,15 +221,15 @@ impl FileSystem {
     }
 
     pub fn get_directory(&mut self, path: &String) -> Option<&mut Directory> {
-        let mut parts = path.split('/');
-        parts.retain(&|x| x.size() != 0);
+        let path = Path::from(path);
+        let mut parts = path.dirs;
         parts.reverse();
         self.root.get().get_directory_full(parts)
     }
 
     pub fn get_file(&mut self, path: &String) -> Option<&mut File> {
-        let mut parts = path.split('/');
-        parts.retain(&|x| x.size() != 0);
+        let path = Path::from(path);
+        let mut parts = path.dirs;
         let file_name = parts.pop()?;
         parts.reverse();
         let directory = self.root.get().get_directory_full(parts)?;
@@ -197,8 +237,8 @@ impl FileSystem {
     }
 
     pub fn create_file(&mut self, path: &String) -> &mut File {
-        let mut parts = path.split('/');
-        parts.retain(&|x| x.size() != 0);
+        let path = Path::from(path);
+        let mut parts = path.dirs;
         if let Some(file_name) = parts.pop() {
             parts.reverse();
             let parent = self.root.get().create_directory_full(parts);
@@ -209,15 +249,15 @@ impl FileSystem {
     }
 
     pub fn create_directory(&mut self, path: &String) -> &mut Directory {
-        let mut parts = path.split('/');
-        parts.retain(&|x| x.size() != 0);
+        let path = Path::from(path);
+        let mut parts = path.dirs;
         parts.reverse();
         self.root.get().create_directory_full(parts)
     }
 
     pub fn delete_file(&mut self, path: &String) {
-        let mut parts = path.split('/');
-        parts.retain(&|x| x.size() != 0);
+        let path = Path::from(path);
+        let mut parts = path.dirs;
         if let Some(file_name) = parts.pop() {
             parts.reverse();
             let parent = self.root.get().get_directory_full(parts).unwrap();
@@ -228,10 +268,8 @@ impl FileSystem {
     }
 
     pub fn delete_directory(&mut self, path: &String) {
-        let mut parts = path.split('/');
-        parts.retain(&|x| x.size() != 0);
-        let mut parts = path.split('/');
-        parts.retain(&|x| x.size() != 0);
+        let path = Path::from(path);
+        let mut parts = path.dirs;
         if let Some(dir_name) = parts.pop() {
             parts.reverse();
             let parent = self.root.get().get_directory_full(parts).unwrap();

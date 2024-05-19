@@ -38,6 +38,10 @@ impl MemoryDisk {
     pub fn get_num_pages(&self) -> usize {
         self.disk.size() / 4
     }
+    
+    pub fn get_num_free_pages(&self) -> usize {
+        self.bitset.as_ref().unwrap().get_count0()
+    }
 
     pub fn get_size(&self) -> usize {
         self.get_num_pages() * PAGE_SIZE as usize

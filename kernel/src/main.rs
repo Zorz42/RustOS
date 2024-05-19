@@ -155,7 +155,13 @@ fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
     let all_memory = (get_num_pages() * 4) as f32 / 1000.0;
     let used_memory = ((get_num_pages() - get_num_free_pages()) * 4) as f32 / 1000.0;
     let portion = used_memory / all_memory * 100.0;
-    println!("{used_memory} MB / {all_memory} MB used ({portion:.1}%)");
+    println!("{used_memory} MB / {all_memory} MB of RAM used ({portion:.1}%)");
+
+    let all_disk = (get_mounted_disk().get_num_pages() * 4) as f32 / 1000.0;
+    let used_disk = ((get_mounted_disk().get_num_pages() - get_mounted_disk().get_num_free_pages()) * 4) as f32 / 1000.0;
+    let portion = used_disk / all_disk * 100.0;
+    println!("{used_disk} MB / {all_disk} MB of DISK used ({portion:.1}%)");
+    
     println!("Entering shell");
     
     shell_main();
