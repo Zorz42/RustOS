@@ -66,7 +66,20 @@ pub fn key_to_char(code: Key) -> Option<char> {
         Key::Num7 => Some('7'),
         Key::Num8 => Some('8'),
         Key::Num9 => Some('9'),
+
+        Key::Minus => Some('-'),
+        Key::Plus => Some('+'),
+        Key::LeftBracket => Some(']'),
+        Key::RightBracket => Some('['),
+        Key::Semicolon => Some(';'),
+        Key::Quote => Some('\''),
+        Key::Backquote => Some('`'),
+        Key::Period => Some('.'),
+        Key::Comma => Some(','),
+        Key::Slash => Some('/'),
         Key::Space => Some(' '),
+        Key::Backslash => Some('\\'),
+
         _ => None
     }
 }

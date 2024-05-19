@@ -94,6 +94,12 @@ fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
     println!("Initializing disk");
     let disks = scan_for_disks();
 
+    #[cfg(feature = "run_tests")]
+    {
+        use crate::tests::test_runner;
+        test_runner(&disks);
+    }
+
     // find the root disk
     let mut root_disk = None;
     for disk in &disks {
@@ -115,12 +121,6 @@ fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
     mount_disk(root_disk);
     init_fs();
     println!("Root disk is mounted!");
-
-    #[cfg(feature = "run_tests")]
-    {
-        use crate::tests::test_runner;
-        test_runner(&disks);
-    }
 
     // run program
     /*let testing_program = include_bytes!("../../compiled_projects/testing_project");

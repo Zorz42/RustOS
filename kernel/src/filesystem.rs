@@ -11,9 +11,17 @@ pub struct Path {
 impl Path {
     pub fn from(string: &String) -> Self {
         let mut dirs = string.split('/');
-        dirs.retain(&|x| x.size() != 0);
+        dirs.retain(&|x| x.size() != 0 && *x != String::from("."));
+        let mut dirs2 = Vec::new();
+        for dir in dirs {
+            if dir == String::from("..") {
+                dirs2.pop();
+            } else {
+                dirs2.push(dir);
+            }
+        }
         Self {
-            dirs
+            dirs: dirs2,
         }
     }
     
