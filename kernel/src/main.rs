@@ -25,6 +25,7 @@ use crate::memory::{
 use crate::memory_disk::{get_mounted_disk, mount_disk, unmount_disk};
 use crate::ports::word_out;
 use crate::print::{move_cursor_back, reset_print_color, set_print_color, TextColor};
+use crate::shell::shell_main;
 use crate::timer::init_timer;
 use crate::vga_driver::clear_screen;
 
@@ -41,6 +42,7 @@ mod print;
 mod tests;
 mod timer;
 mod vga_driver;
+mod shell;
 
 const CONFIG: BootloaderConfig = {
     let mut config = BootloaderConfig::new_default();
@@ -51,10 +53,6 @@ const CONFIG: BootloaderConfig = {
     config
 };
 entry_point!(kernel_main, config = &CONFIG);
-
-fn command_callback(command: String) {
-    println!("Echo {command}");
-}
 
 #[no_mangle]
 fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
@@ -115,14 +113,7 @@ fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
     let root_disk = root_disk.unwrap();
 
     mount_disk(root_disk);
-
-    // TEMPORARY
-    get_mounted_disk().erase();
-
     init_fs();
-
-    // TEMPORARY
-    get_fs().erase();
     println!("Root disk is mounted!");
 
     #[cfg(feature = "run_tests")]
@@ -167,46 +158,7 @@ fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
     println!("{used_memory} MB / {all_memory} MB used ({portion:.1}%)");
     println!("Entering shell");
     
-    print!("\n# _");
-    let mut command = String::new();
-    'shell_loop: loop {
-        while let Some((key, is_up)) = get_key_event() {
-            if !is_up {
-                if let Some(c) = key_to_char(key) {
-                    move_cursor_back();
-                    print!("{c}_");
-                    command.push(c);
-                }
-                
-                if key == Key::Enter {
-                    move_cursor_back();
-                    print!(" \n");
-                    if command == String::from("exit") {
-                        break 'shell_loop;
-                    }
-                    
-                    if command.size() != 0 {
-                        command_callback(command.clone());
-                    }
-                    print!("# _");
-                    command = String::new();
-                }
-                
-                if key == Key::Backspace && command.size() != 0 {
-                    move_cursor_back();
-                    move_cursor_back();
-                    print!("  ");
-                    move_cursor_back();
-                    move_cursor_back();
-                    print!("_");
-                    command.pop();
-                }
-            }
-        }
-        unsafe {
-            asm!("hlt");
-        }
-    }
+    shell_main();
 
     close_fs();
     unmount_disk();
@@ -227,5 +179,9 @@ fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
 fn panic(info: &PanicInfo) -> ! {
     set_print_color(TextColor::LightRed, TextColor::Black);
     println!("Kernel panic: {}", info);
-    loop {}
+    loop {
+        unsafe {
+            asm!("hlt");
+        }
+    }
 }

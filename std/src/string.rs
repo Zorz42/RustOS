@@ -72,6 +72,19 @@ impl String {
         res.push(curr);
         res
     }
+    
+    pub fn as_str(&self) -> &str {
+        unsafe {
+            //core::str::from_utf8(core::slice::from_raw_parts((self.vec.get_unchecked(0) as *const char) as *const u8, self.vec.size())).unwrap()
+            let mut data = Vec::new();
+            for c in self {
+                for i in c.encode_utf8(&mut [0; 4]).bytes() {
+                    data.push(i);
+                }
+            }
+            core::str::from_utf8(core::slice::from_raw_parts(data.get_unchecked(0) as *const u8, self.vec.size())).unwrap()
+        }
+    }
 }
 
 impl Index<usize> for String {
