@@ -2,7 +2,7 @@ use core::ptr::{addr_of, addr_of_mut};
 use std::{deserialize, memcpy_non_aligned, serialize, Serial, Vec};
 
 use crate::disk::disk::Disk;
-use crate::memory::{map_page_auto, BitSetRaw, VirtAddr, DISK_OFFSET, PAGE_SIZE};
+use crate::memory::{map_page_auto, BitSetRaw, VirtAddr, DISK_OFFSET, PAGE_SIZE, unmap_page};
 
 pub struct MemoryDisk {
     disk: Disk,
@@ -71,6 +71,7 @@ impl MemoryDisk {
             }
             self.disk.write(sector as i32, &data);
         }
+        unmap_page(id_to_addr(page));
     }
 
     // bitset size in pages

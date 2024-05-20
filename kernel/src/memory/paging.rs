@@ -38,10 +38,12 @@ impl PageTable {
     }
 }
 
-fn create_page_table_entry(addr: PhysAddr, writable: bool, user: bool) -> PageTableEntry {
+fn create_page_table_entry(addr: PhysAddr, present: bool, writable: bool, user: bool) -> PageTableEntry {
     debug_assert_eq!(addr & 0xFFF00000_00000FFF, 0);
     let mut entry = addr & 0x000FFFFF_FFFFF000;
-    entry |= 1 << 0; // present
+    if present {
+        entry |= 1 << 0; // present
+    }
     if writable {
         entry |= 1 << 1;
     }
@@ -57,10 +59,6 @@ pub fn find_free_page() -> PhysAddr {
     unsafe {
         let index = SEGMENTS_BITSET.get_zero_element();
         if let Some(index) = index {
-            /*if index % 20 == 0 {
-                print!("\nFound ");
-            }
-            print!("P0x{:x} ", index as u64 * PAGE_SIZE);*/
             SEGMENTS_BITSET.set(index, true);
             index as u64 * PAGE_SIZE
         } else {
@@ -80,7 +78,7 @@ pub unsafe fn free_page(addr: PhysAddr) {
     SEGMENTS_BITSET.set(index, false);
 }
 
-pub fn map_page(virtual_addr: VirtAddr, physical_addr: PhysAddr, writable: bool, user: bool) {
+fn get_address_page_table(virtual_addr: VirtAddr) -> *mut PageTable {
     let mut curr_table = unsafe { CURRENT_PAGE_TABLE };
     for i in 0..3 {
         let index = (virtual_addr as u64 >> (39 - 9 * i)) & 0b111111111;
@@ -90,22 +88,40 @@ pub fn map_page(virtual_addr: VirtAddr, physical_addr: PhysAddr, writable: bool,
             } else {
                 let new_table = find_free_page();
                 clear_page_memory((new_table + VIRTUAL_OFFSET) as VirtAddr);
-                (*curr_table).entries[index as usize] = create_page_table_entry(new_table, true, false);
+                (*curr_table).entries[index as usize] = create_page_table_entry(new_table, true, true, false);
                 curr_table = (new_table + VIRTUAL_OFFSET) as *mut PageTable;
             }
         }
     }
+    
+    curr_table
+}
+
+pub fn map_page(virtual_addr: VirtAddr, physical_addr: PhysAddr, writable: bool, user: bool) {
+    let curr_table = get_address_page_table(virtual_addr);
 
     unsafe {
         let index = (virtual_addr as u64 >> 12) & 0b111111111;
         if (*curr_table).get_sub_page_table(index as usize).is_none() {
-            (*curr_table).entries[index as usize] = create_page_table_entry(physical_addr, writable, user);
+            (*curr_table).entries[index as usize] = create_page_table_entry(physical_addr, true, writable, user);
         }
     }
 }
 
 pub fn map_page_auto(virtual_addr: VirtAddr, writable: bool, user: bool) {
     map_page(virtual_addr, find_free_page(), writable, user);
+}
+
+pub fn unmap_page(virtual_addr: VirtAddr) {
+    let curr_table = get_address_page_table(virtual_addr);
+
+    unsafe {
+        let index = (virtual_addr as u64 >> 12) & 0b111111111;
+        if (*curr_table).get_sub_page_table(index as usize).is_none() {
+            panic!("Cannot unmap non-present page");
+        }
+        (*curr_table).entries[index as usize] = create_page_table_entry(0, false, false, false);
+    }
 }
 
 pub fn check_page_table_integrity() {
