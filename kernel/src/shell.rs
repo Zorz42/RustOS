@@ -2,7 +2,7 @@ use core::arch::asm;
 use std::{String, Vec};
 use crate::keyboard::{get_key_event, Key, key_to_char};
 use crate::{print, println};
-use crate::filesystem::{get_fs, Path};
+use crate::disk::filesystem::{get_fs, Path};
 use crate::print::move_cursor_back;
 
 struct Context {

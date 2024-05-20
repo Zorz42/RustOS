@@ -14,15 +14,15 @@ use bootloader_api::info::PixelFormat;
 use bootloader_api::{entry_point, BootInfo, BootloaderConfig};
 use std::String;
 
-use crate::disk::scan_for_disks;
-use crate::filesystem::{close_fs, get_fs, init_fs};
+use crate::disk::disk::scan_for_disks;
+use crate::disk::filesystem::{close_fs, get_fs, init_fs};
 use crate::interrupts::init_idt;
 use crate::keyboard::{get_key_event, init_keyboard, Key, key_to_char};
 use crate::memory::{
     check_page_table_integrity, get_num_free_pages, get_num_pages, init_memory, map_framebuffer, map_page_auto, VirtAddr, FRAMEBUFFER_OFFSET, KERNEL_STACK_ADDR, KERNEL_STACK_SIZE, PAGE_SIZE,
     VIRTUAL_OFFSET,
 };
-use crate::memory_disk::{get_mounted_disk, mount_disk, unmount_disk};
+use crate::disk::memory_disk::{get_mounted_disk, mount_disk, unmount_disk};
 use crate::ports::word_out;
 use crate::print::{move_cursor_back, reset_print_color, set_print_color, TextColor};
 use crate::shell::shell_main;
@@ -30,12 +30,10 @@ use crate::timer::init_timer;
 use crate::vga_driver::clear_screen;
 
 mod disk;
-mod filesystem;
 mod font;
 mod interrupts;
 mod keyboard;
 mod memory;
-mod memory_disk;
 mod ports;
 mod print;
 #[cfg(feature = "run_tests")]

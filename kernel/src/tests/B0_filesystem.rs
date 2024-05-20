@@ -1,5 +1,5 @@
-use crate::filesystem::{close_fs, get_fs, init_fs};
-use crate::memory_disk::{mount_disk, unmount_disk};
+use crate::disk::filesystem::{close_fs, get_fs, init_fs};
+use crate::disk::memory_disk::{mount_disk, unmount_disk};
 use crate::tests::get_test_disk;
 use kernel_test::{kernel_test, kernel_test_mod};
 use std::{Rng, String, Vec};
@@ -8,6 +8,8 @@ kernel_test_mod!(crate::tests::B0_filesystem);
 
 #[kernel_test]
 fn test_fs_erase() {
+    init_fs();
+    
     for _ in 0..100 {
         get_fs().erase();
     }

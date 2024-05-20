@@ -1,7 +1,7 @@
 // always operates with the currently mounted disk
 
 use crate::memory::{DISK_OFFSET, PAGE_SIZE};
-use crate::memory_disk::{get_mounted_disk, DiskBox};
+use crate::disk::memory_disk::{get_mounted_disk, DiskBox};
 use std::{deserialize, serialize, swap, String, Vec};
 
 pub struct Path {

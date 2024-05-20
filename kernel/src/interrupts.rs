@@ -1,7 +1,7 @@
 use core::arch::asm;
 use core::ptr::addr_of;
 
-use crate::memory_disk::disk_page_fault_handler;
+use crate::disk::memory_disk::disk_page_fault_handler;
 use crate::ports::byte_out;
 use crate::println;
 

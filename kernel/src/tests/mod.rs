@@ -1,6 +1,7 @@
 use std::Vec;
 
-use crate::disk::Disk;
+use crate::disk::disk::Disk;
+use crate::disk::memory_disk::mount_disk;
 use crate::timer::get_ticks;
 
 mod A0_rand;
