@@ -4,6 +4,7 @@ version = "0.1.0"
 
 [features]
 run_tests = ["kernel/run_tests"]
+run_perf = ["kernel/run_perf"]
 
 [build-dependencies]
 bootloader = { version = "0.11", default-features = false, features = ["uefi"] }
