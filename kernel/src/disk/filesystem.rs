@@ -73,7 +73,7 @@ impl File {
         self.size = data.size() as i32;
         let num_pages = (self.size as u64 + PAGE_SIZE - 1) / PAGE_SIZE;
         for _ in 0..num_pages {
-            self.pages.push(get_mounted_disk().alloc_page());
+            self.pages.push(get_mounted_disk().as_mut().unwrap().alloc_page());
         }
         for i in 0..self.size {
             let page = self.pages[(i / (PAGE_SIZE as i32)) as usize];
@@ -87,7 +87,7 @@ impl File {
     fn clear(&mut self) {
         self.size = 0;
         for page in &self.pages {
-            get_mounted_disk().free_page(*page);
+            get_mounted_disk().as_mut().unwrap().free_page(*page);
         }
         self.pages = Vec::new();
     }
@@ -215,16 +215,16 @@ pub struct FileSystem {
 
 impl FileSystem {
     pub fn new() -> Self {
-        if get_mounted_disk().get_head().size() == 0 {
-            get_mounted_disk().set_head(&serialize(&mut DiskBox::new(Directory::new(String::new()))));
+        if get_mounted_disk().as_mut().unwrap().get_head().size() == 0 {
+            get_mounted_disk().as_mut().unwrap().set_head(&serialize(&mut DiskBox::new(Directory::new(String::new()))));
         }
         Self {
-            root: deserialize(&get_mounted_disk().get_head()),
+            root: deserialize(&get_mounted_disk().as_mut().unwrap().get_head()),
         }
     }
 
     pub fn erase(&mut self) {
-        get_mounted_disk().erase();
+        get_mounted_disk().as_mut().unwrap().erase();
         self.root = DiskBox::new(Directory::new(String::new()));
     }
 
@@ -290,7 +290,7 @@ impl FileSystem {
 
 impl Drop for FileSystem {
     fn drop(&mut self) {
-        get_mounted_disk().set_head(&serialize(&mut self.root));
+        get_mounted_disk().as_mut().unwrap().set_head(&serialize(&mut self.root));
     }
 }
 

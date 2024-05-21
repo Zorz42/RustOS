@@ -1,5 +1,5 @@
 use core::ptr::{addr_of, addr_of_mut};
-use std::{deserialize, memcpy_non_aligned, serialize, Serial, Vec};
+use std::{deserialize, memcpy_non_aligned, serialize, Serial, Vec, SpinLock, Lock};
 
 use crate::disk::disk::Disk;
 use crate::memory::{map_page_auto, BitSetRaw, VirtAddr, DISK_OFFSET, PAGE_SIZE, unmap_page};
@@ -129,54 +129,47 @@ impl MemoryDisk {
     }
 }
 
-static mut MOUNTED_DISK: Option<MemoryDisk> = None;
+static MOUNTED_DISK: SpinLock<Option<MemoryDisk>> = SpinLock::new(None);
 
 pub fn unmount_disk() {
-    let mounted_disk = unsafe { &*addr_of!(MOUNTED_DISK) };
+    let mounted_disk = MOUNTED_DISK.get();
 
-    if let Some(mounted_disk) = mounted_disk {
+    if let Some(mounted_disk) = mounted_disk.as_ref() {
         for page in &mounted_disk.mapped_pages {
             mounted_disk.unmap_page(*page);
         }
-
-        unsafe {
-            MOUNTED_DISK = None;
-        }
     }
+    
+    drop(mounted_disk);
+    
+    *MOUNTED_DISK.get() = None;
 }
 
 pub fn mount_disk(disk: Disk) {
     unmount_disk();
 
     let mounted_disk = MemoryDisk::new(disk);
-    unsafe {
-        MOUNTED_DISK = Some(mounted_disk);
-        MOUNTED_DISK.as_mut().unwrap().init();
-    }
+    *MOUNTED_DISK.get() = Some(mounted_disk);
+    MOUNTED_DISK.get().as_mut().unwrap().init();
 }
 
-pub fn get_mounted_disk() -> &'static mut MemoryDisk {
-    unsafe {
-        if let Some(mounted_disk) = &mut *addr_of_mut!(MOUNTED_DISK) {
-            mounted_disk
-        } else {
-            panic!("No disk is mounted.");
-        }
-    }
+pub fn get_mounted_disk() -> Lock<'static, Option<MemoryDisk>> {
+    MOUNTED_DISK.get()
 }
 
 pub fn disk_page_fault_handler(addr: u64) -> bool {
-    if addr < DISK_OFFSET || addr >= DISK_OFFSET + get_mounted_disk().get_size() as u64 {
+    if addr < DISK_OFFSET || addr >= DISK_OFFSET + get_mounted_disk().as_mut().unwrap().get_size() as u64 {
         return false;
     }
 
-    let mounted_disk = unsafe {
-        if let Some(mounted_disk) = &mut *addr_of_mut!(MOUNTED_DISK) {
+    let mut disk = MOUNTED_DISK.get();
+    
+    let mounted_disk =
+        if let Some(mounted_disk) = disk.as_mut() {
             mounted_disk
         } else {
             return false;
-        }
-    };
+        };
 
     mounted_disk.map_page(addr);
 
@@ -218,7 +211,7 @@ impl<T: Serial> DiskBox<T> {
 
     fn save(&mut self) {
         for page in &self.pages {
-            get_mounted_disk().free_page(*page);
+            get_mounted_disk().as_mut().unwrap().free_page(*page);
         }
         self.pages = Vec::new();
         let data = serialize(self.obj.as_mut().unwrap());
@@ -227,7 +220,7 @@ impl<T: Serial> DiskBox<T> {
         let mut idx = 0;
         while idx != data.size() {
             let curr_size = usize::min(PAGE_SIZE as usize, data.size() - idx);
-            let page = get_mounted_disk().alloc_page();
+            let page = get_mounted_disk().as_mut().unwrap().alloc_page();
             self.pages.push(page);
             unsafe {
                 memcpy_non_aligned(data.get_unchecked(idx), id_to_addr(page), curr_size);
@@ -267,7 +260,7 @@ impl<T: Serial> DiskBox<T> {
 
     pub fn delete(mut self) {
         for page in &self.pages {
-            get_mounted_disk().free_page(*page);
+            get_mounted_disk().as_mut().unwrap().free_page(*page);
         }
         self.obj = None;
     }

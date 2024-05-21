@@ -1,6 +1,7 @@
 #![no_std]
 #![feature(decl_macro)]
 #![feature(str_from_raw_parts)]
+#![feature(ptr_as_ref_unchecked)]
 
 mod boxed;
 mod heap_tree;
@@ -11,6 +12,7 @@ mod serial;
 mod string;
 mod utils;
 mod vector;
+mod spinlock;
 
 #[cfg(feature = "test_includes")]
 pub use heap_tree::HeapTree;
@@ -25,6 +27,7 @@ pub use serial::{deserialize, serialize, Serial};
 pub use string::String;
 pub use utils::{memcpy, memcpy_non_aligned, memset, memset_int64, swap, volatile_store_byte};
 pub use vector::Vec;
+pub use spinlock::{SpinLock, Lock};
 
 static mut PAGE_ALLOCATOR: Option<&'static dyn Fn(*mut u8)> = None;
 static mut HEAP_TREE_ADDR: u64 = 0;
