@@ -2,7 +2,7 @@
 
 use crate::memory::{DISK_OFFSET, PAGE_SIZE};
 use crate::disk::memory_disk::{get_mounted_disk, DiskBox};
-use std::{deserialize, serialize, swap, String, Vec};
+use std::{deserialize, serialize, swap, String, Vec, Box};
 
 pub struct Path {
     dirs: Vec<String>,
@@ -294,11 +294,11 @@ impl Drop for FileSystem {
     }
 }
 
-static mut FILESYSTEM: Option<FileSystem> = None;
+static mut FILESYSTEM: Option<Box<FileSystem>> = None;
 
 pub fn init_fs() {
     unsafe {
-        FILESYSTEM = Some(FileSystem::new());
+        FILESYSTEM = Some(Box::new(FileSystem::new()));
     }
 }
 

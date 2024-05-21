@@ -111,5 +111,5 @@ fn run_perf_test<T: KernelPerf>(name: &str) {
     test_struct.teardown();
 
     set_print_color(TextColor::Green, TextColor::Black);
-    println!("   {:.3}ms per call", duration as f32 / count as f32);
+    println!("   {:.6}ms per call", duration as f32 / count as f32);
 }

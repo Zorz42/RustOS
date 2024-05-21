@@ -1,5 +1,5 @@
 use core::ptr::{addr_of, addr_of_mut};
-use std::{deserialize, memcpy_non_aligned, serialize, Serial, Vec};
+use std::{deserialize, memcpy_non_aligned, serialize, Serial, Vec, Box};
 
 use crate::disk::disk::Disk;
 use crate::memory::{map_page_auto, BitSetRaw, VirtAddr, DISK_OFFSET, PAGE_SIZE, unmap_page};
@@ -129,12 +129,10 @@ impl MemoryDisk {
     }
 }
 
-static mut MOUNTED_DISK: Option<MemoryDisk> = None;
+static mut MOUNTED_DISK: Option<Box<MemoryDisk>> = None;
 
 pub fn unmount_disk() {
-    let mounted_disk = unsafe { &*addr_of!(MOUNTED_DISK) };
-
-    if let Some(mounted_disk) = mounted_disk {
+    if let Some(mounted_disk) = unsafe { MOUNTED_DISK.as_mut() } {
         for page in &mounted_disk.mapped_pages {
             mounted_disk.unmap_page(*page);
         }
@@ -148,7 +146,7 @@ pub fn unmount_disk() {
 pub fn mount_disk(disk: Disk) {
     unmount_disk();
 
-    let mounted_disk = MemoryDisk::new(disk);
+    let mounted_disk = Box::new(MemoryDisk::new(disk));
     unsafe {
         MOUNTED_DISK = Some(mounted_disk);
         MOUNTED_DISK.as_mut().unwrap().init();
@@ -157,7 +155,7 @@ pub fn mount_disk(disk: Disk) {
 
 pub fn get_mounted_disk() -> &'static mut MemoryDisk {
     unsafe {
-        if let Some(mounted_disk) = &mut *addr_of_mut!(MOUNTED_DISK) {
+        if let Some(mounted_disk) = MOUNTED_DISK.as_mut() {
             mounted_disk
         } else {
             panic!("No disk is mounted.");
@@ -171,7 +169,7 @@ pub fn disk_page_fault_handler(addr: u64) -> bool {
     }
 
     let mounted_disk = unsafe {
-        if let Some(mounted_disk) = &mut *addr_of_mut!(MOUNTED_DISK) {
+        if let Some(mounted_disk) = MOUNTED_DISK.as_mut() {
             mounted_disk
         } else {
             return false;
