@@ -105,6 +105,7 @@ pub fn map_page(virtual_addr: VirtAddr, physical_addr: PhysAddr, writable: bool,
         if (*curr_table).get_sub_page_table(index as usize).is_none() {
             (*curr_table).entries[index as usize] = create_page_table_entry(physical_addr, true, writable, user);
         }
+        debug_assert!((*curr_table).get_sub_page_table(index as usize).is_some());
     }
 }
 
@@ -121,6 +122,7 @@ pub fn unmap_page(virtual_addr: VirtAddr) {
             panic!("Cannot unmap non-present page");
         }
         (*curr_table).entries[index as usize] = create_page_table_entry(0, false, false, false);
+        debug_assert!((*curr_table).get_sub_page_table(index as usize).is_none());
     }
 }
 

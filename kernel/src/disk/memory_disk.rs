@@ -2,6 +2,7 @@ use std::{deserialize, memcpy_non_aligned, serialize, Serial, Vec, Box};
 
 use crate::disk::disk::Disk;
 use crate::memory::{map_page_auto, BitSetRaw, VirtAddr, DISK_OFFSET, PAGE_SIZE, unmap_page};
+use crate::println;
 
 pub struct MemoryDisk {
     disk: Disk,

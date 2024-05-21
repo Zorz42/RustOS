@@ -1,5 +1,5 @@
 use kernel_test::all_perf_tests;
-use std::{Box, Vec};
+use std::Vec;
 
 use crate::disk::disk::Disk;
 use crate::timer::get_ticks;
