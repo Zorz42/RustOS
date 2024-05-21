@@ -1,5 +1,6 @@
-use kernel_test::{kernel_test, kernel_test_mod};
+use kernel_test::{kernel_perf, kernel_test, kernel_test_mod};
 use std::{free, malloc, memset, Rng};
+use crate::tests::KernelPerf;
 
 kernel_test_mod!(crate::tests::A5_malloc);
 
@@ -101,5 +102,22 @@ fn test_malloc_free_works() {
         unsafe {
             free(ptr);
         }
+    }
+}
+
+#[kernel_perf]
+struct PerfMalloc {
+    
+}
+
+impl KernelPerf for PerfMalloc {
+    fn setup() -> Self {
+        Self {
+            
+        }
+    }
+
+    fn run(&mut self) {
+        malloc(2);
     }
 }

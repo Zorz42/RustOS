@@ -1,7 +1,7 @@
+use kernel_test::all_perf_tests;
 use std::Vec;
 
 use crate::disk::disk::Disk;
-use crate::disk::memory_disk::mount_disk;
 use crate::timer::get_ticks;
 
 mod A0_rand;
@@ -15,6 +15,12 @@ mod A7_vector;
 mod A8_disk;
 mod A9_memory_disk;
 mod B0_filesystem;
+
+pub trait KernelPerf {
+    fn setup() -> Self;
+    fn run(&mut self);
+    fn teardown(&mut self) {}
+}
 
 const TESTDISK_MAGIC_CODE: u32 = 0x61732581;
 
@@ -82,5 +88,29 @@ pub fn test_runner(disks: &Vec<Disk>) {
         println!("{}ms", end_time - start_time);
     }
 
+    let perf_tests = all_perf_tests!();
+    println!("Running {} performance tests", perf_tests.len());
+
+    
+    const TEST_DURATION_MS: u32 = 1000;
+    for (mut test_struct, name) in perf_tests {
+        set_print_color(TextColor::DarkGray, TextColor::Black);
+        print!("Benchmarking");
+        set_print_color(TextColor::LightCyan, TextColor::Black);
+        print!(" {name}");
+        
+        let start_time = get_ticks();
+        let mut count = 0;
+        while get_ticks() - start_time < TEST_DURATION_MS {
+            count += 1;
+            test_struct.run();
+        }
+        let duration = get_ticks() - start_time;
+        test_struct.teardown();
+
+        set_print_color(TextColor::Green, TextColor::Black);
+        println!("   {:.3}ms per call", duration as f32 / count as f32);
+    }
+    
     reset_print_color();
 }

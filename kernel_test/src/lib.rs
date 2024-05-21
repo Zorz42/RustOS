@@ -1,7 +1,7 @@
 use proc_macro::TokenStream;
 use std::ops::Add;
 
-use syn::ItemFn;
+use syn::{ItemFn, ItemStruct};
 
 static mut TESTS: Vec<String> = Vec::new();
 static mut PERF_TESTS: Vec<String> = Vec::new();
@@ -30,20 +30,20 @@ pub fn kernel_test(_args: TokenStream, input: TokenStream) -> TokenStream {
 
 #[proc_macro_attribute]
 pub fn kernel_perf(_args: TokenStream, input: TokenStream) -> TokenStream {
-    let function = input.to_string();
+    let struct_ = input.to_string();
 
-    let input_fn = syn::parse_macro_input!(input as ItemFn);
-    let test_fn = input_fn.sig.ident;
-    let function_full_name = unsafe { format!("{CURR_MOD}::{test_fn}") };
+    let input_struct = syn::parse_macro_input!(input as ItemStruct);
+    let test_struct = input_struct.ident;
+    let struct_full_name = unsafe { format!("{CURR_MOD}::{test_struct}") };
 
     let code = format!(
         r#"
-        pub {function}
+        pub {struct_}
     "#
     );
 
     unsafe {
-        PERF_TESTS.push(function_full_name.to_string());
+        PERF_TESTS.push(struct_full_name.to_string());
     }
 
     code.parse().expect("Generated invalid tokens")
@@ -72,7 +72,7 @@ pub fn all_perf_tests(_item: TokenStream) -> TokenStream {
     unsafe {
         for test in PERF_TESTS.iter() {
             let function_name = test.split(':').last().unwrap();
-            code = code.add(&format!("({test} as fn(), \"{function_name}\"),"));
+            code = code.add(&format!("({test}::setup(), \"{function_name}\"),"));
         }
     }
 
