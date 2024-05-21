@@ -3,6 +3,7 @@ use crate::disk::memory_disk::{get_mounted_disk, mount_disk, unmount_disk, DiskB
 use crate::tests::get_test_disk;
 use kernel_test::{kernel_test, kernel_test_mod};
 use std::{deserialize, serialize, Rng, Vec};
+use crate::println;
 kernel_test_mod!(crate::tests::A9_memory_disk);
 
 #[kernel_test]
@@ -32,6 +33,29 @@ fn test_disk_persists() {
             }
         }
         get_mounted_disk().free_page(page);
+    }
+}
+
+#[kernel_test]
+fn test_disk_head_persists() {
+    let mut rng = Rng::new(7865436873);
+
+    for _ in 0..20 {
+        let len = rng.get(0, 40) as usize;
+        let mut vec = Vec::new();
+
+        for _ in 0..len {
+            vec.push(rng.get(0, 1u64 << 8) as u8);
+        }
+
+        get_mounted_disk().set_head(&vec);
+
+        unmount_disk();
+        mount_disk(get_test_disk());
+
+        let vec1 = get_mounted_disk().get_head();
+        
+        assert!(vec == vec1);
     }
 }
 
@@ -93,28 +117,5 @@ fn test_diskbox_persists() {
         for i in vec1 {
             DiskBox::delete(i);
         }
-    }
-}
-
-#[kernel_test]
-fn test_disk_head_persists() {
-    let mut rng = Rng::new(7865436873);
-    
-    for _ in 0..20 {
-        let len = rng.get(0, 40) as usize;
-        let mut vec = Vec::new();
-
-        for _ in 0..len {
-            vec.push(rng.get(0, 1u64 << 8) as u8);
-        }
-
-        get_mounted_disk().set_head(&vec);
-
-        unmount_disk();
-        mount_disk(get_test_disk());
-
-        let vec1 = get_mounted_disk().get_head();
-        
-        assert!(vec == vec1);
     }
 }

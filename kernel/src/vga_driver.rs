@@ -1,5 +1,5 @@
 use crate::font::{CHAR_HEIGHT, CHAR_WIDTH, DEFAULT_FONT};
-use std::{memcpy, memset_int64, volatile_store_byte};
+use std::{memcpy, memset_int64};
 
 struct VgaBinding {
     width: usize,
@@ -59,9 +59,9 @@ fn get_pixel_mut(x: usize, y: usize) -> *mut u8 {
 pub fn set_pixel(x: usize, y: usize, color: (u8, u8, u8)) {
     unsafe {
         let pixel_pointer = get_pixel_mut(x, y);
-        volatile_store_byte(pixel_pointer, color.2);
-        volatile_store_byte(pixel_pointer.add(1), color.1);
-        volatile_store_byte(pixel_pointer.add(2), color.0);
+        *pixel_pointer = color.2;
+        *pixel_pointer.add(1) = color.1;
+        *pixel_pointer.add(2) = color.0;
     }
 }
 

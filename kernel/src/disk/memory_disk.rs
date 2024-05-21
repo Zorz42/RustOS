@@ -1,4 +1,4 @@
-use std::{deserialize, memcpy_non_aligned, serialize, Serial, Vec, Box, volatile_store_byte, volatile_load_byte};
+use std::{deserialize, memcpy_non_aligned, serialize, Serial, Vec, Box};
 
 use crate::disk::disk::Disk;
 use crate::memory::{map_page_auto, BitSetRaw, VirtAddr, DISK_OFFSET, PAGE_SIZE, unmap_page};
@@ -92,7 +92,7 @@ impl MemoryDisk {
 
         let ptr = (DISK_OFFSET + 4) as *mut u8;
         for i in 0..size {
-            data.push(unsafe { volatile_load_byte(ptr.add(i)) });
+            data.push(unsafe { *ptr.add(i) });
         }
 
         data
@@ -106,7 +106,7 @@ impl MemoryDisk {
         let mut ptr = (DISK_OFFSET + 4) as *mut u8;
         for i in data {
             unsafe {
-                volatile_store_byte(ptr, *i);
+                *ptr = *i;
                 ptr = ptr.add(1);
             }
         }
