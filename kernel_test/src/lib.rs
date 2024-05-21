@@ -67,16 +67,14 @@ pub fn all_tests(_item: TokenStream) -> TokenStream {
 
 #[proc_macro]
 pub fn all_perf_tests(_item: TokenStream) -> TokenStream {
-    let mut code = "[".to_owned();
+    let mut code = format!("println!(\"Running {} performance tests.\");", unsafe { PERF_TESTS.len() });
 
     unsafe {
         for test in PERF_TESTS.iter() {
-            let function_name = test.split(':').last().unwrap();
-            code = code.add(&format!("({test}::setup(), \"{function_name}\"),"));
+            let struct_name = test.split(':').last().unwrap();
+            code = code.add(&format!("run_perf_test::<{test}>(\"{struct_name}\");"));
         }
     }
-
-    code.push(']');
 
     code.parse().expect("Generated invalid tokens")
 }

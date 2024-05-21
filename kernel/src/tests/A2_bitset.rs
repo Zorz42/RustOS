@@ -1,6 +1,6 @@
-use kernel_test::{kernel_test, kernel_test_mod};
+use kernel_test::{kernel_perf, kernel_test, kernel_test_mod};
 
-use super::get_free_space_addr;
+use super::{get_free_space_addr, KernelPerf};
 use crate::memory::BitSetRaw;
 use std::Rng;
 
@@ -105,5 +105,24 @@ fn test_bitset_fill() {
         arr[idx] = 1;
         assert!(bitset.get(idx));
         assert_eq!(bitset.get_count0(), 1024 * 8 - i - 1);
+    }
+}
+
+#[kernel_perf]
+struct PerfBitsetSet {
+    rng: Rng,
+    bitset: BitSetRaw,
+}
+
+impl KernelPerf for PerfBitsetSet {
+    fn setup() -> Self {
+        Self {
+            bitset: BitSetRaw::new(1024 * 8, get_free_space_addr() as *mut u64),
+            rng: Rng::new(46327836248),
+        }
+    }
+
+    fn run(&mut self) {
+        self.bitset.set(self.rng.get(0, 1024 * 8) as usize, self.rng.get(0, 2) == 0);
     }
 }

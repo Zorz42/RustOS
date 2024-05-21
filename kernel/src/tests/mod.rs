@@ -1,8 +1,11 @@
 use kernel_test::all_perf_tests;
-use std::Vec;
+use std::{Box, Vec};
 
 use crate::disk::disk::Disk;
 use crate::timer::get_ticks;
+use kernel_test::all_tests;
+use crate::print::{reset_print_color, set_print_color, TextColor};
+use crate::{print, println};
 
 mod A0_rand;
 mod A1_utils;
@@ -37,11 +40,6 @@ pub fn get_test_disk() -> Disk {
 }
 
 pub fn test_runner(disks: &Vec<Disk>) {
-    use kernel_test::all_tests;
-
-    use crate::print::{reset_print_color, set_print_color, TextColor};
-    use crate::{print, println};
-
     let mut test_disk = None;
     for disk in disks {
         let first_sector = disk.read(0);
@@ -88,32 +86,30 @@ pub fn test_runner(disks: &Vec<Disk>) {
         println!("{}ms", end_time - start_time);
     }
 
-    println!();
-    let perf_tests = all_perf_tests!();
-    println!("Running {} performance tests", perf_tests.len());
-
-    
-    const TEST_DURATION_MS: u32 = 1000;
-    for (mut test_struct, name) in perf_tests {
-        set_print_color(TextColor::DarkGray, TextColor::Black);
-        print!("Benchmarking");
-        set_print_color(TextColor::LightCyan, TextColor::Black);
-        print!(" {name}");
-        
-        let start_time = get_ticks();
-        let mut count = 0;
-        while get_ticks() - start_time < TEST_DURATION_MS {
-            count += 1;
-            test_struct.run();
-        }
-        let duration = get_ticks() - start_time;
-        test_struct.teardown();
-
-        set_print_color(TextColor::Green, TextColor::Black);
-        println!("   {:.3}ms per call", duration as f32 / count as f32);
-    }
-    println!();
-    
+    all_perf_tests!();
     
     reset_print_color();
+}
+
+const PERF_TEST_DURATION_MS: u32 = 1000;
+
+fn run_perf_test<T: KernelPerf>(name: &str) {
+    let mut test_struct = T::setup();
+    
+    set_print_color(TextColor::DarkGray, TextColor::Black);
+    print!("Benchmarking");
+    set_print_color(TextColor::LightCyan, TextColor::Black);
+    print!(" {name}");
+
+    let start_time = get_ticks();
+    let mut count = 0;
+    while get_ticks() - start_time < PERF_TEST_DURATION_MS {
+        count += 1;
+        test_struct.run();
+    }
+    let duration = get_ticks() - start_time;
+    test_struct.teardown();
+
+    set_print_color(TextColor::Green, TextColor::Black);
+    println!("   {:.3}ms per call", duration as f32 / count as f32);
 }
