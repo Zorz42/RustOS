@@ -23,7 +23,7 @@ pub use derive;
 pub use rand::Rng;
 pub use serial::{deserialize, serialize, Serial};
 pub use string::String;
-pub use utils::{memcpy, memcpy_non_aligned, memset, memset_int64, swap, volatile_store_byte};
+pub use utils::{memcpy, memcpy_non_aligned, memset, memset_int64, swap, volatile_store_byte, volatile_load_byte};
 pub use vector::Vec;
 
 static mut PAGE_ALLOCATOR: Option<&'static dyn Fn(*mut u8)> = None;

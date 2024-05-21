@@ -28,6 +28,12 @@ pub unsafe fn volatile_store_byte(ptr: *mut u8, value: u8) {
     asm!("mov [{}], {}", in(reg) ptr, in(reg_byte) value);
 }
 
+pub unsafe fn volatile_load_byte(ptr: *mut u8) -> u8 {
+    let mut res = 0;
+    asm!("mov [{}], {}", in(reg) ptr, out(reg_byte) res);
+    res
+}
+
 pub unsafe fn memcpy(src: *const u8, dst: *mut u8, len: usize) {
     // check for alignment
     debug_assert_eq!(src as u64 % 8, 0);

@@ -85,8 +85,10 @@ pub fn test_runner(disks: &Vec<Disk>) {
         set_print_color(TextColor::LightGray, TextColor::Black);
         println!("{}ms", end_time - start_time);
     }
-
+    
+    println!();
     all_perf_tests!();
+    println!();
     
     reset_print_color();
 }
