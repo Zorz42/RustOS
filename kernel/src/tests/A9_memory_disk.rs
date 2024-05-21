@@ -8,14 +8,14 @@ kernel_test_mod!(crate::tests::A9_memory_disk);
 #[kernel_test]
 fn test_disk_mount_erase() {
     mount_disk(get_test_disk());
-    get_mounted_disk().as_mut().unwrap().erase();
+    get_mounted_disk().erase();
 }
 
 #[kernel_test]
 fn test_disk_persists() {
     let mut rng = Rng::new(56437285922);
     for _ in 0..20 {
-        let page = get_mounted_disk().as_mut().unwrap().alloc_page();
+        let page = get_mounted_disk().alloc_page();
         let addr = (DISK_OFFSET + PAGE_SIZE * page as u64) as *mut u8;
         let mut data = [0; PAGE_SIZE as usize];
         for i in 0..PAGE_SIZE {
@@ -31,7 +31,7 @@ fn test_disk_persists() {
                 assert_eq!(*addr.add(i as usize), data[i as usize]);
             }
         }
-        get_mounted_disk().as_mut().unwrap().free_page(page);
+        get_mounted_disk().free_page(page);
     }
 }
 
@@ -80,15 +80,12 @@ fn test_diskbox_persists() {
         for i in &vec {
             vec1.push(DiskBox::new(*i));
         }
-        
         let data = serialize(&mut vec1);
-        drop(vec1);
+        vec1 = deserialize(&data);
 
         unmount_disk();
         mount_disk(get_test_disk());
 
-        let mut vec1 = deserialize::<Vec::<DiskBox<u64>>>(&data);
-        
         for i in 0..len {
             assert_eq!(*vec1[i].get(), vec[i]);
         }
