@@ -201,6 +201,7 @@ impl<T: Serial> Serial for DiskBox<T> {
     fn deserialize(vec: &Vec<u8>, idx: &mut usize) -> Self {
         let size = i32::deserialize(vec, idx);
         let pages = Vec::<i32>::deserialize(vec, idx);
+        debug_assert_eq!((size + PAGE_SIZE as i32 - 1) / PAGE_SIZE as i32, pages.size() as i32);
 
         Self { size, pages, obj: None }
     }
@@ -237,6 +238,8 @@ impl<T: Serial> DiskBox<T> {
 
     // translate idx-th byte to its ram location
     fn translate(&self, idx: usize) -> *mut u8 {
+        debug_assert!(idx < self.size as usize);
+        
         let page_id = self.pages[idx / (PAGE_SIZE as usize)];
         let page_addr = id_to_addr(page_id);
         unsafe { page_addr.add(idx % (PAGE_SIZE as usize)) }

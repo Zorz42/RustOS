@@ -115,7 +115,7 @@ impl Disk {
         byte_out(self.base | ATA_SECTORCOUNT, 1);
         set_disk_sector(self.base, self.h, sector);
         byte_out(self.base | ATA_COMMAND, 0x30); // write
-
+        
         loop {
             let status = get_disk_status(self.base);
             if let Some(status) = status {
