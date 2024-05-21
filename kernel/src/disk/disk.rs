@@ -23,13 +23,20 @@ pub struct Disk {
     size: usize,
 }
 
-pub fn get_disk_status(base: u16) -> Option<u8> {
+fn get_disk_status(base: u16) -> Option<u8> {
     let res = byte_in(base | ATA_STATUS);
     if (res & 1) == 1 {
         None
     } else {
         Some(res)
     }
+}
+
+fn set_disk_sector(base: u16, h: u8, sector: i32) {
+    byte_out(base | ATA_SECTORNUMBER1, (sector & 0xFF) as u8);
+    byte_out(base | ATA_SECTORNUMBER2, ((sector >> 8) & 0xFF) as u8);
+    byte_out(base | ATA_SECTORNUMBER3, ((sector >> 16) & 0xFF) as u8);
+    byte_out(base | ATA_DRIVEHEAD, ((sector >> 24) & 0x0F) as u8 | 0b11100000 | (h << 4));
 }
 
 pub fn wait_for_disk(base: u16) -> bool {
@@ -63,10 +70,7 @@ impl Disk {
         }
 
         byte_out(self.base | ATA_SECTORCOUNT, 1);
-        byte_out(self.base | ATA_SECTORNUMBER1, (sector & 0xFF) as u8);
-        byte_out(self.base | ATA_SECTORNUMBER2, ((sector >> 8) & 0xFF) as u8);
-        byte_out(self.base | ATA_SECTORNUMBER3, ((sector >> 16) & 0xFF) as u8);
-        byte_out(self.base | ATA_DRIVEHEAD, ((sector >> 24) & 0x0F) as u8 | 0b11100000 | (self.h << 4));
+        set_disk_sector(self.base, self.h, sector);
         byte_out(self.base | ATA_COMMAND, 0x20); // read with retry
 
         let mut data = [0; SECTOR_SIZE];
@@ -109,10 +113,7 @@ impl Disk {
         }
 
         byte_out(self.base | ATA_SECTORCOUNT, 1);
-        byte_out(self.base | ATA_SECTORNUMBER1, (sector & 0xFF) as u8);
-        byte_out(self.base | ATA_SECTORNUMBER2, ((sector >> 8) & 0xFF) as u8);
-        byte_out(self.base | ATA_SECTORNUMBER3, ((sector >> 16) & 0xFF) as u8);
-        byte_out(self.base | ATA_DRIVEHEAD, ((sector >> 24) & 0x0F) as u8 | 0b11100000 | (self.h << 4));
+        set_disk_sector(self.base, self.h, sector);
         byte_out(self.base | ATA_COMMAND, 0x30); // write
 
         loop {

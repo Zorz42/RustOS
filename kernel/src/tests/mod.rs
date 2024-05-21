@@ -67,7 +67,7 @@ pub fn test_runner(disks: &Vec<Disk>) {
     for (_, name) in tests {
         max_length = max_length.max((name.len() + 9) / 10 * 10);
     }
-
+    
     set_print_color(TextColor::Pink, TextColor::Black);
     println!("Running {} tests", tests.len());
     for (test_fn, name) in tests {
@@ -88,6 +88,7 @@ pub fn test_runner(disks: &Vec<Disk>) {
         println!("{}ms", end_time - start_time);
     }
 
+    println!();
     let perf_tests = all_perf_tests!();
     println!("Running {} performance tests", perf_tests.len());
 
@@ -111,6 +112,8 @@ pub fn test_runner(disks: &Vec<Disk>) {
         set_print_color(TextColor::Green, TextColor::Black);
         println!("   {:.3}ms per call", duration as f32 / count as f32);
     }
+    println!();
+    
     
     reset_print_color();
 }

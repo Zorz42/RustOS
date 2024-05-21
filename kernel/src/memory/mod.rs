@@ -18,7 +18,7 @@ mod paging;
 pub const PAGE_SIZE: u64 = 4096;
 const FRAME_SIZE: u64 = 1u64 << 35;
 pub const KERNEL_STACK_SIZE: u64 = 100 * 1024; // 100 KiB
-pub const KERNEL_STACK_ADDR: u64 = FRAME_SIZE - KERNEL_STACK_SIZE;
+pub const KERNEL_STACK_ADDR: u64 = FRAME_SIZE;
 pub const HEAP_BASE_ADDR: u64 = 2 * FRAME_SIZE;
 pub const HEAP_TREE_ADDR: u64 = 3 * FRAME_SIZE;
 #[allow(dead_code)]

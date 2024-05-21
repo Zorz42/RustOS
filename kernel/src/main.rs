@@ -119,7 +119,7 @@ fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
     mount_disk(root_disk);
     init_fs();
     println!("Root disk is mounted!");
-
+    
     // run program
     /*let testing_program = include_bytes!("../../compiled_projects/testing_project");
     assert_eq!(testing_program[1] as char, 'E');
