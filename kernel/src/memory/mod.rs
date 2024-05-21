@@ -7,10 +7,10 @@ pub use paging::{check_page_table_integrity, VirtAddr};
 #[cfg(feature = "run_tests")]
 pub use paging::{find_free_page, free_page, PhysAddr};
 pub use paging::{get_num_free_pages, get_num_pages, map_page, map_page_auto, unmap_page};
-use paging::{PageTable, SEGMENTS_BITSET};
+use paging::SEGMENTS_BITSET;
 use std::init_std_memory;
 
-use crate::memory::paging::CURRENT_PAGE_TABLE;
+use crate::memory::paging::{CURRENT_PAGE_TABLE, PageTable};
 
 mod bitset;
 mod paging;
@@ -36,7 +36,7 @@ pub fn init_memory(memory_regions: &MemoryRegions) {
         // use already existing page table
         let cr3: u64;
         asm!("mov {}, cr3", out(reg) cr3);
-        CURRENT_PAGE_TABLE = (cr3 + VIRTUAL_OFFSET) as *mut PageTable;
+        CURRENT_PAGE_TABLE = (cr3 + VIRTUAL_OFFSET) as PageTable;
     }
 
     let mut highest_address = 0;

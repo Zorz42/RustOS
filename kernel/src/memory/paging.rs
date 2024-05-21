@@ -1,3 +1,4 @@
+use core::ptr::write_volatile;
 use crate::memory::bitset::BitSetRaw;
 use crate::memory::{PAGE_SIZE, VIRTUAL_OFFSET};
 use crate::{print, println};
@@ -17,24 +18,25 @@ pub fn get_num_pages() -> usize {
     unsafe { SEGMENTS_BITSET.get_size() }
 }
 
-type PageTableEntry = u64;
+pub type PageTableEntry = u64;
 
 const PAGE_TABLE_SIZE: usize = 512;
 
-#[repr(C)]
-pub struct PageTable {
-    entries: [PageTableEntry; PAGE_TABLE_SIZE],
+pub type PageTable = *mut PageTableEntry;
+
+fn get_sub_page_table_entry(table: PageTable, index: usize) -> &'static mut PageTableEntry {
+    debug_assert!(index < PAGE_TABLE_SIZE);
+    unsafe {
+        &mut *table.add(index)
+    }
 }
 
-impl PageTable {
-    fn get_sub_page_table(&mut self, index: usize) -> Option<PhysAddr> {
-        debug_assert!(index < PAGE_TABLE_SIZE);
-        let entry = self.entries[index];
-        if entry & 1 == 0 {
-            None
-        } else {
-            Some(entry & 0x000FFFFF_FFFFF000)
-        }
+fn get_sub_page_table(table: PageTable, index: usize) -> Option<PageTable> {
+    let entry = *get_sub_page_table_entry(table, index);
+    if entry & 1 == 0 {
+        None
+    } else {
+        Some((entry & 0x000FFFFF_FFFFF000) as PageTable)
     }
 }
 
@@ -53,7 +55,7 @@ fn create_page_table_entry(addr: PhysAddr, present: bool, writable: bool, user: 
     entry
 }
 
-pub static mut CURRENT_PAGE_TABLE: *mut PageTable = 0 as *mut PageTable;
+pub static mut CURRENT_PAGE_TABLE: PageTable = 0 as PageTable;
 
 pub fn find_free_page() -> PhysAddr {
     unsafe {
@@ -78,18 +80,18 @@ pub unsafe fn free_page(addr: PhysAddr) {
     SEGMENTS_BITSET.set(index, false);
 }
 
-fn get_address_page_table(virtual_addr: VirtAddr) -> *mut PageTable {
+fn get_address_page_table(virtual_addr: VirtAddr) -> PageTable {
     let mut curr_table = unsafe { CURRENT_PAGE_TABLE };
     for i in 0..3 {
         let index = (virtual_addr as u64 >> (39 - 9 * i)) & 0b111111111;
         unsafe {
-            if let Some(sub_table) = (*curr_table).get_sub_page_table(index as usize) {
-                curr_table = (sub_table + VIRTUAL_OFFSET) as *mut PageTable;
+            if let Some(sub_table) = get_sub_page_table(curr_table, index as usize) {
+                curr_table = (sub_table as u64 + VIRTUAL_OFFSET) as PageTable;
             } else {
                 let new_table = find_free_page();
                 clear_page_memory((new_table + VIRTUAL_OFFSET) as VirtAddr);
-                (*curr_table).entries[index as usize] = create_page_table_entry(new_table, true, true, false);
-                curr_table = (new_table + VIRTUAL_OFFSET) as *mut PageTable;
+                *get_sub_page_table_entry(curr_table, index as usize) = create_page_table_entry(new_table, true, true, false);
+                curr_table = (new_table + VIRTUAL_OFFSET) as PageTable;
             }
         }
     }
@@ -102,10 +104,10 @@ pub fn map_page(virtual_addr: VirtAddr, physical_addr: PhysAddr, writable: bool,
 
     unsafe {
         let index = (virtual_addr as u64 >> 12) & 0b111111111;
-        if (*curr_table).get_sub_page_table(index as usize).is_none() {
-            (*curr_table).entries[index as usize] = create_page_table_entry(physical_addr, true, writable, user);
+        if get_sub_page_table(curr_table, index as usize).is_none() {
+            *get_sub_page_table_entry(curr_table, index as usize) = create_page_table_entry(physical_addr, true, writable, user);
         }
-        debug_assert!((*curr_table).get_sub_page_table(index as usize).is_some());
+        debug_assert!(get_sub_page_table(curr_table, index as usize).is_some());
     }
 }
 
@@ -118,11 +120,11 @@ pub fn unmap_page(virtual_addr: VirtAddr) {
 
     unsafe {
         let index = (virtual_addr as u64 >> 12) & 0b111111111;
-        if (*curr_table).get_sub_page_table(index as usize).is_none() {
+        if get_sub_page_table(curr_table, index as usize).is_none() {
             panic!("Cannot unmap non-present page");
         }
-        (*curr_table).entries[index as usize] = create_page_table_entry(0, false, false, false);
-        debug_assert!((*curr_table).get_sub_page_table(index as usize).is_none());
+        *get_sub_page_table_entry(curr_table, index as usize) = create_page_table_entry(0, false, false, false);
+        debug_assert!(get_sub_page_table(curr_table, index as usize).is_none());
     }
 }
 
@@ -133,7 +135,7 @@ pub fn check_page_table_integrity() {
 
         // first 4 entries will be used by the kernel and will be identical for all page tables
         for i in 4..PAGE_TABLE_SIZE {
-            let entry = unsafe { (*CURRENT_PAGE_TABLE).get_sub_page_table(i) };
+            let entry = unsafe { get_sub_page_table(CURRENT_PAGE_TABLE, i) };
             assert!(entry.is_none());
         }
 

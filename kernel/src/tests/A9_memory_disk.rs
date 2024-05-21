@@ -56,16 +56,16 @@ fn test_disk_head_persists() {
         let vec1 = get_mounted_disk().get_head();
         
         crate::println!("{} {}", vec.size(), vec1.size());
-        /*if vec.size() == 31 {
-            for i in &vec {
-                crate::print!("{} ", *i);
-            }
-            crate::println!();
-            for i in &vec1 {
-                crate::print!("{} ", *i);
-            }
-            crate::println!();
-        }*/
+        
+        for i in &vec {
+            crate::print!("{} ", *i);
+        }
+        crate::println!();
+        for i in &vec1 {
+            crate::print!("{} ", *i);
+        }
+        crate::println!();
+        
         assert!(vec == vec1);
     }
 }
