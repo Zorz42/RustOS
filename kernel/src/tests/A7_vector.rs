@@ -1,5 +1,7 @@
-use kernel_test::{kernel_test, kernel_test_mod};
-use std::{deserialize, serialize, Rng, Serial, String, Vec};
+use kernel_test::{kernel_perf, kernel_test, kernel_test_mod};
+use std::{deserialize, serialize, Rng, Serial, String, Vec, malloc, free};
+use crate::tests::A5_malloc::PerfMalloc;
+use crate::tests::KernelPerf;
 kernel_test_mod!(crate::tests::A7_vector);
 
 #[kernel_test]
@@ -264,4 +266,44 @@ fn test_string_split() {
     let parts = str1.split('/');
 
     assert!(parts == Vec::new_from_slice(&[String::from(""), String::from("home"), String::from("jakob"), String::from("directory"), String::from("file")]))
+}
+
+#[kernel_perf]
+struct PerfVecPush10 {
+    rng: Rng,
+}
+
+impl KernelPerf for PerfVecPush10 {
+    fn setup() -> Self {
+        Self {
+            rng: Rng::new(564378254),
+        }
+    }
+
+    fn run(&mut self) {
+        let mut vec = Vec::new();
+        for _ in 0..10 {
+            vec.push(self.rng.get(0, 1u64 << 63));
+        }
+    }
+}
+
+#[kernel_perf]
+struct PerfVecPush1000 {
+    rng: Rng,
+}
+
+impl KernelPerf for PerfVecPush1000 {
+    fn setup() -> Self {
+        Self {
+            rng: Rng::new(65347852643),
+        }
+    }
+
+    fn run(&mut self) {
+        let mut vec = Vec::new();
+        for _ in 0..10000 {
+            vec.push(self.rng.get(0, 1u64 << 63));
+        }
+    }
 }

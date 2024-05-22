@@ -284,8 +284,8 @@ impl<T: Clone> Clone for Vec<T> {
 impl<T: Serial> Serial for Vec<T> {
     fn serialize(&mut self, vec: &mut Vec<u8>) {
         self.size.serialize(vec);
-        for i in 0..self.size {
-            self[i].serialize(vec);
+        for i in self {
+            i.serialize(vec);
         }
     }
 
@@ -294,6 +294,27 @@ impl<T: Serial> Serial for Vec<T> {
         let size = usize::deserialize(vec, idx);
         for _ in 0..size {
             obj.push(T::deserialize(vec, idx));
+        }
+        obj
+    }
+}
+
+impl<T1: Serial, T2: Serial> Serial for Vec<(T1, T2)> {
+    fn serialize(&mut self, vec: &mut Vec<u8>) {
+        self.size.serialize(vec);
+        for (i1, i2) in self {
+            i1.serialize(vec);
+            i2.serialize(vec);
+        }
+    }
+
+    fn deserialize(vec: &Vec<u8>, idx: &mut usize) -> Self {
+        let mut obj = Vec::new();
+        let size = usize::deserialize(vec, idx);
+        for _ in 0..size {
+            let i1 = T1::deserialize(vec, idx);
+            let i2 = T2::deserialize(vec, idx);
+            obj.push((i1, i2));
         }
         obj
     }

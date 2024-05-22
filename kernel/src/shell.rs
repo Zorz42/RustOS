@@ -56,6 +56,49 @@ fn command_cd(args: Vec<String>, context: &mut Context) {
     context.curr_dir = Path::from(&dest);
 }
 
+fn command_cp(args: Vec<String>, context: &mut Context) {
+    if args.size() != 2 {
+        println!("Expected 2 arguments");
+        return;
+    }
+
+    let src = if args[0][0] == '/' {
+        args[0].clone()
+    } else {
+        let mut res = context.curr_dir.to_string();
+        for c in &args[0] {
+            res.push(*c);
+        }
+        res
+    };
+
+    let dest = if args[1][0] == '/' {
+        args[1].clone()
+    } else {
+        let mut res = context.curr_dir.to_string();
+        for c in &args[1] {
+            res.push(*c);
+        }
+        res
+    };
+
+    if get_fs().get_file(&src).is_none() {
+        println!("{src} is not a file");
+        return;
+    }
+    
+    let data = get_fs().get_file(&src).unwrap().read();
+    let dst_file = if let Some(file) = get_fs().get_file(&dest) {
+        file
+    } else {
+        get_fs().create_file(&dest)
+    };
+    
+    dst_file.write(&data);
+
+    context.curr_dir = Path::from(&dest);
+}
+
 fn command_callback(command: String, context: &mut Context) {
     let mut parts = command.split(' ');
     parts.retain(&|x| x.size() != 0);
@@ -71,6 +114,7 @@ fn command_callback(command: String, context: &mut Context) {
         "ls" => command_ls(parts, context),
         "mkdir" => command_mkdir(parts, context),
         "cd" => command_cd(parts, context),
+        "cp" => command_cp(parts, context),
         _ => println!("Unknown command \"{command_name}\""),
     }
 }

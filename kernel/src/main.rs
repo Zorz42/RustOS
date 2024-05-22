@@ -150,6 +150,12 @@ fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
         println!("Returned {rax}");
     }*/
 
+    #[cfg(feature = "run_perf")]
+    {
+        use crate::tests::perf_test_runner;
+        perf_test_runner();
+    }
+
     let all_memory = (get_num_pages() * 4) as f32 / 1000.0;
     let used_memory = ((get_num_pages() - get_num_free_pages()) * 4) as f32 / 1000.0;
     let portion = used_memory / all_memory * 100.0;

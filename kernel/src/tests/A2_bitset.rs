@@ -107,22 +107,3 @@ fn test_bitset_fill() {
         assert_eq!(bitset.get_count0(), 1024 * 8 - i - 1);
     }
 }
-
-#[kernel_perf]
-struct PerfBitsetSet {
-    rng: Rng,
-    bitset: BitSetRaw,
-}
-
-impl KernelPerf for PerfBitsetSet {
-    fn setup() -> Self {
-        Self {
-            bitset: BitSetRaw::new(1024 * 8, get_free_space_addr() as *mut u64),
-            rng: Rng::new(46327836248),
-        }
-    }
-
-    fn run(&mut self) {
-        self.bitset.set(self.rng.get(0, 1024 * 8) as usize, self.rng.get(0, 2) == 0);
-    }
-}
