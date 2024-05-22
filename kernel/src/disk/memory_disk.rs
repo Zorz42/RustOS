@@ -36,7 +36,7 @@ impl MemoryDisk {
     }
 
     pub fn get_num_pages(&self) -> usize {
-        self.disk.size() / 4
+        self.disk.size() / 8
     }
     
     pub fn get_num_free_pages(&self) -> usize {

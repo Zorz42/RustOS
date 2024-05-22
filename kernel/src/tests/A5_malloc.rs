@@ -104,19 +104,3 @@ fn test_malloc_free_works() {
         }
     }
 }
-
-#[kernel_perf]
-struct PerfMalloc {}
-
-impl KernelPerf for PerfMalloc {
-    fn setup() -> Self {
-        Self {}
-    }
-
-    fn run(&mut self) {
-        let ptr = malloc(2);
-        unsafe {
-            free(ptr);
-        }
-    }
-}

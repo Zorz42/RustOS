@@ -14,7 +14,7 @@ use bootloader_api::info::PixelFormat;
 use bootloader_api::{entry_point, BootInfo, BootloaderConfig};
 
 use crate::disk::disk::scan_for_disks;
-use crate::disk::filesystem::{close_fs, init_fs};
+use crate::disk::filesystem::{close_fs, get_fs, init_fs};
 use crate::interrupts::init_idt;
 use crate::keyboard::{init_keyboard};
 use crate::memory::{
@@ -118,6 +118,7 @@ fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
     close_fs();
     mount_disk(root_disk);
     init_fs();
+    
     println!("Root disk is mounted!");
     
     // run program

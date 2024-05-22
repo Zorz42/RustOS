@@ -78,12 +78,16 @@ pub fn test_runner(disks: &Vec<Disk>) {
         let start_time = get_ticks();
         test_fn();
         let end_time = get_ticks();
-        set_print_color(TextColor::LightGreen, TextColor::Black);
         let width = max_length - name.len();
         for _ in 0..width {
             print!(" ");
         }
-        print!("[OK] ");
+        set_print_color(TextColor::LightGray, TextColor::Black);
+        print!("[");
+        set_print_color(TextColor::LightGreen, TextColor::Black);
+        print!("OK");
+        set_print_color(TextColor::LightGray, TextColor::Black);
+        print!("] ");
         set_print_color(TextColor::LightGray, TextColor::Black);
         println!("{}ms", end_time - start_time);
     }
@@ -93,6 +97,7 @@ pub fn test_runner(disks: &Vec<Disk>) {
 }
 
 pub fn perf_test_runner() {
+    set_print_color(TextColor::Pink, TextColor::Black);
     all_perf_tests!();
     println!();
     reset_print_color();
@@ -113,7 +118,6 @@ fn get_perf_data(name: &str) -> Option<f32> {
             return Some(val);
         }
     }
-    
     None
 }
 
@@ -123,8 +127,6 @@ fn save_perf_data(name: &str, val: f32) {
     } else {
         get_fs().create_file(&String::from(PERF_FILE_SAVE))
     };
-
-    
     
     let mut vec = if file.read().size() == 0 {
         Vec::new()
@@ -192,12 +194,31 @@ fn run_perf_test<T: KernelPerf>(name: &str) {
     
     let saved_perf_ms = get_perf_data(name);
     
-    set_print_color(TextColor::LightGreen, TextColor::Black);
+    set_print_color(TextColor::White, TextColor::Black);
+    print!("{:10.6}", perf_ms);
+    set_print_color(TextColor::LightGray, TextColor::Black);
+    print!("ms");
+    
     if let Some(saved_perf_ms) = saved_perf_ms {
-        println!("{:.6}ms / {:.6}ms    {:.1}%", perf_ms, saved_perf_ms, perf_ms / saved_perf_ms * 100.0 - 100.0);
-    } else {
-        println!("{:.6}ms / ?", perf_ms);
+        let percent = perf_ms / saved_perf_ms * 100.0 - 100.0;
+        
+        print!(" / ");
+        set_print_color(TextColor::White, TextColor::Black);
+        print!("{:10.6}", saved_perf_ms);
+        set_print_color(TextColor::LightGray, TextColor::Black);
+        print!("ms");
+        
+        if percent < -10.0 {
+            set_print_color(TextColor::LightGreen, TextColor::Black);
+        } else if percent < 10.0 {
+            set_print_color(TextColor::LightGray, TextColor::Black);
+        } else {
+            set_print_color(TextColor::LightRed, TextColor::Black);
+        }
+        
+        print!("       {:.1}%", percent);
     }
+    println!();
     
     save_perf_data(name, perf_ms);
 }

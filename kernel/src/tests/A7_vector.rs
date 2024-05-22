@@ -1,6 +1,5 @@
 use kernel_test::{kernel_perf, kernel_test, kernel_test_mod};
 use std::{deserialize, serialize, Rng, Serial, String, Vec, malloc, free};
-use crate::tests::A5_malloc::PerfMalloc;
 use crate::tests::KernelPerf;
 kernel_test_mod!(crate::tests::A7_vector);
 

@@ -1,5 +1,6 @@
-use kernel_test::{kernel_test, kernel_test_mod};
-use std::{Box, Rng};
+use kernel_test::{kernel_perf, kernel_test, kernel_test_mod};
+use std::{Box, free, malloc, Rng};
+use crate::tests::KernelPerf;
 
 kernel_test_mod!(crate::tests::A6_box);
 
@@ -66,5 +67,37 @@ fn test_box_calls_drop() {
     unsafe {
         assert_eq!(DROP_COUNTER, 1);
         DROP_COUNTER = 0;
+    }
+}
+
+#[kernel_perf]
+struct PerfBox {}
+
+impl KernelPerf for PerfBox {
+    fn setup() -> Self {
+        Self {}
+    }
+
+    fn run(&mut self) {
+        let a = Box::new(43264);
+        drop(a);
+    }
+}
+
+#[kernel_perf]
+struct PerfBox1000 {}
+
+impl KernelPerf for PerfBox1000 {
+    fn setup() -> Self {
+        Self {}
+    }
+
+    fn run(&mut self) {
+        const ARRAY_REPEAT_VALUE: Option<Box<i32>> = None;
+        let mut arr = [ARRAY_REPEAT_VALUE; 1000];
+        for i in &mut arr {
+            *i = Some(Box::new(463278));
+        }
+        drop(arr);
     }
 }
