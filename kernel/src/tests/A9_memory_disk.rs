@@ -3,7 +3,6 @@ use crate::disk::memory_disk::{get_mounted_disk, mount_disk, unmount_disk, DiskB
 use crate::tests::get_test_disk;
 use kernel_test::{kernel_test, kernel_test_mod};
 use std::{deserialize, serialize, Rng, Vec};
-use crate::println;
 kernel_test_mod!(crate::tests::A9_memory_disk);
 
 #[kernel_test]
@@ -54,17 +53,6 @@ fn test_disk_head_persists() {
         mount_disk(get_test_disk());
 
         let vec1 = get_mounted_disk().get_head();
-        
-        crate::println!("{} {}", vec.size(), vec1.size());
-        
-        for i in &vec {
-            crate::print!("{} ", *i);
-        }
-        crate::println!();
-        for i in &vec1 {
-            crate::print!("{} ", *i);
-        }
-        crate::println!();
         
         assert!(vec == vec1);
     }

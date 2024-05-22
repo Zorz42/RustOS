@@ -1,3 +1,4 @@
+use core::arch::asm;
 use core::ptr::write_volatile;
 use crate::memory::bitset::BitSetRaw;
 use crate::memory::{PAGE_SIZE, VIRTUAL_OFFSET};
@@ -23,6 +24,14 @@ pub type PageTableEntry = u64;
 const PAGE_TABLE_SIZE: usize = 512;
 
 pub type PageTable = *mut PageTableEntry;
+
+pub fn refresh_paging() {
+    unsafe {
+        let cr3: u64;
+        asm!("mov {}, cr3", out(reg) cr3);
+        asm!("mov cr3, {}", in(reg) cr3);
+    }
+}
 
 fn get_sub_page_table_entry(table: PageTable, index: usize) -> &'static mut PageTableEntry {
     debug_assert!(index < PAGE_TABLE_SIZE);
@@ -109,6 +118,7 @@ pub fn map_page(virtual_addr: VirtAddr, physical_addr: PhysAddr, writable: bool,
         }
         debug_assert!(get_sub_page_table(curr_table, index as usize).is_some());
     }
+    refresh_paging();
 }
 
 pub fn map_page_auto(virtual_addr: VirtAddr, writable: bool, user: bool) {
@@ -126,6 +136,7 @@ pub fn unmap_page(virtual_addr: VirtAddr) {
         *get_sub_page_table_entry(curr_table, index as usize) = create_page_table_entry(0, false, false, false);
         debug_assert!(get_sub_page_table(curr_table, index as usize).is_none());
     }
+    refresh_paging();
 }
 
 pub fn check_page_table_integrity() {
