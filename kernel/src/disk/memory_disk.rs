@@ -1,13 +1,12 @@
 use std::{deserialize, memcpy_non_aligned, serialize, Serial, Vec, Box};
 
 use crate::disk::disk::Disk;
-use crate::memory::{map_page_auto, BitSetRaw, VirtAddr, DISK_OFFSET, PAGE_SIZE, unmap_page};
-use crate::println;
+use crate::memory::{map_page_auto, BitSetRaw, VirtAddr, DISK_OFFSET, PAGE_SIZE, unmap_page, BitSet};
 
 pub struct MemoryDisk {
     disk: Disk,
     mapped_pages: Vec<i32>,
-    bitset: Option<BitSetRaw>, // which page is taken
+    bitset: Option<BitSet>, // which page is taken
 }
 
 fn id_to_addr(page: i32) -> *mut u8 {
@@ -24,7 +23,10 @@ impl MemoryDisk {
     }
 
     pub fn init(&mut self) {
-        self.bitset = Some(BitSetRaw::new_from(self.disk.size() / 8, id_to_addr(1) as *mut u64));
+        self.bitset = Some(BitSet::new(self.disk.size() / 8));
+        unsafe {
+            self.bitset.as_mut().unwrap().load_from(id_to_addr(1) as *mut u64);
+        }
     }
 
     fn get_bitset(&self) -> &BitSetRaw {
@@ -138,6 +140,7 @@ pub fn unmount_disk() {
         }
 
         unsafe {
+            mounted_disk.bitset.as_mut().unwrap().store_to(id_to_addr(1) as *mut u64);
             MOUNTED_DISK = None;
         }
     }

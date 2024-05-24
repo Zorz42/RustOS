@@ -2,7 +2,7 @@ use core::arch::asm;
 
 use bootloader_api::info::{MemoryRegionKind, MemoryRegions};
 
-pub use bitset::BitSetRaw;
+pub use bitset::{BitSetRaw, BitSet};
 pub use paging::{check_page_table_integrity, VirtAddr};
 #[cfg(feature = "run_tests")]
 pub use paging::{find_free_page, free_page, PhysAddr};
