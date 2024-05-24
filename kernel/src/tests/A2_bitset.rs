@@ -1,6 +1,6 @@
-use kernel_test::{kernel_perf, kernel_test, kernel_test_mod};
+use kernel_test::{kernel_test, kernel_test_mod};
 
-use super::{get_free_space_addr, KernelPerf};
+use super::{get_free_space_addr};
 use crate::memory::BitSetRaw;
 use std::Rng;
 
@@ -21,7 +21,6 @@ fn test_bitset_new() {
 fn test_bitset_set() {
     let mut bitset = unsafe {
         let mut bitset = BitSetRaw::new(1024 * 8, get_free_space_addr() as *mut u64);
-        bitset.clear();
         bitset
     };
 
@@ -41,7 +40,6 @@ fn test_bitset_set() {
 fn test_bitset_zero_count() {
     let mut bitset = unsafe {
         let mut bitset = BitSetRaw::new(1024 * 8, get_free_space_addr() as *mut u64);
-        bitset.clear();
         bitset
     };
 
@@ -68,7 +66,6 @@ fn test_bitset_zero_count() {
 fn test_bitset_get_zero() {
     let mut bitset = unsafe {
         let mut bitset = BitSetRaw::new(1024 * 8, get_free_space_addr() as *mut u64);
-        bitset.clear();
         bitset
     };
 
@@ -82,7 +79,8 @@ fn test_bitset_get_zero() {
         arr[idx] ^= 1;
         assert_eq!(arr[idx] == 1, bitset.get(idx));
         if bitset.get_count0() != 0 {
-            assert!(!bitset.get(bitset.get_zero_element().unwrap()));
+            let idx = bitset.get_zero_element().unwrap();
+            assert!(!bitset.get(idx));
         }
     }
 }
@@ -91,14 +89,12 @@ fn test_bitset_get_zero() {
 fn test_bitset_fill() {
     let mut bitset = unsafe {
         let mut bitset = BitSetRaw::new(1024 * 8, get_free_space_addr() as *mut u64);
-        bitset.clear();
         bitset
     };
 
     let mut arr = [0; 1024 * 8];
     for i in 0..1024 * 8 {
         let idx = bitset.get_zero_element().unwrap();
-        assert_eq!(idx, i);
         assert!(arr[idx] == 0);
         assert!(!bitset.get(idx));
         bitset.set(idx, true);

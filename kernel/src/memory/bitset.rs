@@ -5,10 +5,30 @@ pub struct BitSetRaw {
     data: *mut u64,
     size: usize,
     count0: usize,
+    stack_size: usize,
 }
 
-fn bitset_size_bytes(size: usize) -> usize {
-    return (size + 63) / 64 * 8;
+unsafe fn get_raw(base: *const u64, index: usize) -> bool {
+    let byte_index = index / 64;
+    let bit_index = index % 64;
+    (*base.add(byte_index) & (1 << bit_index)) != 0
+}
+
+unsafe fn set_raw(base: *mut u64, index: usize, val: bool) {
+    let byte_index = index / 64;
+    let bit_index = index % 64;
+    if val {
+        *base.add(byte_index) |= 1 << bit_index;
+    } else {
+        *base.add(byte_index) &= !(1 << bit_index);
+    }
+}
+
+pub const fn bitset_size_bytes(size: usize) -> usize {
+    let s1 = (size + 63) / 64 * 8; // for actual bits
+    let s2 = (size + 63) / 64 * 8; // for bits "is on stack"
+    let s3 = size * 4; // for the actual stack
+    return s1 + s2 + s3;
 }
 
 impl BitSetRaw {
@@ -17,13 +37,33 @@ impl BitSetRaw {
             data: 0 as *mut u64,
             size: 0,
             count0: 0,
+            stack_size: 0,
         }
     }
 
     pub fn new(size: usize, addr: *mut u64) -> BitSetRaw {
         debug_assert_eq!(addr as u64 % 8, 0);
-        let mut res = BitSetRaw { data: addr, size, count0: 0 };
+        let mut res = BitSetRaw { 
+            data: addr, 
+            size, 
+            count0: 0,
+            stack_size: 0,
+        };
         res.clear();
+        res
+    }
+
+    /// Takes from memory, does not clear
+    pub fn new_from(size: usize, addr: *mut u64) -> BitSetRaw {
+        debug_assert_eq!(addr as u64 % 8, 0);
+        let mut res = BitSetRaw {
+            data: addr,
+            size,
+            count0: 0,
+            stack_size: 0,
+        };
+        res.update_count0();
+        res.setup_stack();
         res
     }
     
@@ -35,37 +75,89 @@ impl BitSetRaw {
             }
         }
     }
+    
+    fn setup_stack(&mut self) {
+        self.stack_size = 0;
+        for i in 0..self.size {
+            unsafe {
+                set_raw(self.get_stack_bitset_addr(), i, false);
+            }
+            if !self.get(i) {
+                self.add_to_stack(i);
+            }
+        }
+    }
+    
+    fn get_stack_bitset_addr(&mut self) -> *mut u64 {
+        unsafe {
+            self.data.add(self.get_num_u64())
+        }
+    }
 
-    /// Takes from memory, does not clear
-    pub fn new_from(size: usize, addr: *mut u64) -> BitSetRaw {
-        debug_assert_eq!(addr as u64 % 8, 0);
-        let mut res = BitSetRaw { data: addr, size, count0: 0 };
-        res.update_count0();
-        res
+    fn get_stack_addr(&mut self) -> *mut i32 {
+        unsafe {
+            self.data.add(2 * self.get_num_u64()) as *mut i32
+        }
+    }
+    
+    fn add_to_stack(&mut self, index: usize) {
+        if unsafe { get_raw(self.get_stack_bitset_addr(), index) } {
+            return;
+        }
+        
+        unsafe {
+            set_raw(self.get_stack_bitset_addr(), index, true);
+        }
+        debug_assert!(self.stack_size < self.size);
+        
+        unsafe {
+            *self.get_stack_addr().add(self.stack_size) = index as i32;
+        }
+        
+        self.stack_size += 1;
+    }
+    
+    fn stack_top(&mut self) -> Option<i32> {
+        if self.stack_size == 0 {
+            return None;
+        }
+
+        unsafe {
+            Some(*self.get_stack_addr().add(self.stack_size - 1))
+        }
+    }
+
+    fn pop_stack(&mut self) {
+        if self.stack_size == 0 {
+            panic!("Stack not empty");
+        }
+
+        self.stack_size -= 1;
+        unsafe {
+            set_raw(self.get_stack_bitset_addr(), self.stack_size, false);
+        }
     }
 
     pub fn set(&mut self, index: usize, val: bool) {
         debug_assert!(index < self.size);
-
-        let byte_index = index / 64;
-        let bit_index = index % 64;
+        
         self.count0 += !val as usize;
         self.count0 -= !self.get(index) as usize;
-        unsafe {
-            if val {
-                *self.data.add(byte_index) |= 1 << bit_index;
-            } else {
-                *self.data.add(byte_index) &= !(1 << bit_index);
-            }
+
+        unsafe { 
+            set_raw(self.data, index, val);
+        }
+
+        if !val {
+            self.add_to_stack(index);
         }
     }
 
     pub fn get(&self, index: usize) -> bool {
         debug_assert!(index < self.size);
-
-        let byte_index = index / 64;
-        let bit_index = index % 64;
-        unsafe { (*self.data.add(byte_index) & (1 << bit_index)) != 0 }
+        unsafe { 
+            get_raw(self.data, index)
+        }
     }
 
     pub fn get_size_bytes(&self) -> usize {
@@ -80,23 +172,14 @@ impl BitSetRaw {
         (self.size + 63) / 64
     }
 
-    pub fn get_zero_element(&self) -> Option<usize> {
-        if self.count0 == 0 {
-            return None;
-        }
-        for i in 0..self.get_num_u64() {
-            let mut val = unsafe { *self.data.add(i) };
-            if val != 0xFFFF_FFFF_FFFF_FFFF {
-                for j in 0..64 {
-                    if val & 1 == 0 {
-                        return Some(i * 64 + j);
-                    }
-                    val >>= 1;
-                }
-                unreachable!();
+    pub fn get_zero_element(&mut self) -> Option<usize> {
+        loop {
+            let idx = self.stack_top()? as usize;
+            if !self.get(idx) {
+                return Some(idx);
             }
+            self.pop_stack();
         }
-        None
     }
 
     pub fn clear(&mut self) {
@@ -106,6 +189,7 @@ impl BitSetRaw {
             }
         }
         self.count0 = self.size;
+        self.setup_stack();
     }
 
     pub fn get_count0(&self) -> usize {
@@ -113,12 +197,13 @@ impl BitSetRaw {
     }
     
     pub unsafe fn load_from(&mut self, ptr: *mut u64) {
-        memcpy(ptr as *mut u8, self.data as *mut u8, (self.size + 63) / 64 * 8);
+        memcpy(ptr as *mut u8, self.data as *mut u8, self.get_num_u64() * 8);
         self.update_count0();
+        self.setup_stack();
     }
     
     pub unsafe fn store_to(&self, ptr: *mut u64) {
-        memcpy(self.data as *mut u8, ptr as *mut u8, (self.size + 63) / 64 * 8);
+        memcpy(self.data as *mut u8, ptr as *mut u8, self.get_num_u64() * 8);
     }
 }
 

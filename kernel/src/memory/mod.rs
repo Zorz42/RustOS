@@ -2,7 +2,7 @@ use core::arch::asm;
 
 use bootloader_api::info::{MemoryRegionKind, MemoryRegions};
 
-pub use bitset::{BitSetRaw, BitSet};
+pub use bitset::{BitSetRaw, BitSet, bitset_size_bytes};
 pub use paging::{check_page_table_integrity, VirtAddr};
 #[cfg(feature = "run_tests")]
 pub use paging::{find_free_page, free_page, PhysAddr};
@@ -45,7 +45,7 @@ pub fn init_memory(memory_regions: &MemoryRegions) {
     }
     let num_all_pages = highest_address / PAGE_SIZE;
     // how many pages will the bitset alone take
-    let pages_for_bitset = (num_all_pages + 8 * PAGE_SIZE - 1) / (8 * PAGE_SIZE);
+    let pages_for_bitset = (bitset_size_bytes(num_all_pages as usize) as u64 + PAGE_SIZE - 1) / PAGE_SIZE;
 
     let bitset_addr = {
         // find some consecutive free pages in memory_regions

@@ -116,7 +116,7 @@ impl MemoryDisk {
     }
 
     pub fn alloc_page(&mut self) -> i32 {
-        let res = self.get_bitset().get_zero_element();
+        let res = self.get_bitset_mut().get_zero_element();
         if let Some(res) = res {
             self.get_bitset_mut().set(res, true);
             res as i32

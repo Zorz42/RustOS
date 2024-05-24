@@ -8,6 +8,7 @@ use kernel_test::all_tests;
 use crate::print::{reset_print_color, set_print_color, TextColor};
 use crate::{print, println};
 use crate::disk::filesystem::get_fs;
+use crate::memory::bitset_size_bytes;
 
 mod A0_rand;
 mod A1_utils;
@@ -29,7 +30,7 @@ pub trait KernelPerf {
 
 const TESTDISK_MAGIC_CODE: u32 = 0x61732581;
 
-static mut FREE_SPACE: [u8; 1032] = [0; 1032];
+static mut FREE_SPACE: [u8; bitset_size_bytes(1024 * 8) + 8] = [0; bitset_size_bytes(1024 * 8) + 8];
 
 pub(super) fn get_free_space_addr() -> *mut u8 {
     unsafe { ((FREE_SPACE.as_mut_ptr() as u64 + 7) / 8 * 8) as *mut u8 }
