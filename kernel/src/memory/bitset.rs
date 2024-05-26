@@ -27,7 +27,7 @@ unsafe fn set_raw(base: *mut u64, index: usize, val: bool) {
 pub const fn bitset_size_bytes(size: usize) -> usize {
     let s1 = (size + 63) / 64 * 8; // for actual bits
     let s2 = (size + 63) / 64 * 8; // for bits "is on stack"
-    let s3 = size * 4; // for the actual stack
+    let s3 = size * 4; // for the stack
     return s1 + s2 + s3;
 }
 
@@ -231,7 +231,6 @@ impl Deref for BitSet {
 }
 
 impl DerefMut for BitSet {
-
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.bitset
     }

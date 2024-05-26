@@ -3,6 +3,7 @@ use crate::disk::memory_disk::{get_mounted_disk, mount_disk, unmount_disk, DiskB
 use crate::tests::get_test_disk;
 use kernel_test::{kernel_test, kernel_test_mod};
 use std::{deserialize, serialize, Rng, Vec};
+use crate::{print, println};
 kernel_test_mod!(crate::tests::A9_memory_disk);
 
 #[kernel_test]
@@ -65,7 +66,7 @@ fn test_diskbox() {
     for _ in 0..20 {
         let len = rng.get(0, 40) as usize;
         let mut vec = Vec::new();
-
+        
         for _ in 0..len {
             vec.push(rng.get(0, 1u64 << 63));
         }
@@ -74,13 +75,15 @@ fn test_diskbox() {
         for i in &vec {
             vec1.push(DiskBox::new(*i));
         }
+        
         let data = serialize(&mut vec1);
-        vec1 = deserialize(&data);
 
+        vec1 = deserialize(&data);
+        
         for i in 0..len {
             assert_eq!(*vec1[i].get(), vec[i]);
         }
-
+        
         for i in vec1 {
             DiskBox::delete(i);
         }

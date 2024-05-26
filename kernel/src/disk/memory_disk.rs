@@ -2,6 +2,7 @@ use std::{deserialize, memcpy_non_aligned, serialize, Serial, Vec, Box};
 
 use crate::disk::disk::Disk;
 use crate::memory::{map_page_auto, BitSetRaw, VirtAddr, DISK_OFFSET, PAGE_SIZE, unmap_page, BitSet};
+use crate::println;
 
 pub struct MemoryDisk {
     disk: Disk,
@@ -77,13 +78,13 @@ impl MemoryDisk {
     }
 
     // bitset size in pages
-    fn get_bitset_size(&self) -> usize {
+    fn get_bitset_num_pages(&self) -> usize {
         (self.get_bitset().get_size_bytes() + PAGE_SIZE as usize - 1) / PAGE_SIZE as usize
     }
 
     pub fn erase(&mut self) {
         self.get_bitset_mut().clear();
-        for i in 0..=self.get_bitset_size() {
+        for i in 0..=self.get_bitset_num_pages() {
             self.get_bitset_mut().set(i, true);
         }
         self.set_head(&Vec::new());
@@ -186,7 +187,7 @@ pub fn disk_page_fault_handler(addr: u64) -> bool {
 
 pub struct DiskBox<T: Serial> {
     size: i32,
-    pages: Vec<i32>,
+    pub pages: Vec<i32>,
     obj: Option<T>,
 }
 
@@ -197,6 +198,8 @@ impl<T: Serial> Serial for DiskBox<T> {
         }
         self.size.serialize(vec);
         self.pages.serialize(vec);
+        self.pages = Vec::new();
+        self.obj = None;
     }
 
     fn deserialize(vec: &Vec<u8>, idx: &mut usize) -> Self {
@@ -270,7 +273,7 @@ impl<T: Serial> DiskBox<T> {
         for page in &self.pages {
             get_mounted_disk().free_page(*page);
         }
-        self.obj = None;
+        self.pages = Vec::new();
     }
 }
 
