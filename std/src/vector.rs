@@ -124,6 +124,10 @@ impl<T> Vec<T> {
         }
         *self = new_vec;
     }
+    
+    pub fn as_ptr(&self) -> *const T {
+        self.arr.get()
+    }
 }
 
 impl<T: Default> Vec<T> {

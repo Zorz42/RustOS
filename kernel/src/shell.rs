@@ -1,8 +1,9 @@
 use core::arch::asm;
-use std::{String, Vec};
+use std::{memcpy_non_aligned, String, Vec};
 use crate::keyboard::{get_key_event, Key, key_to_char};
 use crate::{print, println};
 use crate::disk::filesystem::{get_fs, Path};
+use crate::memory::{map_page_auto, PAGE_SIZE, VirtAddr};
 use crate::print::move_cursor_back;
 
 struct Context {
@@ -104,6 +105,49 @@ fn command_erase() {
     get_fs().erase();
 }
 
+fn run_program(name: String) {
+    // run program
+    let mut file_path = String::from("programs/");
+    for c in &name {
+        file_path.push(*c);
+    }
+    let file = if let Some(file) = get_fs().get_file(&file_path) {
+        file
+    } else {
+        println!("Unknown command \"{name}\"");
+        return;
+    };
+    
+    let testing_program = file.read();
+    if testing_program.size() < 4 || testing_program[1] as char != 'E' || testing_program[2] as char != 'L' || testing_program[3] as char != 'F' {
+        println!("\"{name}\" has invalid ELF header");
+        return;
+    }
+
+    let mut entry = 0x1000;
+    for i in 0..8 {
+        entry += (testing_program[24 + i] as u64) << (i * 8);
+    }
+    let program_offset = 1u64 << (12 + 3 * 9 + 2);
+
+    let num_pages = (testing_program.size() as u64 + PAGE_SIZE - 1) / PAGE_SIZE;
+    println!("allocating {num_pages} pages");
+    for i in 0..num_pages {
+        map_page_auto((program_offset + PAGE_SIZE * i) as VirtAddr, true, true);
+    }
+
+    unsafe {
+        memcpy_non_aligned(testing_program.as_ptr(), program_offset as *mut u8, testing_program.size());
+        
+        println!("Calling address 0x{entry:x}");
+        asm!("call {}", in(reg) entry);
+
+        let rax: u64;
+        asm!("mov {}, rax", out(reg) rax);
+        println!("Program exited with code {rax}");
+    }
+}
+
 fn command_callback(command: String, context: &mut Context) {
     let mut parts = command.split(' ');
     parts.retain(&|x| x.size() != 0);
@@ -121,7 +165,9 @@ fn command_callback(command: String, context: &mut Context) {
         "cd" => command_cd(parts, context),
         "cp" => command_cp(parts, context),
         "erase" => command_erase(),
-        _ => println!("Unknown command \"{command_name}\""),
+        _ => {
+            run_program(command_name);
+        },
     }
 }
 

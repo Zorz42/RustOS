@@ -12,6 +12,7 @@ use core::panic::PanicInfo;
 use bootloader_api::config::Mapping;
 use bootloader_api::info::PixelFormat;
 use bootloader_api::{entry_point, BootInfo, BootloaderConfig};
+use std::{String, Vec};
 
 use crate::disk::disk::scan_for_disks;
 use crate::disk::filesystem::{close_fs, get_fs, init_fs};
@@ -120,37 +121,11 @@ fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
     init_fs();
     
     println!("Root disk is mounted!");
+
+    let program_exec = include_bytes!("../../compiled_projects/testing_project");
+    let file = get_fs().create_file(&String::from("programs/test"));
+    file.write(&Vec::new_from_slice(program_exec));
     
-    // run program
-    /*let testing_program = include_bytes!("../../compiled_projects/testing_project");
-    assert_eq!(testing_program[1] as char, 'E');
-    assert_eq!(testing_program[2] as char, 'L');
-    assert_eq!(testing_program[3] as char, 'F');
-
-    let mut entry = 0x1000;
-    for i in 0..8 {
-        entry += (testing_program[24 + i] as u64) << (i * 8);
-    }
-    let program_offset = 1u64 << (12 + 3 * 9 + 2);
-
-    println!("Mapping pages");
-    let num_pages = (testing_program.len() as u64 + PAGE_SIZE - 1) / PAGE_SIZE;
-    for i in 0..num_pages {
-        map_page_auto((program_offset + PAGE_SIZE * i) as VirtAddr, true, true);
-    }
-
-    println!("Loading program");
-    unsafe {
-        memcpy_non_aligned(testing_program.as_ptr(), program_offset as *mut u8, testing_program.len());
-
-        println!("Jumping into program (to 0x{entry:x})");
-        asm!("call {}", in(reg) entry);
-
-        let rax: u64;
-        asm!("mov {}, rax", out(reg) rax);
-        println!("Returned {rax}");
-    }*/
-
     #[cfg(feature = "run_perf")]
     {
         use crate::tests::perf_test_runner;
