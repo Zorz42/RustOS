@@ -105,6 +105,71 @@ fn command_erase() {
     get_fs().erase();
 }
 
+const EI_MAG0: usize = 0; // File identification
+const EI_MAG1: usize = 1; // File identification
+const EI_MAG2: usize = 2; // File identification
+const EI_MAG3: usize = 3; // File identification
+const EI_CLASS: usize = 4; // File class
+const EI_DATA: usize = 5; // Data encoding
+const EI_VERSION: usize = 6; // File version
+const EI_OSABI: usize = 7; // Operating system/ABI identification
+const EI_ABIVERSION: usize = 8; // ABI version
+const EI_PAD: usize = 9; // Start of padding bytes
+const EI_NIDENT: usize = 16; // Size of e_ident[]
+
+#[repr(C)]
+struct ElfHeader {
+    ident: [u8; 16],
+    file_type: u16,
+    machine: u16,
+    version: u32,
+    entry: u64,
+    program_header_offset: u64,
+    section_header_offset: u64,
+    flags: u32,
+    header_size: u16,
+    program_header_entry_size: u16,
+    program_header_num_entries: u16,
+    section_header_entry_size: u16,
+    program_section_num_entries: u16,
+    section_names_offset: u16,
+}
+
+#[repr(C)]
+#[derive(Debug)]
+struct ProgramHeader {
+    header_type: u32,
+    flags: u32,
+    offset: u64,
+    virt_addr: u64,
+    phys_addr: u64,
+    size_in_file: u64,
+    size_in_memory: u64,
+    align: u64,
+}
+
+#[repr(C)]
+#[derive(Debug)]
+struct SectionHeader {
+    header_type: u32,
+    flags: u64,
+    virt_addr: u64,
+    offset: u64,
+    size: u64,
+    link: u32,
+    info: u32,
+    align: u64,
+    entry_size: u64,
+}
+
+fn verify_elf_header(header: &ElfHeader) -> bool {
+        header.ident[EI_MAG0] == 0x7F &&
+        header.ident[EI_MAG1] as char == 'E' &&
+        header.ident[EI_MAG2] as char == 'L' &&
+        header.ident[EI_MAG3] as char == 'F'
+}
+
+
 fn run_program(name: String) {
     // run program
     let mut file_path = String::from("programs/");
@@ -119,12 +184,36 @@ fn run_program(name: String) {
     };
     
     let testing_program = file.read();
-    if testing_program.size() < 4 || testing_program[1] as char != 'E' || testing_program[2] as char != 'L' || testing_program[3] as char != 'F' {
+    if testing_program.size() < core::mem::size_of::<ElfHeader>() {
+        println!("\"{name}\" is too small to contain an ELF header.");
+        return;
+    }
+    
+    let mut elf_header = unsafe { &*(testing_program.as_ptr() as *const ElfHeader) };
+    
+    println!("{}", elf_header.file_type);
+    
+    if !verify_elf_header(elf_header) {
         println!("\"{name}\" has invalid ELF header");
         return;
     }
+    
+    
+    println!("Num {} {}", elf_header.program_header_num_entries, elf_header.program_section_num_entries);
 
-    let mut entry = 0x1000;
+    for i in 0..elf_header.program_header_num_entries {
+        let addr = unsafe { testing_program.as_ptr().add(elf_header.program_header_offset as usize).add(i as usize * elf_header.program_header_entry_size as usize) as *const ProgramHeader };
+        let header = unsafe { &*(addr) };
+        println!("{:?}", header);
+    }
+
+    for i in 0..elf_header.program_section_num_entries {
+        let addr = unsafe { testing_program.as_ptr().add(elf_header.section_header_offset as usize).add(i as usize * elf_header.section_header_entry_size as usize) as *const SectionHeader };
+        let header = unsafe { &*(addr) };
+        println!("{:?}", header);
+    }
+    
+    /*let mut entry = 0x1000;
     for i in 0..8 {
         entry += (testing_program[24 + i] as u64) << (i * 8);
     }
@@ -145,7 +234,7 @@ fn run_program(name: String) {
         let rax: u64;
         asm!("mov {}, rax", out(reg) rax);
         println!("Program exited with code {rax}");
-    }
+    }*/
 }
 
 fn command_callback(command: String, context: &mut Context) {
