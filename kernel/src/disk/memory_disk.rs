@@ -2,7 +2,6 @@ use std::{deserialize, memcpy_non_aligned, serialize, Serial, Vec, Box};
 
 use crate::disk::disk::Disk;
 use crate::memory::{map_page_auto, BitSetRaw, VirtAddr, DISK_OFFSET, PAGE_SIZE, unmap_page, BitSet};
-use crate::println;
 
 pub struct MemoryDisk {
     disk: Disk,
@@ -87,6 +86,7 @@ impl MemoryDisk {
         for i in 0..=self.get_bitset_num_pages() {
             self.get_bitset_mut().set(i, true);
         }
+        
         self.set_head(&Vec::new());
     }
 
@@ -136,12 +136,15 @@ static mut MOUNTED_DISK: Option<Box<MemoryDisk>> = None;
 
 pub fn unmount_disk() {
     if let Some(mounted_disk) = unsafe { MOUNTED_DISK.as_mut() } {
+        unsafe {
+            mounted_disk.bitset.as_mut().unwrap().store_to(id_to_addr(1) as *mut u64);
+        }
+
         for page in &mounted_disk.mapped_pages {
             mounted_disk.unmap_page(*page);
         }
-
+        
         unsafe {
-            mounted_disk.bitset.as_mut().unwrap().store_to(id_to_addr(1) as *mut u64);
             MOUNTED_DISK = None;
         }
     }
@@ -274,6 +277,7 @@ impl<T: Serial> DiskBox<T> {
             get_mounted_disk().free_page(*page);
         }
         self.pages = Vec::new();
+        self.obj = None;
     }
 }
 

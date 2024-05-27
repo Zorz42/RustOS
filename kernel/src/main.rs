@@ -116,7 +116,7 @@ fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
     let root_disk = root_disk.unwrap();
     
     close_fs();
-    mount_disk(root_disk);
+    mount_disk(root_disk.clone());
     init_fs();
     
     println!("Root disk is mounted!");
@@ -172,6 +172,8 @@ fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
     shell_main();
 
     close_fs();
+    unmount_disk();
+    mount_disk(root_disk.clone());
     unmount_disk();
 
     // shutdown qemu

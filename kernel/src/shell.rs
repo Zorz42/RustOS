@@ -99,6 +99,11 @@ fn command_cp(args: Vec<String>, context: &mut Context) {
     context.curr_dir = Path::from(&dest);
 }
 
+fn command_erase() {
+    println!("Erasing the disk");
+    get_fs().erase();
+}
+
 fn command_callback(command: String, context: &mut Context) {
     let mut parts = command.split(' ');
     parts.retain(&|x| x.size() != 0);
@@ -115,6 +120,7 @@ fn command_callback(command: String, context: &mut Context) {
         "mkdir" => command_mkdir(parts, context),
         "cd" => command_cd(parts, context),
         "cp" => command_cp(parts, context),
+        "erase" => command_erase(),
         _ => println!("Unknown command \"{command_name}\""),
     }
 }

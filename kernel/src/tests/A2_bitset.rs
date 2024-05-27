@@ -103,3 +103,26 @@ fn test_bitset_fill() {
         assert_eq!(bitset.get_count0(), 1024 * 8 - i - 1);
     }
 }
+
+#[kernel_test]
+fn test_bitset_store_load() {
+    let mut bitset = unsafe {
+        let mut bitset = BitSetRaw::new(1024, get_free_space_addr().add(1024) as *mut u64);
+        bitset
+    };
+
+    let mut rng = Rng::new(5437891);
+
+    let mut arr = [0; 1024];
+    for i in 0..100 {
+        let idx = rng.get(0, 1024) as usize;
+        assert_eq!(arr[idx] == 1, bitset.get(idx));
+        bitset.set(idx, arr[idx] == 0);
+        arr[idx] ^= 1;
+        unsafe {
+            bitset.store_to(get_free_space_addr() as *mut u64);
+            bitset.load_from(get_free_space_addr() as *mut u64);
+        }
+        assert_eq!(arr[idx] == 1, bitset.get(idx));
+    }
+}

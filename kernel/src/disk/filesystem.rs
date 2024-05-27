@@ -210,29 +210,30 @@ impl Directory {
 }
 
 pub struct FileSystem {
-    root: DiskBox<Directory>,
+    root: Option<DiskBox<Directory>>,
 }
 
 impl FileSystem {
-    pub fn new() -> Self {
+    fn new() -> Self {
         if get_mounted_disk().get_head().size() == 0 {
             get_mounted_disk().set_head(&serialize(&mut DiskBox::new(Directory::new(String::new()))));
         }
         Self {
-            root: deserialize(&get_mounted_disk().get_head()),
+            root: Some(deserialize(&get_mounted_disk().get_head())),
         }
     }
 
     pub fn erase(&mut self) {
+        self.root = None;
         get_mounted_disk().erase();
-        self.root = DiskBox::new(Directory::new(String::new()));
+        self.root = Some(DiskBox::new(Directory::new(String::new())));
     }
 
     pub fn get_directory(&mut self, path: &String) -> Option<&mut Directory> {
         let path = Path::from(path);
         let mut parts = path.dirs;
         parts.reverse();
-        self.root.get().get_directory_full(parts)
+        self.root.as_mut().unwrap().get().get_directory_full(parts)
     }
 
     pub fn get_file(&mut self, path: &String) -> Option<&mut File> {
@@ -240,7 +241,7 @@ impl FileSystem {
         let mut parts = path.dirs;
         let file_name = parts.pop()?;
         parts.reverse();
-        let directory = self.root.get().get_directory_full(parts)?;
+        let directory = self.root.as_mut().unwrap().get().get_directory_full(parts)?;
         directory.get_file(&file_name)
     }
 
@@ -249,7 +250,7 @@ impl FileSystem {
         let mut parts = path.dirs;
         if let Some(file_name) = parts.pop() {
             parts.reverse();
-            let parent = self.root.get().create_directory_full(parts);
+            let parent = self.root.as_mut().unwrap().get().create_directory_full(parts);
             parent.create_file(file_name)
         } else {
             panic!("No file name specified!");
@@ -260,7 +261,7 @@ impl FileSystem {
         let path = Path::from(path);
         let mut parts = path.dirs;
         parts.reverse();
-        self.root.get().create_directory_full(parts)
+        self.root.as_mut().unwrap().get().create_directory_full(parts)
     }
 
     pub fn delete_file(&mut self, path: &String) {
@@ -268,7 +269,7 @@ impl FileSystem {
         let mut parts = path.dirs;
         if let Some(file_name) = parts.pop() {
             parts.reverse();
-            let parent = self.root.get().get_directory_full(parts).unwrap();
+            let parent = self.root.as_mut().unwrap().get().get_directory_full(parts).unwrap();
             parent.delete_file(&file_name);
         } else {
             panic!("No file name specified!");
@@ -280,7 +281,7 @@ impl FileSystem {
         let mut parts = path.dirs;
         if let Some(dir_name) = parts.pop() {
             parts.reverse();
-            let parent = self.root.get().get_directory_full(parts).unwrap();
+            let parent = self.root.as_mut().unwrap().get().get_directory_full(parts).unwrap();
             parent.delete_directory(&dir_name);
         } else {
             panic!("No directory name specified!");
@@ -290,7 +291,7 @@ impl FileSystem {
 
 impl Drop for FileSystem {
     fn drop(&mut self) {
-        get_mounted_disk().set_head(&serialize(&mut self.root));
+        get_mounted_disk().set_head(&serialize(self.root.as_mut().unwrap()));
     }
 }
 
