@@ -3,6 +3,7 @@ use crate::disk::memory_disk::{get_mounted_disk, mount_disk, unmount_disk};
 use crate::tests::{get_test_disk, KernelPerf};
 use kernel_test::{kernel_perf, kernel_test, kernel_test_mod};
 use std::{Rng, String, Vec};
+use crate::println;
 use crate::tests::A7_vector::PerfVecPush1000;
 
 kernel_test_mod!(crate::tests::B0_filesystem);

@@ -1,5 +1,6 @@
 use core::ops::{Deref, DerefMut};
-use std::{memcpy, Vec};
+use std::{memcpy, memset_int64, Vec};
+use crate::println;
 
 pub struct BitSetRaw {
     data: *mut u64,
@@ -78,14 +79,15 @@ impl BitSetRaw {
     
     fn setup_stack(&mut self) {
         self.stack_size = 0;
+        unsafe {
+            memset_int64(self.get_stack_bitset_addr() as *mut u8, 0, self.get_num_u64() * 8);
+        }
         for i in 0..self.size {
-            unsafe {
-                set_raw(self.get_stack_bitset_addr(), i, false);
-            }
             if !self.get(i) {
                 self.add_to_stack(i);
             }
         }
+        assert!(self.stack_size >= self.count0);
     }
     
     fn get_stack_bitset_addr(&mut self) -> *mut u64 {
@@ -117,25 +119,22 @@ impl BitSetRaw {
         self.stack_size += 1;
     }
     
-    fn stack_top(&mut self) -> Option<i32> {
-        if self.stack_size == 0 {
-            return None;
-        }
+    fn stack_top(&mut self) -> i32 {
+        assert!(self.stack_size >= self.count0);
 
         unsafe {
-            Some(*self.get_stack_addr().add(self.stack_size - 1))
+            *self.get_stack_addr().add(self.stack_size - 1)
         }
     }
 
     fn pop_stack(&mut self) {
-        if self.stack_size == 0 {
-            panic!("Stack not empty");
+        assert!(self.stack_size >= self.count0);
+        
+        unsafe {
+            set_raw(self.get_stack_bitset_addr(), self.stack_top() as usize, false);
         }
 
         self.stack_size -= 1;
-        unsafe {
-            set_raw(self.get_stack_bitset_addr(), self.stack_size, false);
-        }
     }
 
     pub fn set(&mut self, index: usize, val: bool) {
@@ -144,13 +143,15 @@ impl BitSetRaw {
         self.count0 += !val as usize;
         self.count0 -= !self.get(index) as usize;
 
-        unsafe { 
+        unsafe {
             set_raw(self.data, index, val);
         }
 
         if !val {
             self.add_to_stack(index);
         }
+        
+        assert!(self.stack_size >= self.count0);
     }
 
     pub fn get(&self, index: usize) -> bool {
@@ -173,8 +174,12 @@ impl BitSetRaw {
     }
 
     pub fn get_zero_element(&mut self) -> Option<usize> {
+        if self.count0 == 0 {
+            return None;
+        }
+        
         loop {
-            let idx = self.stack_top()? as usize;
+            let idx = self.stack_top() as usize;
             if !self.get(idx) {
                 return Some(idx);
             }
@@ -183,10 +188,8 @@ impl BitSetRaw {
     }
 
     pub fn clear(&mut self) {
-        for i in 0..self.get_num_u64() {
-            unsafe {
-                *self.data.add(i) = 0;
-            }
+        unsafe {
+            memset_int64(self.data as *mut u8, 0, self.get_num_u64() * 8);
         }
         self.count0 = self.size;
         self.setup_stack();
