@@ -1,5 +1,5 @@
 use core::arch::asm;
-use std::{memcpy_non_aligned, String, Vec};
+use std::{memcpy_non_aligned, memset, String, Vec};
 use crate::keyboard::{get_key_event, Key, key_to_char};
 use crate::{print, println};
 use crate::disk::filesystem::{get_fs, Path};
@@ -131,7 +131,7 @@ struct ElfHeader {
     program_header_entry_size: u16,
     program_header_num_entries: u16,
     section_header_entry_size: u16,
-    program_section_num_entries: u16,
+    section_header_num_entries: u16,
     section_names_offset: u16,
 }
 
@@ -151,6 +151,7 @@ struct ProgramHeader {
 #[repr(C)]
 #[derive(Debug)]
 struct SectionHeader {
+    header_name: u32,
     header_type: u32,
     flags: u64,
     virt_addr: u64,
@@ -167,6 +168,15 @@ fn verify_elf_header(header: &ElfHeader) -> bool {
         header.ident[EI_MAG1] as char == 'E' &&
         header.ident[EI_MAG2] as char == 'L' &&
         header.ident[EI_MAG3] as char == 'F'
+}
+
+struct MemoryRange {
+    start: u64,
+    length: u64,
+    file_offset: Option<u64>,
+    writable: bool,
+    readable: bool,
+    executable: bool,
 }
 
 
@@ -191,50 +201,86 @@ fn run_program(name: String) {
     
     let mut elf_header = unsafe { &*(testing_program.as_ptr() as *const ElfHeader) };
     
-    println!("{}", elf_header.file_type);
-    
     if !verify_elf_header(elf_header) {
         println!("\"{name}\" has invalid ELF header");
         return;
     }
-    
-    
-    println!("Num {} {}", elf_header.program_header_num_entries, elf_header.program_section_num_entries);
 
+    let mut ranges = Vec::new();
+    
     for i in 0..elf_header.program_header_num_entries {
         let addr = unsafe { testing_program.as_ptr().add(elf_header.program_header_offset as usize).add(i as usize * elf_header.program_header_entry_size as usize) as *const ProgramHeader };
         let header = unsafe { &*(addr) };
-        println!("{:?}", header);
-    }
-
-    for i in 0..elf_header.program_section_num_entries {
-        let addr = unsafe { testing_program.as_ptr().add(elf_header.section_header_offset as usize).add(i as usize * elf_header.section_header_entry_size as usize) as *const SectionHeader };
-        let header = unsafe { &*(addr) };
-        println!("{:?}", header);
+        
+        let mut range = MemoryRange {
+            start: header.virt_addr,
+            length: header.size_in_memory,
+            file_offset: None,
+            executable: (header.flags & 1) != 0,
+            writable: (header.flags & 2) != 0,
+            readable: (header.flags & 4) != 0,
+        };
+        
+        if header.size_in_file != 0 {
+            range.file_offset = Some(header.offset);
+        }
+        
+        assert!(header.size_in_file == 0 || header.size_in_file == header.size_in_memory);
+        
+        if header.header_type == 1 {
+            if range.length != 0 {
+                ranges.push(range);
+            }
+        } else if (header.header_type >= 0x60000000 && header.header_type <= 0x7FFFFFFF) || header.header_type == 0 || header.header_type == 2 {
+            // just ignore it
+        } else {
+            panic!("Unknown header type {}", header.header_type)
+        }
     }
     
-    /*let mut entry = 0x1000;
-    for i in 0..8 {
-        entry += (testing_program[24 + i] as u64) << (i * 8);
+    ranges.sort(&|a, b| a.start < b.start);
+    
+    // check for ranges not overlapping
+    let mut high_addr = 0;
+    for range in &ranges {
+        assert!(high_addr <= range.start);
+        high_addr = range.start + range.length;
     }
-    let program_offset = 1u64 << (12 + 3 * 9 + 2);
-
-    let num_pages = (testing_program.size() as u64 + PAGE_SIZE - 1) / PAGE_SIZE;
-    println!("allocating {num_pages} pages");
-    for i in 0..num_pages {
-        map_page_auto((program_offset + PAGE_SIZE * i) as VirtAddr, true, true);
+    
+    // map pages
+    let mut curr_page = 0;
+    for range in &ranges {
+        curr_page = u64::max(curr_page, range.start / PAGE_SIZE * PAGE_SIZE);
+        
+        while curr_page < range.start + range.length {
+            map_page_auto(curr_page as VirtAddr, true, true);
+            curr_page += PAGE_SIZE;
+        }
     }
+    
+    // copy data to memory
+    for range in &ranges {
+        if let Some(file_offset) = range.file_offset {
+            unsafe {
+                memcpy_non_aligned(testing_program.as_ptr().add(file_offset as usize), range.start as *mut u8, range.length as usize);
+            }
+        } else {
+            unsafe {
+                memset(range.start as *mut u8, 0, range.length as usize);
+            }
+        }
+    }
+    
+    
 
     unsafe {
-        memcpy_non_aligned(testing_program.as_ptr(), program_offset as *mut u8, testing_program.size());
-        
-        println!("Calling address 0x{entry:x}");
+        let entry = elf_header.entry;
         asm!("call {}", in(reg) entry);
 
         let rax: u64;
         asm!("mov {}, rax", out(reg) rax);
         println!("Program exited with code {rax}");
-    }*/
+    }
 }
 
 fn command_callback(command: String, context: &mut Context) {

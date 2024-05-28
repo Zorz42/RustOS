@@ -1,4 +1,4 @@
-use crate::memcpy;
+use crate::{memcpy, swap};
 use crate::pointer::Ptr;
 use crate::serial::Serial;
 use core::ops::{DerefMut, Index, IndexMut};
@@ -127,6 +127,18 @@ impl<T> Vec<T> {
     
     pub fn as_ptr(&self) -> *const T {
         self.arr.get()
+    }
+    
+    pub fn sort(&mut self, f: &dyn Fn(&T, &T) -> bool) {
+        for t in 0..self.size {
+            for i in 0..self.size - 1 - t {
+                if !f(&self[i], &self[i + 1]) {
+                    let ptr1 = &mut self[i] as *mut T;
+                    let ptr2 = &mut self[i + 1] as *mut T;
+                    swap(unsafe { &mut *ptr1 }, unsafe { &mut *ptr2  });
+                }
+            }
+        }
     }
 }
 
