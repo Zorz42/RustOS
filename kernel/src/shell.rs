@@ -163,15 +163,18 @@ unsafe fn switch_to_user_mode(entry_point: u64, user_stack: u64) {
         mov gs, ax
         push 0x23            // User data segment selector (SS)
         push {1}             // User stack pointer
-        pushf                // EFLAGS
+        push 0x200           // EFLAGS
         push 0x1B            // User code segment selector (CS)
         push {0}             // Entry point address
-        iretq                // Interrupt return, switches to user mode
+        //iretq                // Interrupt return, switches to user mode
         ",
     in(reg) entry_point,
     in(reg) user_stack,
-    options(noreturn)
+    //options(noreturn)
     );
+    
+    println!("Going to infinite loop");
+    loop {}
 }
 
 fn run_program(name: String) {
@@ -272,7 +275,7 @@ fn run_program(name: String) {
         /*let entry = elf_header.entry;
         asm!("call {}", in(reg) entry);*/
         
-        switch_to_user_mode(elf_header.entry, USER_STACK);
+        switch_to_user_mode(elf_header.entry, USER_STACK - USER_STACK_SIZE / 2);
         
         println!("Going to infinite loop");
         loop {
