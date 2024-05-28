@@ -152,7 +152,7 @@ struct MemoryRange {
 const USER_STACK: u64 = 0x30000000000;
 const USER_STACK_SIZE: u64 = 100 * 1024; // 100kB
 
-unsafe fn switch_to_user_mode(entry_point: usize, user_stack: usize) {
+unsafe fn switch_to_user_mode(entry_point: u64, user_stack: u64) {
     asm!(
     "
         cli                  // Clear interrupts
@@ -170,7 +170,7 @@ unsafe fn switch_to_user_mode(entry_point: usize, user_stack: usize) {
         ",
     in(reg) entry_point,
     in(reg) user_stack,
-    //options(noreturn)
+    options(noreturn)
     );
 }
 
@@ -272,7 +272,7 @@ fn run_program(name: String) {
         /*let entry = elf_header.entry;
         asm!("call {}", in(reg) entry);*/
         
-        switch_to_user_mode(elf_header.entry as usize, USER_STACK as usize);
+        switch_to_user_mode(elf_header.entry, USER_STACK);
         
         println!("Going to infinite loop");
         loop {
