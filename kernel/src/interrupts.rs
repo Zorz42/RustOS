@@ -6,7 +6,7 @@ use crate::ports::byte_out;
 use crate::println;
 
 #[derive(Debug)]
-#[repr(C)]
+#[repr(C, packed)]
 pub struct ExceptionStackFrame {
     instruction_pointer: u64,
     code_segment: u64,

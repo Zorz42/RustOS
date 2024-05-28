@@ -3,7 +3,7 @@ use std::{memcpy_non_aligned, memset, String, Vec};
 use crate::keyboard::{get_key_event, Key, key_to_char};
 use crate::{print, println};
 use crate::disk::filesystem::{get_fs, Path};
-use crate::memory::{map_page, map_page_auto, PAGE_SIZE, VirtAddr};
+use crate::memory::{map_page_auto, PAGE_SIZE, VirtAddr};
 use crate::print::move_cursor_back;
 
 struct Context {

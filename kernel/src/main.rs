@@ -23,6 +23,7 @@ use crate::memory::{
     VIRTUAL_OFFSET,
 };
 use crate::disk::memory_disk::{get_mounted_disk, mount_disk, unmount_disk};
+use crate::gdt::init_gdt;
 use crate::ports::word_out;
 use crate::print::{reset_print_color, set_print_color, TextColor};
 use crate::shell::shell_main;
@@ -41,6 +42,7 @@ mod tests;
 mod timer;
 mod vga_driver;
 mod shell;
+mod gdt;
 
 const CONFIG: BootloaderConfig = {
     let mut config = BootloaderConfig::new_default();
@@ -77,7 +79,8 @@ fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
         reset_print_color();
     }
 
-    println!("Initializing IDT");
+    println!("Initializing IDT/GDT");
+    init_gdt();
     init_idt();
     init_timer();
     init_keyboard();
