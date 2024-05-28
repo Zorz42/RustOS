@@ -3,7 +3,7 @@ use std::{memcpy_non_aligned, memset, String, Vec};
 use crate::keyboard::{get_key_event, Key, key_to_char};
 use crate::{print, println};
 use crate::disk::filesystem::{get_fs, Path};
-use crate::memory::{map_page_auto, PAGE_SIZE, VirtAddr};
+use crate::memory::{map_page, map_page_auto, PAGE_SIZE, VirtAddr};
 use crate::print::move_cursor_back;
 
 struct Context {
@@ -105,18 +105,6 @@ fn command_erase() {
     get_fs().erase();
 }
 
-const EI_MAG0: usize = 0; // File identification
-const EI_MAG1: usize = 1; // File identification
-const EI_MAG2: usize = 2; // File identification
-const EI_MAG3: usize = 3; // File identification
-const EI_CLASS: usize = 4; // File class
-const EI_DATA: usize = 5; // Data encoding
-const EI_VERSION: usize = 6; // File version
-const EI_OSABI: usize = 7; // Operating system/ABI identification
-const EI_ABIVERSION: usize = 8; // ABI version
-const EI_PAD: usize = 9; // Start of padding bytes
-const EI_NIDENT: usize = 16; // Size of e_ident[]
-
 #[repr(C)]
 struct ElfHeader {
     ident: [u8; 16],
@@ -136,7 +124,6 @@ struct ElfHeader {
 }
 
 #[repr(C)]
-#[derive(Debug)]
 struct ProgramHeader {
     header_type: u32,
     flags: u32,
@@ -148,37 +135,44 @@ struct ProgramHeader {
     align: u64,
 }
 
-#[repr(C)]
-#[derive(Debug)]
-struct SectionHeader {
-    header_name: u32,
-    header_type: u32,
-    flags: u64,
-    virt_addr: u64,
-    offset: u64,
-    size: u64,
-    link: u32,
-    info: u32,
-    align: u64,
-    entry_size: u64,
-}
 
 fn verify_elf_header(header: &ElfHeader) -> bool {
-        header.ident[EI_MAG0] == 0x7F &&
-        header.ident[EI_MAG1] as char == 'E' &&
-        header.ident[EI_MAG2] as char == 'L' &&
-        header.ident[EI_MAG3] as char == 'F'
+        header.ident[0] == 0x7F &&
+        header.ident[1] as char == 'E' &&
+        header.ident[2] as char == 'L' &&
+        header.ident[3] as char == 'F'
 }
 
 struct MemoryRange {
     start: u64,
     length: u64,
     file_offset: Option<u64>,
-    writable: bool,
-    readable: bool,
-    executable: bool,
 }
 
+const USER_STACK: u64 = 0x30000000000;
+const USER_STACK_SIZE: u64 = 100 * 1024; // 100kB
+
+unsafe fn switch_to_user_mode(entry_point: usize, user_stack: usize) {
+    asm!(
+    "
+        cli                  // Clear interrupts
+        mov ax, 0x23         // User data segment selector (DS, ES, FS, GS)
+        mov ds, ax
+        mov es, ax
+        mov fs, ax
+        mov gs, ax
+        push 0x23            // User data segment selector (SS)
+        push {1}             // User stack pointer
+        pushf                // EFLAGS
+        push 0x1B            // User code segment selector (CS)
+        push {0}             // Entry point address
+        iretq                // Interrupt return, switches to user mode
+        ",
+    in(reg) entry_point,
+    in(reg) user_stack,
+    //options(noreturn)
+    );
+}
 
 fn run_program(name: String) {
     // run program
@@ -216,9 +210,6 @@ fn run_program(name: String) {
             start: header.virt_addr,
             length: header.size_in_memory,
             file_offset: None,
-            executable: (header.flags & 1) != 0,
-            writable: (header.flags & 2) != 0,
-            readable: (header.flags & 4) != 0,
         };
         
         if header.size_in_file != 0 {
@@ -271,15 +262,26 @@ fn run_program(name: String) {
         }
     }
     
+    // map stack 
+    let num_pages_stack = (USER_STACK_SIZE + PAGE_SIZE - 1) / PAGE_SIZE;
+    for i in 0..num_pages_stack {
+        map_page_auto((USER_STACK - (num_pages_stack - i) * PAGE_SIZE) as VirtAddr, true, true);
+    }
     
-
     unsafe {
-        let entry = elf_header.entry;
-        asm!("call {}", in(reg) entry);
+        /*let entry = elf_header.entry;
+        asm!("call {}", in(reg) entry);*/
+        
+        switch_to_user_mode(elf_header.entry as usize, USER_STACK as usize);
+        
+        println!("Going to infinite loop");
+        loop {
+            asm!("hlt");
+        }
 
-        let rax: u64;
+        /*let rax: u64;
         asm!("mov {}, rax", out(reg) rax);
-        println!("Program exited with code {rax}");
+        println!("Program exited with code {rax}");*/
     }
 }
 

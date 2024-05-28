@@ -1,6 +1,7 @@
 #![no_std]
 #![no_main]
 
+use core::arch::asm;
 use core::panic::PanicInfo;
 
 static mut arr: [i32; 10000] = [0; 10000];
@@ -12,7 +13,8 @@ pub extern "C" fn _start() -> i32 {
         for i in 2..10000 {
             arr[i] = (arr[i - 1] + arr[i - 2]) % 1000;
         }
-        arr[9999]
+        //asm!("hlt");
+        loop {}
     }
 }
 
