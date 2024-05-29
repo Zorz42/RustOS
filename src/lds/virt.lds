@@ -1,36 +1,25 @@
-OUTPUT_ARCH( "riscv" )
-ENTRY( _start )
+ENTRY(start);
 
-SECTIONS
-{
-  . = 0x80000000;
+. = 0x80000000;
 
-  .text : {
-    *(.text .text.*)
-    . = ALIGN(0x1000);
-    PROVIDE(etext = .);
-  }
-
-  .rodata : {
-    . = ALIGN(16);
-    *(.srodata .srodata.*) /* do not need to distinguish this from .rodata */
-    . = ALIGN(16);
-    *(.rodata .rodata.*)
-  }
-
-  .data : {
-    . = ALIGN(16);
-    *(.sdata .sdata.*) /* do not need to distinguish this from .data */
-    . = ALIGN(16);
-    *(.data .data.*)
-  }
-
-  .bss : {
-    . = ALIGN(16);
-    *(.sbss .sbss.*) /* do not need to distinguish this from .bss */
-    . = ALIGN(16);
-    *(.bss .bss.*)
-  }
-
-  PROVIDE(end = .);
+SECTIONS {
+	/* Include entry point at start of binary */
+	.text : ALIGN(4K) {
+		*(.init);
+		*(.text);
+	}
+	.bss : ALIGN(4K) {
+		PROVIDE(bss_start = .);
+		*(.bss);
+		PROVIDE(KERNEL_STACK = .);
+		. += 4 * 4096;
+		PROVIDE(global_pointer = .);
+		PROVIDE(bss_end = .);
+	}
+	.rodata : ALIGN(4K) {
+		*(.rodata);
+	}
+	.data : ALIGN(4K) {
+		*(.data);
+	}
 }

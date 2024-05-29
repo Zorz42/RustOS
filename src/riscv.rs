@@ -40,11 +40,3 @@ macro_rules! csr_getter_setter {
 
 // satp register hold the pointer to the page table
 //csr_getter_setter!(satp);
-
-#[naked]
-#[no_mangle]
-extern "C" fn test_fn() {
-    unsafe {
-        asm!("ret", options(noreturn));
-    }
-}

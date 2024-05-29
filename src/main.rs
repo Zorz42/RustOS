@@ -3,6 +3,9 @@
 #![feature(naked_functions)]
 #![feature(concat_idents)]
 
+use core::arch::global_asm;
+global_asm!(include_str!("entry.S"));
+
 mod boot;
 mod riscv;
 
