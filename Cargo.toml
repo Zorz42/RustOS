@@ -13,4 +13,6 @@ lto = true
 codegen-units = 1
 
 [dependencies]
+# this is just a macro, it doesn't get included in the execuable
+paste = "1.0"
 

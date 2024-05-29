@@ -1,5 +1,7 @@
 use core::arch::asm;
+use crate::riscv::{MODE_MACHINE, MODE_SUPERVISOR};
 
+// this has to be the first thing in the binary
 #[no_mangle]
 #[naked]
 extern "C" fn _start() {
@@ -21,17 +23,23 @@ extern "C" fn _start() {
 }
 
 const STACK_SIZE: usize = 4 * 1024; // 4kB
+const NUM_CORES: usize = 4;
 
 #[repr(align(16))]
-struct Stack([u8; STACK_SIZE]);
+struct Stack([u8; NUM_CORES * STACK_SIZE]);
 
 #[used]
 #[no_mangle]
-static mut KERNEL_STACK: Stack = Stack([0; STACK_SIZE]);
+static KERNEL_STACK: Stack = Stack([0; NUM_CORES * STACK_SIZE]);
 
 #[no_mangle]
 extern "C" fn start() {
-    let val = 10;
+    unsafe {
+        asm!("call test_fn");
+    }
 
-    loop {}
+    //let mut mstatus = get_mstatus();
+    //mstatus &= !MODE_MACHINE;
+    //mstatus |= MODE_SUPERVISOR;
+    //set_mstatus(mstatus);
 }
