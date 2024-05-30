@@ -4,10 +4,11 @@ use crate::riscv::{get_core_id, get_mhartid, get_mstatus, get_sie, MSTATUS_MACHI
 use core::arch::global_asm;
 use crate::{main, println};
 use crate::spinlock::Lock;
-global_asm!(include_str!("entry.S"));
+use crate::timer::machine_mode_timer_init;
+global_asm!(include_str!("asm/entry.S"));
 
 const STACK_SIZE: usize = 4 * 1024; // 4kB
-const NUM_CORES: usize = 4;
+pub const NUM_CORES: usize = 4;
 
 #[used]
 #[no_mangle]
@@ -53,6 +54,8 @@ extern "C" fn rust_entry() -> ! {
     // give kernel whole memory
     set_pmpaddr0(0x3fffffffffffff);
     set_pmpcfg0(0xF);
+
+    machine_mode_timer_init();
 
     // load hartid into tp
     set_tp(get_mhartid());

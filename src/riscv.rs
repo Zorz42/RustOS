@@ -43,7 +43,19 @@ csr_get!(mhartid);
 pub const MSTATUS_MACHINE: u64 = 3 << 11;
 pub const MSTATUS_SUPERVISOR: u64 = 1 << 11;
 pub const MSTATUS_USER: u64 = 0 << 11;
+
+// machine mode interrupts
+pub const MSTATUS_MMI: u64 = 1 << 3;
 csr_get_set!(mstatus);
+
+// supervisor mode interrupts
+pub const SSTATUS_SPP: u64 = 1 << 8;  // Previous mode, 1=Supervisor, 0=User
+pub const SSTATUS_SPIE: u64 = 1 << 5; // Supervisor Previous Interrupt Enable
+pub const SSTATUS_UPIE: u64 = 1 << 4; // User Previous Interrupt Enable
+pub const SSTATUS_SIE: u64 = 1 << 1;  // Supervisor Interrupt Enable
+pub const SSTATUS_UIE: u64 = 1 << 0;  // User Interrupt Enable
+
+csr_get_set!(sstatus);
 
 // satp register holds the pointer to the page table
 csr_get_set!(satp);
@@ -62,6 +74,12 @@ pub const SIE_EXTERNAL: u64 = 1 << 9;
 pub const SIE_TIMER: u64 = 1 << 5;
 pub const SIE_SOFTWARE: u64 = 1 << 1;
 csr_get_set!(sie);
+
+// Machine Interrupt Enable
+pub const MIE_EXTERNAL: u64 = 1 << 11;
+pub const MIE_TIMER: u64 = 1 << 7;
+pub const MIE_SOFTWARE: u64 = 1 << 3;
+csr_get_set!(mie);
 
 // Physical memory protection config register
 csr_get_set!(pmpcfg0);
@@ -95,3 +113,15 @@ pub unsafe fn amoswap(addr: *mut i32, val: i32) -> i32 {
     asm!("amoswap.w {}, {}, ({})", out(reg) res, in(reg) val, in(reg) addr as u64);
     res
 }
+
+
+// core local interrupter for the timer
+pub const CLINT: u64 = 0x2000000;
+
+csr_get_set!(mscratch);
+
+// holds the trap handler address for machine mode
+csr_get_set!(mtvec);
+
+// holds the trap handler address for supervisor mode
+csr_get_set!(stvec);
