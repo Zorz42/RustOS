@@ -3,7 +3,6 @@
 #![feature(naked_functions)]
 #![feature(concat_idents)]
 
-use core::arch::asm;
 use core::panic::PanicInfo;
 use crate::boot::infinite_loop;
 use crate::print::{set_print_color, TextColor};

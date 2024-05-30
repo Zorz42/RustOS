@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use core::arch::asm;
 
 use paste::paste;
@@ -19,7 +21,6 @@ macro_rules! csr_get {
 macro_rules! csr_set {
     ($csr_name:ident) => {
         paste! {
-
             pub fn [<set_ $csr_name>](val: u64) {
                 unsafe {
                     asm!(concat!("csrw ", stringify!($csr_name), ", {}"), in(reg) val);
@@ -57,6 +58,20 @@ pub const SSTATUS_UIE: u64 = 1 << 0;  // User Interrupt Enable
 
 csr_get_set!(sstatus);
 
+pub fn interrupts_enable(val: bool) {
+    let mut sstatus = get_sstatus();
+    if val {
+        sstatus |= SSTATUS_SIE;
+    } else {
+        sstatus &= !SSTATUS_SIE;
+    }
+    set_sstatus(sstatus);
+}
+
+pub fn interrupts_get() -> bool {
+    (get_sstatus() & SSTATUS_SIE) != 0
+}
+
 // satp register holds the pointer to the page table
 csr_get_set!(satp);
 
@@ -89,7 +104,7 @@ csr_get_set!(pmpaddr0);
 
 // Thread Pointer we will use to store hartid (like in xv6)
 pub fn get_tp() -> u64 {
-    let mut res: u64 = 0;
+    let res: u64;
     unsafe {
         asm!(concat!("mv {}, tp"), out(reg) res);
     }
@@ -109,7 +124,7 @@ pub fn get_core_id() -> u64 {
 // amoswap does *addr = val and also returns *addr before the change
 // it does it in one instruction and is used for locks
 pub unsafe fn amoswap(addr: *mut i32, val: i32) -> i32 {
-    let mut res: i32 = 0;
+    let res: i32;
     asm!("amoswap.w {}, {}, ({})", out(reg) res, in(reg) val, in(reg) addr as u64);
     res
 }
@@ -125,3 +140,9 @@ csr_get_set!(mtvec);
 
 // holds the trap handler address for supervisor mode
 csr_get_set!(stvec);
+
+// supervisor trap cause
+csr_get_set!(scause);
+
+// supervisor interrupt pending
+csr_get_set!(sip);
