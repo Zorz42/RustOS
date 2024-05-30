@@ -7,7 +7,7 @@ use core::arch::global_asm;
 global_asm!(include_str!("entry.S"));
 
 mod boot;
-mod riscv;
+//mod riscv;
 
 #[no_mangle]
 extern "C" fn eh_personality() {}

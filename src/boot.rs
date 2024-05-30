@@ -17,6 +17,11 @@ extern "C" fn rust_entry() {
     putchar('H' as u8);
     putchar('e' as u8);
 
+    let val = "test";
+    for c in val.as_bytes() {
+        putchar(*c);
+    }
+
     //let mut mstatus = get_mstatus();
     //mstatus &= !MODE_MACHINE;
     //mstatus |= MODE_SUPERVISOR;

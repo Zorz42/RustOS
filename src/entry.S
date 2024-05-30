@@ -1,42 +1,46 @@
 .section .init
+.global main
 
-.option norvc
+init:
+    /* zero-initialize all registers */
+    addi x1, zero, 0
+    addi x2, zero, 0
+    addi x3, zero, 0
+    addi x4, zero, 0
+    addi x5, zero, 0
+    addi x6, zero, 0
+    addi x7, zero, 0
+    addi x8, zero, 0
+    addi x9, zero, 0
+    addi x10, zero, 0
+    addi x11, zero, 0
+    addi x12, zero, 0
+    addi x13, zero, 0
+    addi x14, zero, 0
+    addi x15, zero, 0
+    addi x16, zero, 0
+    addi x17, zero, 0
+    addi x18, zero, 0
+    addi x19, zero, 0
+    addi x20, zero, 0
+    addi x21, zero, 0
+    addi x22, zero, 0
+    addi x23, zero, 0
+    addi x24, zero, 0
+    addi x25, zero, 0
+    addi x26, zero, 0
+    addi x27, zero, 0
+    addi x28, zero, 0
+    addi x29, zero, 0
+    addi x30, zero, 0
+    addi x31, zero, 0
 
-.type start, @function
-.global start
-start:
-	.cfi_startproc
+    /* set stack pointer */
+    la sp, _stack
 
-.option push
-.option norelax
-	la gp, global_pointer
-.option pop
+    /* call main */
+    jal ra, rust_entry
 
-	/* Reset satp */
-	csrw satp, zero
-
-	/* Setup stack */
-	la sp, KERNEL_STACK
-    li a0, 1024*4
-    csrr a1, mhartid
-    addi a1, a1, 1
-    mul a0, a0, a1
-    add sp, sp, a0
-
-	/* Clear the BSS section */
-	la t5, bss_start
-	la t6, bss_end
-bss_clear:
-	sd zero, (t5)
-	addi t5, t5, 8
-	bltu t5, t6, bss_clear
-
-	la t0, rust_entry
-	csrw mepc, t0
-
-	/* Jump to kernel! */
-	tail rust_entry
-
-	.cfi_endproc
-
-.end
+    /* infinite loop */
+loop:
+    j loop
