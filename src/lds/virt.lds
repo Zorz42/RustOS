@@ -30,6 +30,3 @@ SECTIONS {
 
 /* Set entrypoint */
 ENTRY(_start)
-
-/* Define stack top */
-_stack = ORIGIN(RAM) + LENGTH(RAM);
