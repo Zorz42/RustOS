@@ -87,3 +87,11 @@ pub fn set_tp(val: u64) {
 pub fn get_core_id() -> u64 {
     get_tp()
 }
+
+// amoswap does *addr = val and also returns *addr before the change
+// it does it in one instruction and is used for locks
+pub unsafe fn amoswap(addr: *mut i32, val: i32) -> i32 {
+    let mut res: i32 = 0;
+    asm!("amoswap.w {}, {}, ({})", out(reg) res, in(reg) val, in(reg) addr as u64);
+    res
+}

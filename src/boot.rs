@@ -2,7 +2,8 @@ use core::arch::asm;
 use crate::riscv::{get_core_id, get_mhartid, get_mstatus, get_sie, MSTATUS_MACHINE, MSTATUS_SUPERVISOR, set_medeleg, set_mepc, set_mideleg, set_mstatus, set_pmpaddr0, set_pmpcfg0, set_satp, set_sie, set_tp, SIE_EXTERNAL, SIE_SOFTWARE, SIE_TIMER};
 
 use core::arch::global_asm;
-use crate::main;
+use crate::{main, println};
+use crate::spinlock::Lock;
 global_asm!(include_str!("entry.S"));
 
 const STACK_SIZE: usize = 4 * 1024; // 4kB
@@ -11,15 +12,6 @@ const NUM_CORES: usize = 4;
 #[used]
 #[no_mangle]
 static KERNEL_STACK: [u8; STACK_SIZE * NUM_CORES] = [0; STACK_SIZE * NUM_CORES];
-
-fn putchar(c: u8) {
-    let addr = 0x10000000 as *mut u8;
-    unsafe {
-        while *addr.add(5) & (1 << 5) == 0 {}
-
-        *addr = c;
-    }
-}
 
 pub fn infinite_loop() -> ! {
     loop {
@@ -30,17 +22,8 @@ pub fn infinite_loop() -> ! {
 }
 
 fn main_caller() -> ! {
-    if get_core_id() != 0 {
-        // every core except the main one goes to the loop here
-        infinite_loop();
-    }
-
     main();
 
-    let val = "Going to infinite loop...\n";
-    for c in val.as_bytes() {
-        putchar(*c);
-    }
     infinite_loop();
 }
 

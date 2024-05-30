@@ -3,12 +3,15 @@
 #![feature(naked_functions)]
 #![feature(concat_idents)]
 
+use crate::riscv::get_core_id;
+
 mod boot;
 mod riscv;
-mod graphics;
+mod spinlock;
+mod print;
 
 pub fn main() {
-
+    println!("Core {} entered main function...", get_core_id());
 }
 
 #[no_mangle]
