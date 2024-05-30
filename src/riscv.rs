@@ -106,14 +106,14 @@ csr_get_set!(pmpaddr0);
 pub fn get_tp() -> u64 {
     let res: u64;
     unsafe {
-        asm!(concat!("mv {}, tp"), out(reg) res);
+        asm!("mv {}, tp", out(reg) res);
     }
     res
 }
 
 pub fn set_tp(val: u64) {
     unsafe {
-        asm!(concat!("mv tp, {}"), in(reg) val);
+        asm!("mv tp, {}", in(reg) val);
     }
 }
 
