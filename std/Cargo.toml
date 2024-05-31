@@ -1,0 +1,10 @@
+[package]
+name = "std"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+derive = { path = "./derive" }
+
+[features]
+test_includes = []

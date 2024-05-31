@@ -6,7 +6,8 @@
 use core::panic::PanicInfo;
 use crate::boot::infinite_loop;
 use crate::print::{set_print_color, TextColor};
-use crate::riscv::{get_core_id, get_sstatus, set_sstatus, SSTATUS_SIE};
+use crate::riscv::{get_core_id, get_sstatus, interrupts_enable, set_sstatus, SSTATUS_SIE};
+use crate::timer::get_ticks;
 use crate::trap::init_trap;
 
 mod boot;
@@ -15,18 +16,24 @@ mod spinlock;
 mod print;
 mod timer;
 mod trap;
-
-fn enable_interrupts() {
-    let mut sstatus = get_sstatus();
-    sstatus |= SSTATUS_SIE;
-    set_sstatus(sstatus);
-}
+mod memory;
 
 pub fn main() {
     init_trap();
-    enable_interrupts();
+    interrupts_enable(true);
 
     println!("Core {} has initialized", get_core_id());
+
+    if get_core_id() == 0 {
+        let mut ticker = get_ticks();
+        let mut count = 0;
+        while count < 10 {
+            println!("Count {count}");
+            while get_ticks() - ticker < 1000 {}
+            ticker = get_ticks();
+            count += 1;
+        }
+    }
 }
 
 #[panic_handler]

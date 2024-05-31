@@ -11,7 +11,7 @@ extern "C" {
 static TIMER_SCRATCH: [u64; NUM_CORES * 5] = [0; NUM_CORES * 5];
 
 pub fn machine_mode_timer_init() {
-    let interval = 1000000; // about 1/10 th of a second in qemu
+    let interval = 10000; // about 1/10 th of a second in qemu
     unsafe {
         *((CLINT + 0x4000 + 8 * get_mhartid()) as *mut u64) = *((CLINT + 0xBFF8) as *mut u64) + interval;
     }
@@ -33,4 +33,19 @@ pub fn machine_mode_timer_init() {
     let mut mie = get_mie();
     mie |= MIE_TIMER;
     set_mie(mie);
+}
+
+static mut TICKS: u64 = 0;
+
+// this is called every tick on core 0
+pub fn tick() {
+    unsafe {
+        TICKS += 1;
+    }
+}
+
+pub fn get_ticks() -> u64 {
+    unsafe {
+        TICKS
+    }
 }

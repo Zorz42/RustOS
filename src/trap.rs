@@ -1,4 +1,5 @@
 use crate::riscv::{get_core_id, get_scause, get_sip, get_sstatus, interrupts_get, set_sip, set_stvec, SSTATUS_SPP};
+use crate::timer::tick;
 use crate::trap::InterruptType::{OtherDevice, Timer};
 
 extern "C" {
@@ -42,11 +43,6 @@ fn get_interrupt_type() -> InterruptType {
     } else {
         OtherDevice
     }
-}
-
-// this is called every tick on core 0
-fn tick() {
-
 }
 
 pub fn init_trap() {
