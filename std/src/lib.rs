@@ -9,7 +9,6 @@ mod pointer;
 mod rand;
 mod serial;
 mod string;
-mod utils;
 mod vector;
 
 pub use heap_tree::HeapTree;
@@ -21,7 +20,6 @@ pub use derive;
 pub use rand::Rng;
 pub use serial::{deserialize, serialize, Serial};
 pub use string::String;
-pub use utils::{memcpy, memcpy_non_aligned, memset, memset_int64, swap};
 pub use vector::Vec;
 
 static mut PAGE_ALLOCATOR: Option<&'static dyn Fn(*mut u8)> = None;

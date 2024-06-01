@@ -1,4 +1,5 @@
-use crate::{allocate_page, memcpy, memcpy_non_aligned, memset};
+use core::ptr::{copy_nonoverlapping, write_bytes};
+use crate::allocate_page;
 
 const PAGE_SIZE: u64 = 4096;
 
@@ -66,13 +67,13 @@ impl HeapTree {
     /// Makes all regions free
     pub fn clear(&mut self) {
         unsafe {
-            memset(self.get_base_ptr(), 0, self.get_tree_size() as usize * 2);
+            write_bytes(self.get_base_ptr(), 0, self.get_tree_size() as usize * 2);
         }
         let mut curr = self.get_tree_size();
         let mut curr_val = 3;
         while curr != 0 {
             unsafe {
-                memset(self.get_node_ptr(curr), curr_val + 2, curr as usize);
+                write_bytes(self.get_node_ptr(curr), curr_val + 2, curr as usize);
             }
             curr_val += 1;
             curr /= 2;
@@ -114,9 +115,9 @@ impl HeapTree {
         self.allocate_pages();
 
         unsafe {
-            memset(self.get_base_ptr(), 0, self.get_tree_size() as usize * 2);
-            memcpy(prev_base_ptr, self.get_base_ptr(), self.get_tree_size() as usize / 2);
-            memcpy(
+            write_bytes(self.get_base_ptr(), 0, self.get_tree_size() as usize * 2);
+            copy_nonoverlapping(prev_base_ptr, self.get_base_ptr(), self.get_tree_size() as usize / 2);
+            copy_nonoverlapping(
                 prev_base_ptr.add(self.get_tree_size() as usize / 2),
                 self.get_base_ptr().add(self.get_tree_size() as usize),
                 self.get_tree_size() as usize / 2,
@@ -127,8 +128,8 @@ impl HeapTree {
         let mut curr_val = 3;
         while curr != 1 {
             unsafe {
-                memset(self.get_node_ptr(curr), curr_val + 2, curr as usize);
-                memcpy_non_aligned(self.get_node_ptr(curr / 2), self.get_node_ptr(curr), curr as usize / 2);
+                write_bytes(self.get_node_ptr(curr), curr_val + 2, curr as usize);
+                copy_nonoverlapping(self.get_node_ptr(curr / 2), self.get_node_ptr(curr), curr as usize / 2);
             }
             curr_val += 1;
             curr /= 2;

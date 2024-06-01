@@ -5,10 +5,9 @@
 
 use core::panic::PanicInfo;
 use crate::boot::infinite_loop;
-use crate::memory::{_end, parse_dtb};
+use crate::memory::{get_num_free_pages, init_paging, NUM_PAGES};
 use crate::print::{set_print_color, TextColor};
-use crate::riscv::{get_core_id, get_sstatus, interrupts_enable, set_sstatus, SSTATUS_SIE};
-use crate::timer::get_ticks;
+use crate::riscv::{get_core_id, interrupts_enable};
 use crate::trap::init_trap;
 
 mod boot;
@@ -20,28 +19,21 @@ mod trap;
 mod memory;
 
 pub fn main() {
-    init_trap();
-    interrupts_enable(true);
-
-    const DTB_ADDRESS: usize = 0x80000000; // Replace with the actual DTB address
-
-    let dtb_ptr = DTB_ADDRESS as *const u8;
-    let ram_size = parse_dtb(dtb_ptr);
-
-    println!("Total RAM size: {} bytes", ram_size);
-    
-    println!("Core {} has initialized", get_core_id());
-
     if get_core_id() == 0 {
-        let mut ticker = get_ticks();
-        let mut count = 0;
-        while count < 10 {
-            println!("Count {count}");
-            while get_ticks() - ticker < 1000 {}
-            ticker = get_ticks();
-            count += 1;
-        }
+        init_trap();
+        interrupts_enable(true);
+        init_paging();
+
+        let all_memory = (NUM_PAGES * 4) as f32 / 1000.0;
+        let used_memory = ((NUM_PAGES - get_num_free_pages()) * 4) as f32 / 1000.0;
+        let portion = used_memory / all_memory * 100.0;
+        println!("{used_memory} MB / {all_memory} MB of RAM used ({portion:.1}%)");
+    } else {
+        init_trap();
+        interrupts_enable(true);
     }
+
+    println!("Core {} has initialized", get_core_id());
 }
 
 #[panic_handler]

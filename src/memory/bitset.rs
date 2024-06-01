@@ -1,5 +1,6 @@
 use core::ops::{Deref, DerefMut};
-use std::{memcpy, memset_int64, Vec};
+use core::ptr::{copy_nonoverlapping, write_bytes};
+use std::{Vec};
 
 pub struct BitSetRaw {
     data: *mut u64,
@@ -79,7 +80,7 @@ impl BitSetRaw {
     fn setup_stack(&mut self) {
         self.stack_size = 0;
         unsafe {
-            memset_int64(self.get_stack_bitset_addr() as *mut u8, 0, self.get_num_u64() * 8);
+            write_bytes(self.get_stack_bitset_addr() as *mut u8, 0, self.get_num_u64() * 8);
         }
         for i in 0..self.size {
             if !self.get(i) {
@@ -188,7 +189,7 @@ impl BitSetRaw {
 
     pub fn clear(&mut self) {
         unsafe {
-            memset_int64(self.data as *mut u8, 0, self.get_num_u64() * 8);
+            write_bytes(self.data as *mut u8, 0, self.get_num_u64() * 8);
         }
         self.count0 = self.size;
         self.setup_stack();
@@ -199,13 +200,13 @@ impl BitSetRaw {
     }
 
     pub unsafe fn load_from(&mut self, ptr: *mut u64) {
-        memcpy(ptr as *mut u8, self.data as *mut u8, self.get_num_u64() * 8);
+        copy_nonoverlapping(ptr as *mut u8, self.data as *mut u8, self.get_num_u64() * 8);
         self.update_count0();
         self.setup_stack();
     }
 
     pub unsafe fn store_to(&self, ptr: *mut u64) {
-        memcpy(self.data as *mut u8, ptr as *mut u8, self.get_num_u64() * 8);
+        copy_nonoverlapping(self.data as *mut u8, ptr as *mut u8, self.get_num_u64() * 8);
     }
 }
 

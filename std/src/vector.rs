@@ -1,7 +1,7 @@
-use crate::{memcpy, swap};
 use crate::pointer::Ptr;
 use crate::serial::Serial;
 use core::ops::{DerefMut, Index, IndexMut};
+use core::ptr::copy_nonoverlapping;
 
 pub struct Vec<T> {
     arr: Ptr<T>,
@@ -68,7 +68,7 @@ impl<T> Vec<T> {
     fn double_capacity(&mut self) {
         let mut new_arr = Ptr::new(self.capacity * 2);
         unsafe {
-            memcpy(self.arr.get_mut() as *mut u8, new_arr.get_mut() as *mut u8, (self.size * core::mem::size_of::<T>() + 7) / 8 * 8);
+            copy_nonoverlapping(self.arr.get_mut() as *mut u8, new_arr.get_mut() as *mut u8, (self.size * core::mem::size_of::<T>() + 7) / 8 * 8);
         }
         self.arr = new_arr;
         self.capacity *= 2;
@@ -135,7 +135,7 @@ impl<T> Vec<T> {
                 if !f(&self[i], &self[i + 1]) {
                     let ptr1 = &mut self[i] as *mut T;
                     let ptr2 = &mut self[i + 1] as *mut T;
-                    swap(unsafe { &mut *ptr1 }, unsafe { &mut *ptr2  });
+                    core::mem::swap(unsafe { &mut *ptr1 }, unsafe { &mut *ptr2  });
                 }
             }
         }
