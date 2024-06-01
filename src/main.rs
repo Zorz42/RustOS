@@ -5,6 +5,7 @@
 
 use core::panic::PanicInfo;
 use crate::boot::infinite_loop;
+use crate::memory::{_end, parse_dtb};
 use crate::print::{set_print_color, TextColor};
 use crate::riscv::{get_core_id, get_sstatus, interrupts_enable, set_sstatus, SSTATUS_SIE};
 use crate::timer::get_ticks;
@@ -22,6 +23,13 @@ pub fn main() {
     init_trap();
     interrupts_enable(true);
 
+    const DTB_ADDRESS: usize = 0x80000000; // Replace with the actual DTB address
+
+    let dtb_ptr = DTB_ADDRESS as *const u8;
+    let ram_size = parse_dtb(dtb_ptr);
+
+    println!("Total RAM size: {} bytes", ram_size);
+    
     println!("Core {} has initialized", get_core_id());
 
     if get_core_id() == 0 {

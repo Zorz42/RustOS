@@ -19,10 +19,6 @@ impl<T> Ptr<T> {
     pub fn get_mut(&mut self) -> *mut T {
         self.ptr
     }
-
-    pub fn is_some(&self) -> bool {
-        self.ptr != 0 as *mut T
-    }
 }
 
 impl<T: Default> Ptr<T> {
