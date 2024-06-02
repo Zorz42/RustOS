@@ -4,7 +4,7 @@ use super::{get_free_space_addr};
 use crate::memory::BitSetRaw;
 use std::Rng;
 
-kernel_test_mod!(crate::tests::A2_bitset);
+kernel_test_mod!(crate::tests::A1_bitset);
 
 #[kernel_test]
 fn test_bitset_new() {

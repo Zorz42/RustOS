@@ -7,12 +7,8 @@ use crate::{main, println};
 use crate::timer::machine_mode_timer_init;
 global_asm!(include_str!("asm/entry.S"));
 
-const STACK_SIZE: usize = 4 * 1024; // 4kB
+pub const STACK_SIZE: usize = 16 * 1024; // 16kB
 pub const NUM_CORES: usize = 4;
-
-#[used]
-#[no_mangle]
-static KERNEL_STACK: [u8; STACK_SIZE * NUM_CORES] = [0; STACK_SIZE * NUM_CORES];
 
 pub fn infinite_loop() -> ! {
     loop {
@@ -30,6 +26,8 @@ fn main_caller() -> ! {
 
 #[no_mangle]
 extern "C" fn rust_entry() -> ! {
+    assert!(get_mhartid() < NUM_CORES as u64);
+
     // set to MODE_SUPERVISOR from MODE_MACHINE
     let mut mstatus = get_mstatus();
     mstatus &= !MSTATUS_MACHINE;

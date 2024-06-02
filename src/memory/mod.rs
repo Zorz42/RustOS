@@ -19,6 +19,7 @@ pub const DISK_OFFSET: u64 = 6 * FRAME_SIZE;
 pub const VIRTUAL_OFFSET: u64 = 7 * FRAME_SIZE;
 
 pub use paging::{init_paging, get_num_free_pages};
+pub use bitset::{BitSetRaw, bitset_size_bytes};
 
 extern "C" {
     pub static _end: u8;

@@ -36,12 +36,11 @@ init:
     addi x31, zero, 0
 
     /* set stack pointer */
-    la sp, KERNEL_STACK
-    li a0, 1024*4
+    li sp, 128 * 1024 * 1024 + 0x80000000
+    li a0, 1024 * 16
     csrr a1, mhartid
-    addi a1, a1, 1
     mul a0, a0, a1
-    add sp, sp, a0
+    sub sp, sp, a0
 
     /* call main */
     jal ra, rust_entry

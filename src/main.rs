@@ -6,6 +6,8 @@ use crate::boot::infinite_loop;
 use crate::memory::{get_num_free_pages, init_paging, NUM_PAGES};
 use crate::print::{set_print_color, TextColor};
 use crate::riscv::{get_core_id, get_mstatus, get_sstatus, interrupts_enable, set_mstatus, set_sstatus};
+#[cfg(feature = "run_tests")]
+use crate::tests::test_runner;
 use crate::trap::init_trap;
 
 mod boot;
@@ -15,7 +17,7 @@ mod print;
 mod timer;
 mod trap;
 mod memory;
-#[cfg(test)]
+#[cfg(feature = "run_tests")]
 mod tests;
 
 fn enable_fpu() {
@@ -48,6 +50,9 @@ pub fn main() {
     println!("Core {} has initialized", get_core_id());
 
     if get_core_id() == 0 {
+        #[cfg(feature = "run_tests")]
+        test_runner();
+
         let all_memory = (NUM_PAGES * 4) as f32 / 1000.0;
         let used_memory = ((NUM_PAGES - get_num_free_pages()) * 4) as f32 / 1000.0;
         let portion = used_memory / all_memory * 100.0;

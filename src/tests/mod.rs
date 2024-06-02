@@ -2,25 +2,25 @@ use core::arch::asm;
 use kernel_test::all_perf_tests;
 use std::{deserialize, serialize, String, Vec};
 
-use crate::disk::disk::Disk;
+//use crate::disk::disk::Disk;
 use crate::timer::get_ticks;
 use kernel_test::all_tests;
 use crate::print::{reset_print_color, set_print_color, TextColor};
 use crate::{print, println};
-use crate::disk::filesystem::get_fs;
 use crate::memory::bitset_size_bytes;
+//use crate::disk::filesystem::get_fs;
+//use crate::memory::bitset_size_bytes;
 
 mod A0_rand;
-mod A1_utils;
-mod A2_bitset;
-mod A3_paging;
-mod A4_heap_tree;
-mod A5_malloc;
-mod A6_box;
-mod A7_vector;
-mod A8_disk;
-mod A9_memory_disk;
-mod B0_filesystem;
+mod A1_bitset;
+//mod A3_paging;
+//mod A4_heap_tree;
+//mod A5_malloc;
+//mod A6_box;
+//mod A7_vector;
+//mod A8_disk;
+//mod A9_memory_disk;
+//mod B0_filesystem;
 
 pub trait KernelPerf {
     fn setup() -> Self;
@@ -36,14 +36,14 @@ pub(super) fn get_free_space_addr() -> *mut u8 {
     unsafe { ((FREE_SPACE.as_mut_ptr() as u64 + 7) / 8 * 8) as *mut u8 }
 }
 
-static mut TEST_DISK: Option<Disk> = None;
+//static mut TEST_DISK: Option<Disk> = None;
 
-pub fn get_test_disk() -> Disk {
+/*pub fn get_test_disk() -> Disk {
     unsafe { TEST_DISK.as_ref().unwrap().clone() }
-}
+}*/
 
-pub fn test_runner(disks: &Vec<Disk>) {
-    let mut test_disk = None;
+pub fn test_runner(/*disks: &Vec<Disk>*/) {
+    /*let mut test_disk = None;
     for disk in disks {
         let first_sector = disk.read(0);
         let magic = ((first_sector[511] as u32) << 0) + ((first_sector[510] as u32) << 8) + ((first_sector[509] as u32) << 16) + ((first_sector[508] as u32) << 24);
@@ -59,7 +59,7 @@ pub fn test_runner(disks: &Vec<Disk>) {
         }
     } else {
         panic!("Test disk not found");
-    }
+    }*/
 
     let tests = all_tests!();
 
@@ -97,14 +97,14 @@ pub fn test_runner(disks: &Vec<Disk>) {
     reset_print_color();
 }
 
-pub fn perf_test_runner() {
+/*pub fn perf_test_runner() {
     set_print_color(TextColor::Pink, TextColor::Black);
     all_perf_tests!();
     println!();
     reset_print_color();
-}
+}*/
 
-const PERF_COOLDOWN_DURATION_MS: u32 = 1000;
+/*const PERF_COOLDOWN_DURATION_MS: u32 = 1000;
 const PERF_WARMUP_DURATION_MS: u32 = 1000;
 const PERF_TEST_DURATION_MS: u32 = 3000;
 const PERF_FILE: &str = "perf.data";
@@ -222,4 +222,4 @@ fn run_perf_test<T: KernelPerf>(name: &str) {
     println!();
     
     save_perf_data(name, perf_ms);
-}
+}*/
