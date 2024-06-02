@@ -1,7 +1,5 @@
 #![no_std]
 #![no_main]
-#![feature(naked_functions)]
-#![feature(concat_idents)]
 
 use core::panic::PanicInfo;
 use crate::boot::infinite_loop;
@@ -17,6 +15,8 @@ mod print;
 mod timer;
 mod trap;
 mod memory;
+#[cfg(test)]
+mod tests;
 
 fn enable_fpu() {
     let mut sstatus = get_sstatus();

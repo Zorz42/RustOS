@@ -1,6 +1,4 @@
 #![no_std]
-#![feature(decl_macro)]
-#![feature(str_from_raw_parts)]
 
 mod boxed;
 mod heap_tree;

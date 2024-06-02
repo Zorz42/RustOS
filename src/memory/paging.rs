@@ -33,10 +33,6 @@ pub fn init_paging() {
     let kernel_size_pages = (kernel_end - KERNEL_OFFSET) / PAGE_SIZE;
 
     unsafe {
-        println!("0x{:x} 0x{:x}", get_kernel_top_address(), kernel_end);
-    }
-
-    unsafe {
         SEGMENTS_BITSET = BitSetRaw::new(NUM_PAGES as usize, kernel_end as *mut u64);
     }
 

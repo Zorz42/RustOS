@@ -16,3 +16,4 @@ codegen-units = 1
 # this is just a macro, it doesn't get included in the execuable
 paste = "1.0"
 std = { path = "std" }
+kernel_test = { path = "kernel_test" }
