@@ -1,13 +1,15 @@
+use core::ptr::write_bytes;
 use kernel_test::{kernel_test, kernel_test_mod};
 
-use crate::memory::{find_free_page, free_page, map_page, PhysAddr, VirtAddr, PAGE_SIZE, TESTING_OFFSET, VIRTUAL_OFFSET};
-use std::{memset_int64, Rng};
+use crate::memory::{alloc_page, free_page, PhysAddr, VirtAddr, PAGE_SIZE, TESTING_OFFSET};
+use std::{Rng};
+use crate::println;
 
-kernel_test_mod!(crate::tests::A3_paging);
+kernel_test_mod!(crate::tests::A2_paging);
 
 #[kernel_test]
 fn test_one_page() {
-    let _ = find_free_page();
+    let _ = alloc_page();
 }
 
 #[kernel_test]
@@ -29,10 +31,10 @@ fn test_page_free() {
         }
 
         for i in 0..1024 {
-            pages[i] = find_free_page();
-            let val = rng.get(0, 1u64 << 63);
+            pages[i] = alloc_page();
+            let val = rng.get(0, 1 << 8) as u8;
             unsafe {
-                memset_int64((pages[i] as VirtAddr).add(VIRTUAL_OFFSET as usize), val, 4096);
+                write_bytes((pages[i] as VirtAddr) as *mut u64, val, 4096);
             }
         }
         for i in 0..1024 {
@@ -43,19 +45,19 @@ fn test_page_free() {
     }
 }
 
-#[kernel_test]
+/*#[kernel_test]
 fn test_page_write() {
     let offset = TESTING_OFFSET as *mut u8;
 
     let page_ptr = find_free_page() as u64;
     map_page(offset, page_ptr, true, false);
     unsafe {
-        memset_int64(offset, 0, PAGE_SIZE as usize);
+        write_bytes(offset, 0, PAGE_SIZE as usize);
         free_page(page_ptr);
     }
-}
+}*/
 
-#[kernel_test]
+/*#[kernel_test]
 fn test_page_write_stays() {
     const num_pages: usize = 200;
     let offset = TESTING_OFFSET as *mut u8;
@@ -86,4 +88,4 @@ fn test_page_write_stays() {
             free_page(pages[i]);
         }
     }
-}
+}*/

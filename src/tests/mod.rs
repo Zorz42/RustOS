@@ -13,7 +13,7 @@ use crate::memory::{bitset_size_bytes, TOP_ADDR};
 
 mod A0_rand;
 mod A1_bitset;
-//mod A3_paging;
+mod A2_paging;
 //mod A4_heap_tree;
 //mod A5_malloc;
 //mod A6_box;

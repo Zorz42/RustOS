@@ -16,9 +16,8 @@ pub const HEAP_TREE_ADDR: u64 = 3 * FRAME_SIZE;
 pub const TESTING_OFFSET: u64 = 4 * FRAME_SIZE;
 pub const FRAMEBUFFER_OFFSET: u64 = 5 * FRAME_SIZE;
 pub const DISK_OFFSET: u64 = 6 * FRAME_SIZE;
-pub const VIRTUAL_OFFSET: u64 = 7 * FRAME_SIZE;
 
-pub use paging::{init_paging, get_num_free_pages};
+pub use paging::{init_paging, get_num_free_pages, free_page, alloc_page, VirtAddr, PhysAddr};
 pub use bitset::{BitSetRaw, bitset_size_bytes};
 
 extern "C" {

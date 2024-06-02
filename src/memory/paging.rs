@@ -20,7 +20,7 @@ pub fn alloc_page() -> PhysAddr {
         let index = SEGMENTS_BITSET.get_zero_element();
         if let Some(index) = index {
             SEGMENTS_BITSET.set(index, true);
-            index as u64 * PAGE_SIZE
+            index as u64 * PAGE_SIZE + KERNEL_OFFSET
         } else {
             panic!("Out of memory");
         }
@@ -37,7 +37,8 @@ pub fn free_page(addr: PhysAddr) {
 }
 
 pub fn init_paging() {
-    let mut kernel_end = (get_kernel_top_address() + 2 * PAGE_SIZE - 1) / PAGE_SIZE * PAGE_SIZE;
+    // for now just add 20 pages because apparently kernel writes after the end for some reason
+    let mut kernel_end = (get_kernel_top_address() + 20 * PAGE_SIZE - 1) / PAGE_SIZE * PAGE_SIZE;
     let bitset_size_bytes = bitset_size_bytes(NUM_PAGES as usize);
     let bitset_size_pages = (bitset_size_bytes as u64 + PAGE_SIZE - 1) / PAGE_SIZE;
     let kernel_size_pages = (kernel_end - KERNEL_OFFSET) / PAGE_SIZE;
