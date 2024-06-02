@@ -1,6 +1,7 @@
 use core::ops::{Deref, DerefMut};
 use core::ptr::{copy_nonoverlapping, write_bytes};
 use std::{Vec};
+use crate::println;
 
 pub struct BitSetRaw {
     data: *mut u64,
@@ -87,6 +88,7 @@ impl BitSetRaw {
                 self.add_to_stack(i);
             }
         }
+
         assert!(self.stack_size >= self.count0);
     }
 

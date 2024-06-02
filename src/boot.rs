@@ -2,7 +2,8 @@ use core::arch::asm;
 use crate::riscv::{get_mhartid, get_mstatus, get_sie, MSTATUS_MACHINE, MSTATUS_SUPERVISOR, set_medeleg, set_mepc, set_mideleg, set_mstatus, set_pmpaddr0, set_pmpcfg0, set_satp, set_sie, set_tp, SIE_EXTERNAL, SIE_SOFTWARE, SIE_TIMER};
 
 use core::arch::global_asm;
-use crate::main;
+use core::ptr::addr_of;
+use crate::{main, println};
 use crate::timer::machine_mode_timer_init;
 global_asm!(include_str!("asm/entry.S"));
 
