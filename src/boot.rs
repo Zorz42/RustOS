@@ -7,7 +7,7 @@ use crate::{main, println};
 use crate::timer::machine_mode_timer_init;
 global_asm!(include_str!("asm/entry.S"));
 
-pub const STACK_SIZE: usize = 16 * 1024; // 16kB
+pub const STACK_SIZE: usize = 64 * 1024; // 64kB
 pub const NUM_CORES: usize = 4;
 
 pub fn infinite_loop() -> ! {

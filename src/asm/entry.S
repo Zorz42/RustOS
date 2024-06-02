@@ -37,7 +37,7 @@ init:
 
     /* set stack pointer */
     li sp, 128 * 1024 * 1024 + 0x80000000
-    li a0, 1024 * 16
+    li a0, 1024 * 64
     csrr a1, mhartid
     mul a0, a0, a1
     sub sp, sp, a0

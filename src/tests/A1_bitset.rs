@@ -3,6 +3,7 @@ use kernel_test::{kernel_test, kernel_test_mod};
 use super::{get_free_space_addr};
 use crate::memory::BitSetRaw;
 use std::Rng;
+use crate::println;
 
 kernel_test_mod!(crate::tests::A1_bitset);
 
