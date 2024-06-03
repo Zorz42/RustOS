@@ -157,8 +157,7 @@ fn get_address_page_table_entry(virtual_addr: VirtAddr) -> Option<&'static mut P
             } else {
                 let new_table = alloc_page();
                 write_bytes(new_table as *mut u8, 0, PAGE_SIZE as usize);
-                let new_entry = create_page_table_entry(new_table);
-                *get_sub_page_table_entry(curr_table, index as usize) = new_entry;
+                *get_sub_page_table_entry(curr_table, index as usize) = create_page_table_entry(new_table);
                 curr_table = new_table as PageTable;
             }
         }
@@ -171,7 +170,7 @@ fn get_address_page_table_entry(virtual_addr: VirtAddr) -> Option<&'static mut P
 pub fn map_page(virtual_addr: VirtAddr, physical_addr: PhysAddr, writable: bool, user: bool) {
     let curr_entry = get_address_page_table_entry(virtual_addr).unwrap();
     debug_assert_eq!(*curr_entry & PTE_PRESENT, 0);
-    *curr_entry = create_page_table_entry(physical_addr);
+    *curr_entry = create_page_table_entry(physical_addr) | PTE_READ;
     if writable {
         *curr_entry |= PTE_WRITE;
     }
@@ -183,6 +182,11 @@ pub fn map_page(virtual_addr: VirtAddr, physical_addr: PhysAddr, writable: bool,
 
 pub fn map_page_auto(virtual_addr: VirtAddr, writable: bool, user: bool) {
     map_page(virtual_addr, alloc_page(), writable, user);
+}
+
+pub fn virt_to_phys(addr: VirtAddr) -> Option<PhysAddr> {
+    let entry = get_address_page_table_entry(addr).unwrap();
+    Some(get_entry_addr(*entry)? as PhysAddr)
 }
 
 pub fn unmap_page(virtual_addr: VirtAddr) {

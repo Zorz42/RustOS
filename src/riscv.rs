@@ -143,6 +143,8 @@ csr_get_set!(stvec);
 
 // supervisor trap cause
 csr_get_set!(scause);
+csr_get_set!(sepc);
+csr_get_set!(stval);
 
 // supervisor interrupt pending
 csr_get_set!(sip);

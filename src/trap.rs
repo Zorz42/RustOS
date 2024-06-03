@@ -1,6 +1,7 @@
-use crate::riscv::{get_core_id, get_scause, get_sip, get_sstatus, interrupts_get, set_sip, set_stvec, SSTATUS_SPP};
+use crate::boot::infinite_loop;
+use crate::{panic, println};
+use crate::riscv::{get_core_id, get_scause, get_sepc, get_sip, get_sstatus, get_stval, interrupts_get, set_sip, set_stvec, SSTATUS_SPP};
 use crate::timer::tick;
-use crate::trap::InterruptType::{OtherDevice, Timer};
 
 extern "C" {
     fn kernelvec();
@@ -13,6 +14,14 @@ extern "C" fn kerneltrap() {
 
     let ty = get_interrupt_type();
     assert!(ty != InterruptType::Unknown);
+
+    if ty == InterruptType::OtherDevice {
+        println!("Interrupt occurred");
+        println!("Scause: 0x{:x}", get_scause());
+        println!("Sepc: 0x{:x}", get_sepc());
+        println!("Stval: 0x{:x}", get_stval());
+        panic!("kerneltrap");
+    }
 }
 
 #[derive(PartialEq)]
@@ -39,9 +48,9 @@ fn get_interrupt_type() -> InterruptType {
         sip &= !2;
         set_sip(sip);
 
-        Timer
+        InterruptType::Timer
     } else {
-        OtherDevice
+        InterruptType::OtherDevice
     }
 }
 

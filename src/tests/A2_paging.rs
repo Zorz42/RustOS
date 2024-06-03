@@ -1,7 +1,7 @@
 use core::ptr::write_bytes;
 use kernel_test::{kernel_test, kernel_test_mod};
 
-use crate::memory::{alloc_page, free_page, PhysAddr, VirtAddr, PAGE_SIZE, TESTING_OFFSET};
+use crate::memory::{alloc_page, free_page, PhysAddr, VirtAddr, PAGE_SIZE, TESTING_OFFSET, virt_to_phys};
 use std::{Rng};
 use crate::memory::{map_page};
 use crate::println;
@@ -54,16 +54,12 @@ fn test_page_write() {
     let page_ptr = alloc_page() as u64;
     map_page(offset, page_ptr, true, false);
     unsafe {
-        println!("writing one byte at 0x{:x}", offset as u64);
-        *offset = 0;
-        println!("writing whole page at 0x{:x}", offset as u64);
         write_bytes(offset, 0, PAGE_SIZE as usize);
-        println!("Done");
         free_page(page_ptr);
     }
 }
 
-/*#[kernel_test]
+#[kernel_test]
 fn test_page_write_stays() {
     const num_pages: usize = 200;
     let offset = TESTING_OFFSET as *mut u8;
@@ -72,7 +68,7 @@ fn test_page_write_stays() {
 
     for i in 0..num_pages {
         unsafe {
-            pages[i] = find_free_page();
+            pages[i] = alloc_page();
             map_page(offset.add(i * PAGE_SIZE as usize), pages[i], true, false);
         }
     }
@@ -94,4 +90,4 @@ fn test_page_write_stays() {
             free_page(pages[i]);
         }
     }
-}*/
+}
