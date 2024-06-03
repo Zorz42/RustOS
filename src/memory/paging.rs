@@ -2,9 +2,11 @@ pub type PhysAddr = u64;
 pub type VirtAddr = *mut u8;
 
 use core::intrinsics::write_bytes;
+use std::init_std_memory;
 use crate::boot::{NUM_CORES, STACK_SIZE};
 use crate::memory::bitset::{bitset_size_bytes, BitSetRaw};
-use crate::memory::{get_kernel_top_address, KERNEL_OFFSET, NUM_PAGES, PAGE_SIZE};
+use crate::memory::{get_kernel_top_address, HEAP_BASE_ADDR, HEAP_TREE_ADDR, KERNEL_OFFSET, NUM_PAGES, PAGE_SIZE};
+use crate::println;
 use crate::riscv::{fence, get_satp, set_satp};
 
 pub static mut SEGMENTS_BITSET: BitSetRaw = BitSetRaw::new_empty();
@@ -34,6 +36,18 @@ pub fn free_page(addr: PhysAddr) {
         assert!(SEGMENTS_BITSET.get(index));
         SEGMENTS_BITSET.set(index, false);
     }
+}
+
+fn page_allocator(page: VirtAddr) {
+    println!("allocating 0x{:x}", page as u64);
+    map_page_auto(page, true, false);
+    println!("done allocating");
+}
+
+fn page_deallocator(page: VirtAddr) {
+    println!("deallocating 0x{:x}", page as u64);
+    unmap_page(page);
+    println!("done deallocating");
 }
 
 pub fn init_paging() {
@@ -66,6 +80,8 @@ pub fn init_paging() {
 
     let page_table = create_page_table();
     switch_to_page_table(page_table);
+
+    init_std_memory(&page_allocator, &page_deallocator, HEAP_TREE_ADDR, HEAP_BASE_ADDR);
 }
 
 pub fn init_paging_hart() {

@@ -21,6 +21,7 @@ pub use string::String;
 pub use vector::Vec;
 
 static mut PAGE_ALLOCATOR: Option<&'static dyn Fn(*mut u8)> = None;
+static mut PAGE_DEALLOCATOR: Option<&'static dyn Fn(*mut u8)> = None;
 static mut HEAP_TREE_ADDR: u64 = 0;
 static mut HEAP_ADDR: u64 = 0;
 
@@ -34,9 +35,20 @@ fn allocate_page(page: *mut u8) {
     }
 }
 
-pub fn init_std_memory(page_allocator: &'static dyn Fn(*mut u8), heap_tree_addr: u64, heap_addr: u64) {
+fn deallocate_page(page: *mut u8) {
+    unsafe {
+        if let Some(page_allocator) = PAGE_DEALLOCATOR {
+            page_allocator(page);
+        } else {
+            panic!("Std library memory was not initialized!");
+        }
+    }
+}
+
+pub fn init_std_memory(page_allocator: &'static dyn Fn(*mut u8), page_deallocator: &'static dyn Fn(*mut u8), heap_tree_addr: u64, heap_addr: u64) {
     unsafe {
         PAGE_ALLOCATOR = Some(page_allocator);
+        PAGE_DEALLOCATOR = Some(page_deallocator);
         HEAP_TREE_ADDR = heap_tree_addr;
         HEAP_ADDR = heap_addr;
     }

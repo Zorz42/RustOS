@@ -1,5 +1,5 @@
 use core::ptr::{copy_nonoverlapping, write_bytes};
-use crate::allocate_page;
+use crate::{allocate_page, deallocate_page};
 
 const PAGE_SIZE: u64 = 4096;
 
@@ -45,6 +45,14 @@ impl HeapTree {
         let to = (self.get_base_ptr() as u64 + self.get_tree_size() as u64 * 4 + PAGE_SIZE - 1) / PAGE_SIZE;
         for page in from..to {
             allocate_page((page * PAGE_SIZE) as *mut u8);
+        }
+    }
+
+    fn deallocate_pages(&self) {
+        let from = self.get_base_ptr() as u64 / PAGE_SIZE;
+        let to = (self.get_base_ptr() as u64 + self.get_tree_size() as u64 * 4 + PAGE_SIZE - 1) / PAGE_SIZE;
+        for page in from..to {
+            deallocate_page((page * PAGE_SIZE) as *mut u8);
         }
     }
 
@@ -111,6 +119,7 @@ impl HeapTree {
     /// Doubles its size
     fn double_size(&mut self) {
         let prev_base_ptr = self.get_base_ptr();
+        self.deallocate_pages();
         self.size *= 2;
         self.allocate_pages();
 
@@ -303,5 +312,11 @@ impl HeapTree {
         let node_val = Self::get_biggest_segment(block1);
         self.set_node_val(node, node_val);
         self.update_parents(node, 3);
+    }
+}
+
+impl Drop for HeapTree {
+    fn drop(&mut self) {
+        self.deallocate_pages();
     }
 }

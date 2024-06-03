@@ -2,8 +2,9 @@ use kernel_test::{kernel_test, kernel_test_mod};
 
 use crate::memory::TESTING_OFFSET;
 use std::{HeapTree, Rng};
+use crate::println;
 
-kernel_test_mod!(crate::tests::A4_heap_tree);
+kernel_test_mod!(crate::tests::A3_heap_tree);
 
 const HEAP_TREE_PTR: u64 = TESTING_OFFSET;
 fn get_heap_tree() -> HeapTree {

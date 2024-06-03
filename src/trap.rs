@@ -17,7 +17,7 @@ extern "C" fn kerneltrap() {
 
     if ty == InterruptType::OtherDevice {
         println!("Interrupt occurred");
-        println!("Scause: 0x{:x}", get_scause());
+        println!("Scause: {}", get_scause());
         println!("Sepc: 0x{:x}", get_sepc());
         println!("Stval: 0x{:x}", get_stval());
         panic!("kerneltrap");
