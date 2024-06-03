@@ -9,7 +9,8 @@ kernel_test_mod!(crate::tests::A2_paging);
 
 #[kernel_test]
 fn test_one_page() {
-    let _ = alloc_page();
+    let page = alloc_page();
+    free_page(page);
 }
 
 #[kernel_test]
@@ -34,7 +35,7 @@ fn test_page_free() {
             pages[i] = alloc_page();
             let val = rng.get(0, 1 << 8) as u8;
             unsafe {
-                write_bytes((pages[i] as VirtAddr) as *mut u64, val, 4096);
+                write_bytes((pages[i] as VirtAddr) as *mut u8, val, PAGE_SIZE as usize);
             }
         }
         for i in 0..1024 {
@@ -52,7 +53,7 @@ fn test_page_write() {
     let page_ptr = find_free_page() as u64;
     map_page(offset, page_ptr, true, false);
     unsafe {
-        write_bytes(offset, 0, PAGE_SIZE as usize);
+        write_bytes(offset as *mut u8, 0, PAGE_SIZE as usize);
         free_page(page_ptr);
     }
 }*/

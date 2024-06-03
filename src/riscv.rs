@@ -146,3 +146,9 @@ csr_get_set!(scause);
 
 // supervisor interrupt pending
 csr_get_set!(sip);
+
+pub fn fence() {
+    unsafe {
+        asm!("sfence.vma zero, zero");
+    }
+}
