@@ -1,7 +1,7 @@
 use core::ptr::write_bytes;
 use kernel_test::{kernel_test, kernel_test_mod};
 
-use crate::memory::{alloc_page, free_page, PhysAddr, VirtAddr, PAGE_SIZE, TESTING_OFFSET, virt_to_phys};
+use crate::memory::{alloc_page, free_page, PhysAddr, VirtAddr, PAGE_SIZE, TESTING_OFFSET, virt_to_phys, unmap_page};
 use std::{Rng};
 use crate::memory::{map_page};
 use crate::println;
@@ -57,6 +57,7 @@ fn test_page_write() {
         write_bytes(offset, 0, PAGE_SIZE as usize);
         free_page(page_ptr);
     }
+    unmap_page(offset);
 }
 
 #[kernel_test]
@@ -88,6 +89,12 @@ fn test_page_write_stays() {
     for i in 0..num_pages {
         unsafe {
             free_page(pages[i]);
+        }
+    }
+
+    for i in 0..num_pages {
+        unsafe {
+            unmap_page(offset.add(i * PAGE_SIZE as usize));
         }
     }
 }

@@ -5,7 +5,6 @@ use core::intrinsics::write_bytes;
 use crate::boot::{NUM_CORES, STACK_SIZE};
 use crate::memory::bitset::{bitset_size_bytes, BitSetRaw};
 use crate::memory::{get_kernel_top_address, KERNEL_OFFSET, NUM_PAGES, PAGE_SIZE};
-use crate::{print, println};
 use crate::riscv::{fence, get_satp, set_satp};
 
 pub static mut SEGMENTS_BITSET: BitSetRaw = BitSetRaw::new_empty();
