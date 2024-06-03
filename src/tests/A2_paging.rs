@@ -3,6 +3,7 @@ use kernel_test::{kernel_test, kernel_test_mod};
 
 use crate::memory::{alloc_page, free_page, PhysAddr, VirtAddr, PAGE_SIZE, TESTING_OFFSET};
 use std::{Rng};
+use crate::memory::{map_page};
 use crate::println;
 
 kernel_test_mod!(crate::tests::A2_paging);
@@ -46,17 +47,21 @@ fn test_page_free() {
     }
 }
 
-/*#[kernel_test]
+#[kernel_test]
 fn test_page_write() {
     let offset = TESTING_OFFSET as *mut u8;
 
-    let page_ptr = find_free_page() as u64;
+    let page_ptr = alloc_page() as u64;
     map_page(offset, page_ptr, true, false);
     unsafe {
-        write_bytes(offset as *mut u8, 0, PAGE_SIZE as usize);
+        println!("writing one byte at 0x{:x}", offset as u64);
+        *offset = 0;
+        println!("writing whole page at 0x{:x}", offset as u64);
+        write_bytes(offset, 0, PAGE_SIZE as usize);
+        println!("Done");
         free_page(page_ptr);
     }
-}*/
+}
 
 /*#[kernel_test]
 fn test_page_write_stays() {

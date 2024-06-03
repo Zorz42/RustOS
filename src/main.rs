@@ -3,7 +3,7 @@
 
 use core::panic::PanicInfo;
 use crate::boot::infinite_loop;
-use crate::memory::{get_num_free_pages, init_paging, NUM_PAGES};
+use crate::memory::{get_num_free_pages, init_paging, init_paging_hart, NUM_PAGES};
 use crate::print::{set_print_color, TextColor};
 use crate::riscv::{get_core_id, get_mstatus, get_sstatus, interrupts_enable, set_mstatus, set_sstatus};
 #[cfg(feature = "run_tests")]
@@ -30,6 +30,7 @@ pub fn main() {
     static mut INITIALIZED: bool = false;
 
     if get_core_id() == 0 {
+        println!("Initializing kernel with core 0");
         init_trap();
         interrupts_enable(true);
         enable_fpu();
@@ -45,6 +46,7 @@ pub fn main() {
         init_trap();
         interrupts_enable(true);
         enable_fpu();
+        init_paging_hart();
     }
 
     println!("Core {} has initialized", get_core_id());

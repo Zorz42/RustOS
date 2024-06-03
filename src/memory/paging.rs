@@ -5,8 +5,8 @@ use core::intrinsics::write_bytes;
 use crate::boot::{NUM_CORES, STACK_SIZE};
 use crate::memory::bitset::{bitset_size_bytes, BitSetRaw};
 use crate::memory::{get_kernel_top_address, KERNEL_OFFSET, NUM_PAGES, PAGE_SIZE};
-use crate::println;
-use crate::riscv::{fence, set_satp};
+use crate::{print, println};
+use crate::riscv::{fence, get_satp, set_satp};
 
 pub static mut SEGMENTS_BITSET: BitSetRaw = BitSetRaw::new_empty();
 
@@ -65,14 +65,24 @@ pub fn init_paging() {
         }
     }
 
+    let page_table = create_page_table();
+    switch_to_page_table(page_table);
+}
+
+pub fn init_paging_hart() {
     unsafe {
-        CURRENT_PAGE_TABLE = create_page_table();
         switch_to_page_table(CURRENT_PAGE_TABLE);
     }
 }
 
 pub type PageTableEntry = u64;
 pub type PageTable = *mut PageTableEntry;
+
+pub const PTE_PRESENT: u64 = 1;
+pub const PTE_READ: u64 = 1 << 1;
+pub const PTE_WRITE: u64 = 1 << 2;
+pub const PTE_EXECUTE: u64 = 1 << 3;
+pub const PTE_USER: u64 = 1 << 4;
 
 const PAGE_TABLE_SIZE: usize = 512;
 
@@ -82,7 +92,9 @@ fn create_page_table() -> PageTable {
     let page_table = alloc_page() as PageTable;
     unsafe {
         write_bytes(page_table as *mut u8, 0, PAGE_SIZE as usize);
-        *page_table = 0b1111;
+        for i in 0..3 {
+            *page_table.add(i) = create_page_table_entry(((i as u64) << (12 + 2 * 9)) as PhysAddr) | PTE_READ | PTE_WRITE | PTE_EXECUTE;
+        }
     }
 
     page_table
@@ -91,15 +103,19 @@ fn create_page_table() -> PageTable {
 fn switch_to_page_table(page_table: PageTable) {
     debug_assert_eq!(page_table as u64 % PAGE_SIZE, 0);
     fence();
-    set_satp((page_table as u64 / PAGE_SIZE) | (9u64 << 60));
+    unsafe {
+        CURRENT_PAGE_TABLE = page_table;
+    }
+    set_satp((page_table as u64 / PAGE_SIZE) | (8u64 << 60));
     fence();
 }
 
-/*pub fn refresh_paging() {
+pub fn refresh_paging() {
     unsafe {
-        let cr3: u64;
-        asm!("mov {}, cr3", out(reg) cr3);
-        asm!("mov cr3, {}", in(reg) cr3);
+        fence();
+        let satp = get_satp();
+        set_satp(satp);
+        fence();
     }
 }
 
@@ -110,91 +126,68 @@ fn get_sub_page_table_entry(table: PageTable, index: usize) -> &'static mut Page
     }
 }
 
-fn get_sub_page_table(table: PageTable, index: usize) -> Option<PageTable> {
-    let entry = *get_sub_page_table_entry(table, index);
-    if entry & 1 == 0 {
+fn get_entry_addr(entry: PageTableEntry) -> Option<PageTable> {
+    if (entry & PTE_PRESENT) == 0 {
         None
     } else {
-        Some((entry & 0x000FFFFF_FFFFF000) as PageTable)
+        Some(((entry >> 10) << 12) as PageTable)
     }
 }
 
-fn create_page_table_entry(addr: PhysAddr, present: bool, writable: bool, user: bool) -> PageTableEntry {
-    debug_assert_eq!(addr & 0xFFF00000_00000FFF, 0);
-    let mut entry = addr & 0x000FFFFF_FFFFF000;
-    if present {
-        entry |= 1 << 0; // present
-    }
-    if writable {
-        entry |= 1 << 1;
-    }
-    if user {
-        entry |= 1 << 2;
-    }
-    entry
+fn is_entry_table(entry: PageTableEntry) -> bool {
+    (entry & (PTE_PRESENT | PTE_READ | PTE_WRITE | PTE_EXECUTE)) == PTE_PRESENT
 }
 
-fn get_address_page_table(virtual_addr: VirtAddr) -> PageTable {
+fn create_page_table_entry(addr: PhysAddr) -> PageTableEntry {
+    debug_assert_eq!(addr & 0xFFFFF800_00000FFF, 0);
+    ((addr >> 12) << 10) | PTE_PRESENT
+}
+
+fn get_address_page_table_entry(virtual_addr: VirtAddr) -> Option<&'static mut PageTableEntry> {
     let mut curr_table = unsafe { CURRENT_PAGE_TABLE };
-    for i in 0..3 {
-        let index = (virtual_addr as u64 >> (39 - 9 * i)) & 0b111111111;
+    for i in 0..2 {
+        let index = (virtual_addr as u64 >> (30 - 9 * i)) & 0b111111111;
         unsafe {
-            if let Some(sub_table) = get_sub_page_table(curr_table, index as usize) {
-                curr_table = (sub_table as u64 + VIRTUAL_OFFSET) as PageTable;
+            let entry = get_sub_page_table_entry(curr_table, index as usize);
+            if let Some(table) = get_entry_addr(*entry) {
+                if !is_entry_table(*entry) {
+                    return None;
+                }
+                curr_table = table;
             } else {
-                let new_table = find_free_page();
-                clear_page_memory((new_table + VIRTUAL_OFFSET) as VirtAddr);
-                *get_sub_page_table_entry(curr_table, index as usize) = create_page_table_entry(new_table, true, true, false);
-                curr_table = (new_table + VIRTUAL_OFFSET) as PageTable;
+                let new_table = alloc_page();
+                write_bytes(new_table as *mut u8, 0, PAGE_SIZE as usize);
+                let new_entry = create_page_table_entry(new_table);
+                *get_sub_page_table_entry(curr_table, index as usize) = new_entry;
+                curr_table = new_table as PageTable;
             }
         }
     }
 
-    curr_table
+    let index = (virtual_addr as u64 >> 12) & 0b111111111;
+    Some(get_sub_page_table_entry(curr_table, index as usize))
 }
 
 pub fn map_page(virtual_addr: VirtAddr, physical_addr: PhysAddr, writable: bool, user: bool) {
-    let curr_table = get_address_page_table(virtual_addr);
-
-    unsafe {
-        let index = (virtual_addr as u64 >> 12) & 0b111111111;
-        if get_sub_page_table(curr_table, index as usize).is_none() {
-            *get_sub_page_table_entry(curr_table, index as usize) = create_page_table_entry(physical_addr, true, writable, user);
-        }
-        debug_assert!(get_sub_page_table(curr_table, index as usize).is_some());
+    let curr_entry = get_address_page_table_entry(virtual_addr).unwrap();
+    debug_assert_eq!(*curr_entry & PTE_PRESENT, 0);
+    *curr_entry = create_page_table_entry(physical_addr);
+    if writable {
+        *curr_entry |= PTE_WRITE;
+    }
+    if user {
+        *curr_entry |= PTE_USER;
     }
     refresh_paging();
 }
 
 pub fn map_page_auto(virtual_addr: VirtAddr, writable: bool, user: bool) {
-    map_page(virtual_addr, find_free_page(), writable, user);
+    map_page(virtual_addr, alloc_page(), writable, user);
 }
 
 pub fn unmap_page(virtual_addr: VirtAddr) {
-    let curr_table = get_address_page_table(virtual_addr);
-
-    unsafe {
-        let index = (virtual_addr as u64 >> 12) & 0b111111111;
-        if get_sub_page_table(curr_table, index as usize).is_none() {
-            panic!("Cannot unmap non-present page");
-        }
-        *get_sub_page_table_entry(curr_table, index as usize) = create_page_table_entry(0, false, false, false);
-        debug_assert!(get_sub_page_table(curr_table, index as usize).is_none());
-    }
+    let curr_entry = get_address_page_table_entry(virtual_addr).unwrap();
+    debug_assert!((*curr_entry & PTE_PRESENT) == PTE_PRESENT);
+    *curr_entry = 0;
     refresh_paging();
 }
-
-pub fn check_page_table_integrity() {
-    #[cfg(debug_assertions)]
-    {
-        print!("Checking page table integrity ... ");
-
-        // first 4 entries will be used by the kernel and will be identical for all page tables
-        for i in 4..PAGE_TABLE_SIZE {
-            let entry = unsafe { get_sub_page_table(CURRENT_PAGE_TABLE, i) };
-            assert!(entry.is_none());
-        }
-
-        println!("OK");
-    }
-}*/
