@@ -11,7 +11,8 @@ extern "C" {
 static TIMER_SCRATCH: [u64; NUM_CORES * 5] = [0; NUM_CORES * 5];
 
 pub fn machine_mode_timer_init() {
-    let interval = 10000; // about 1/10 th of a second in qemu
+    let frequency = 1000;
+    let interval = 1193180 / frequency;
     unsafe {
         *((CLINT + 0x4000 + 8 * get_mhartid()) as *mut u64) = *((CLINT + 0xBFF8) as *mut u64) + interval;
     }
