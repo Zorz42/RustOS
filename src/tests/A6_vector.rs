@@ -1,7 +1,7 @@
 use kernel_test::{kernel_perf, kernel_test, kernel_test_mod};
 use std::{deserialize, serialize, Rng, Serial, String, Vec, malloc, free};
 use crate::tests::KernelPerf;
-kernel_test_mod!(crate::tests::A7_vector);
+kernel_test_mod!(crate::tests::A6_vector);
 
 #[kernel_test]
 fn test_vector_new() {

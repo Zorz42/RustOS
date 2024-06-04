@@ -1,8 +1,9 @@
 use kernel_test::{kernel_perf, kernel_test, kernel_test_mod};
-use std::{free, malloc, memset, Rng};
+use std::{free, malloc, Rng};
 use crate::tests::KernelPerf;
+use core::ptr::write_bytes;
 
-kernel_test_mod!(crate::tests::A5_malloc);
+kernel_test_mod!(crate::tests::A4_malloc);
 
 #[kernel_test]
 fn test_malloc() {
@@ -35,7 +36,7 @@ fn test_malloc_free() {
             let len = rng.get(0, 100);
             ptrs[i] = malloc(len as usize);
             unsafe {
-                memset(ptrs[i], 12, len as usize);
+                write_bytes(ptrs[i], 12, len as usize);
             }
         }
         for i in 0..1024 {

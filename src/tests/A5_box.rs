@@ -2,7 +2,7 @@ use kernel_test::{kernel_perf, kernel_test, kernel_test_mod};
 use std::{Box, free, malloc, Rng};
 use crate::tests::KernelPerf;
 
-kernel_test_mod!(crate::tests::A6_box);
+kernel_test_mod!(crate::tests::A5_box);
 
 #[kernel_test]
 fn test_box_new() {
