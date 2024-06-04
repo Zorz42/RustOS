@@ -21,6 +21,7 @@ mod memory;
 #[cfg(feature = "run_tests")]
 mod tests;
 mod virtio;
+mod disk;
 
 pub fn main() {
     static mut INITIALIZED: bool = false;
