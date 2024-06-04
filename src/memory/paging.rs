@@ -1,20 +1,18 @@
 pub type PhysAddr = u64;
 pub type VirtAddr = *mut u8;
 
-use core::intrinsics::write_bytes;
-use core::sync::atomic::{fence, Ordering};
-use std::{init_std_memory, println};
 use crate::boot::{NUM_CORES, STACK_SIZE};
 use crate::memory::bitset::{bitset_size_bytes, BitSetRaw};
 use crate::memory::{get_kernel_top_address, HEAP_BASE_ADDR, HEAP_TREE_ADDR, KERNEL_OFFSET, NUM_PAGES, PAGE_SIZE};
 use crate::riscv::{get_satp, set_satp};
+use core::intrinsics::write_bytes;
+use core::sync::atomic::{fence, Ordering};
+use std::{init_std_memory, println};
 
 pub static mut SEGMENTS_BITSET: BitSetRaw = BitSetRaw::new_empty();
 
 pub fn get_num_free_pages() -> u64 {
-    unsafe {
-        SEGMENTS_BITSET.get_count0() as u64
-    }
+    unsafe { SEGMENTS_BITSET.get_count0() as u64 }
 }
 
 pub fn alloc_page() -> PhysAddr {
@@ -132,9 +130,7 @@ pub fn refresh_paging() {
 
 fn get_sub_page_table_entry(table: PageTable, index: usize) -> &'static mut PageTableEntry {
     debug_assert!(index < PAGE_TABLE_SIZE);
-    unsafe {
-        &mut *table.add(index)
-    }
+    unsafe { &mut *table.add(index) }
 }
 
 fn get_entry_addr(entry: PageTableEntry) -> Option<PageTable> {

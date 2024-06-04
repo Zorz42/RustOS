@@ -50,11 +50,11 @@ pub const MSTATUS_MMI: u64 = 1 << 3;
 csr_get_set!(mstatus);
 
 // supervisor mode interrupts
-pub const SSTATUS_SPP: u64 = 1 << 8;  // Previous mode, 1=Supervisor, 0=User
+pub const SSTATUS_SPP: u64 = 1 << 8; // Previous mode, 1=Supervisor, 0=User
 pub const SSTATUS_SPIE: u64 = 1 << 5; // Supervisor Previous Interrupt Enable
 pub const SSTATUS_UPIE: u64 = 1 << 4; // User Previous Interrupt Enable
-pub const SSTATUS_SIE: u64 = 1 << 1;  // Supervisor Interrupt Enable
-pub const SSTATUS_UIE: u64 = 1 << 0;  // User Interrupt Enable
+pub const SSTATUS_SIE: u64 = 1 << 1; // Supervisor Interrupt Enable
+pub const SSTATUS_UIE: u64 = 1 << 0; // User Interrupt Enable
 
 csr_get_set!(sstatus);
 
@@ -128,7 +128,6 @@ pub unsafe fn amoswap(addr: *mut i32, val: i32) -> i32 {
     asm!("amoswap.w {}, {}, ({})", out(reg) res, in(reg) val, in(reg) addr as u64);
     res
 }
-
 
 // core local interrupter for the timer
 pub const CLINT: u64 = 0x2000000;

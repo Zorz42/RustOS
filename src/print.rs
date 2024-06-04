@@ -1,5 +1,5 @@
-use core::fmt;
 use crate::spinlock::Lock;
+use core::fmt;
 
 #[allow(dead_code)]
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]

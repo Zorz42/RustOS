@@ -6,9 +6,7 @@ pub struct Lock {
 
 impl Lock {
     pub const fn new() -> Self {
-        Self {
-            acquired: 0,
-        }
+        Self { acquired: 0 }
     }
 
     pub fn try_lock(&self) -> bool {

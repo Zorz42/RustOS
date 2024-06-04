@@ -1,7 +1,7 @@
-use kernel_test::{kernel_perf, kernel_test, kernel_test_mod};
-use std::{free, malloc, Rng};
 use crate::tests::KernelPerf;
 use core::ptr::write_bytes;
+use kernel_test::{kernel_perf, kernel_test, kernel_test_mod};
+use std::{free, malloc, Rng};
 
 kernel_test_mod!(crate::tests::A4_malloc);
 

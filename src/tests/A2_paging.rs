@@ -1,9 +1,9 @@
 use core::ptr::write_bytes;
 use kernel_test::{kernel_test, kernel_test_mod};
 
-use crate::memory::{alloc_page, free_page, PhysAddr, VirtAddr, PAGE_SIZE, TESTING_OFFSET, virt_to_phys, unmap_page};
-use std::{Rng};
-use crate::memory::{map_page};
+use crate::memory::map_page;
+use crate::memory::{alloc_page, free_page, unmap_page, virt_to_phys, PhysAddr, VirtAddr, PAGE_SIZE, TESTING_OFFSET};
+use std::Rng;
 
 kernel_test_mod!(crate::tests::A2_paging);
 

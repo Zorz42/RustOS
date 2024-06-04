@@ -1,7 +1,7 @@
-use core::arch::global_asm;
 use crate::boot::NUM_CORES;
-use crate::riscv::{CLINT, get_mhartid, get_mie, get_mstatus, MIE_TIMER, MSTATUS_MMI, set_mie, set_mscratch, set_mstatus, set_mtvec};
+use crate::riscv::{get_mhartid, get_mie, get_mstatus, set_mie, set_mscratch, set_mstatus, set_mtvec, CLINT, MIE_TIMER, MSTATUS_MMI};
 use crate::spinlock::Lock;
+use core::arch::global_asm;
 global_asm!(include_str!("asm/kernelvec.S"));
 
 extern "C" {
@@ -52,7 +52,5 @@ pub fn tick() {
 }
 
 pub fn get_ticks() -> u64 {
-    unsafe {
-        TICKS
-    }
+    unsafe { TICKS }
 }

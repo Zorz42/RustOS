@@ -1,28 +1,28 @@
 #![no_std]
 #![no_main]
 
-use core::panic::PanicInfo;
-use std::println;
 use crate::boot::infinite_loop;
 use crate::disk::disk::scan_for_disks;
 use crate::memory::{get_num_free_pages, init_paging, init_paging_hart, NUM_PAGES};
 use crate::print::{init_print, set_print_color, TextColor};
-use crate::riscv::{enable_fpu, get_core_id, get_mstatus, get_sstatus, interrupts_enable, set_mstatus, set_sstatus};
+use crate::riscv::{enable_fpu, get_core_id, interrupts_enable};
 #[cfg(feature = "run_tests")]
 use crate::tests::test_runner;
 use crate::trap::init_trap;
+use core::panic::PanicInfo;
+use std::println;
 
 mod boot;
+mod disk;
+mod memory;
+mod print;
 mod riscv;
 mod spinlock;
-mod print;
-mod timer;
-mod trap;
-mod memory;
 #[cfg(feature = "run_tests")]
 mod tests;
+mod timer;
+mod trap;
 mod virtio;
-mod disk;
 
 pub fn main() {
     static mut INITIALIZED: bool = false;
@@ -39,7 +39,6 @@ pub fn main() {
         unsafe {
             INITIALIZED = true;
         }
-
     } else {
         while unsafe { !INITIALIZED } {}
 
@@ -68,4 +67,3 @@ fn panic(info: &PanicInfo) -> ! {
     println!("Kernel panic: {}", info);
     infinite_loop();
 }
-

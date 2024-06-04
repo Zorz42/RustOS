@@ -1,12 +1,16 @@
-use std::{Box, println, Vec};
 use crate::spinlock::Lock;
-use crate::virtio::{MAX_VIRTIO_ID, NUM, VIRTIO_MMIO_DEVICE_ID, VIRTIO_MMIO_MAGIC_VALUE, VIRTIO_MMIO_VENDOR_ID, VIRTIO_MMIO_VERSION, virtio_reg, VirtioBlqReq, VirtqAvail, VirtqDesc, VirtqUsed};
+use crate::virtio::{
+    virtio_reg, VirtioBlqReq, VirtqAvail, VirtqDesc, VirtqUsed, MAX_VIRTIO_ID, NUM, VIRTIO_BLK_F_CONFIG_WCE, VIRTIO_BLK_F_MQ, VIRTIO_BLK_F_RO, VIRTIO_BLK_F_SCSI, VIRTIO_CONFIG_S_ACKNOWLEDGE,
+    VIRTIO_CONFIG_S_DRIVER, VIRTIO_F_ANY_LAYOUT, VIRTIO_MMIO_DEVICE_FEATURES, VIRTIO_MMIO_DEVICE_ID, VIRTIO_MMIO_DRIVER_FEATURES, VIRTIO_MMIO_MAGIC_VALUE, VIRTIO_MMIO_STATUS, VIRTIO_MMIO_VENDOR_ID,
+    VIRTIO_MMIO_VERSION, VIRTIO_RING_F_EVENT_IDX, VIRTIO_RING_F_INDIRECT_DESC,
+};
+use std::{Box, Vec};
 
 const BSIZE: usize = 1024;
 
 struct Buf {
-    valid: i32,   // has data been read from disk?
-    disk: i32,    // does disk "own" buf?
+    valid: i32, // has data been read from disk?
+    disk: i32,  // does disk "own" buf?
     dev: u32,
     blockno: u32,
     lock: Lock,
@@ -42,8 +46,8 @@ pub struct Disk {
     used: *mut VirtqUsed,
 
     // our own book-keeping.
-    free: [bool; NUM],  // is a descriptor free?
-    used_idx: u16, // we've looked this far in used[2..NUM].
+    free: [bool; NUM], // is a descriptor free?
+    used_idx: u16,     // we've looked this far in used[2..NUM].
 
     // track info about in-flight operations,
     // for use when completion interrupt arrives.
@@ -55,13 +59,16 @@ pub struct Disk {
     ops: [VirtioBlqReq; NUM],
 
     vdisk_lock: Lock,
+
+    id: u64,
 }
 
 pub fn get_disk_at(id: u64) -> Option<Box<Disk>> {
-    if (*virtio_reg(id, VIRTIO_MMIO_MAGIC_VALUE) != 0x74726976 ||
-        *virtio_reg(id, VIRTIO_MMIO_VERSION) != 2 ||
-        *virtio_reg(id, VIRTIO_MMIO_DEVICE_ID) != 2 ||
-        *virtio_reg(id, VIRTIO_MMIO_VENDOR_ID) != 0x554d4551) {
+    if (*virtio_reg(id, VIRTIO_MMIO_MAGIC_VALUE) != 0x74726976
+        || *virtio_reg(id, VIRTIO_MMIO_VERSION) != 2
+        || *virtio_reg(id, VIRTIO_MMIO_DEVICE_ID) != 2
+        || *virtio_reg(id, VIRTIO_MMIO_VENDOR_ID) != 0x554d4551)
+    {
         return None;
     }
 
@@ -74,7 +81,27 @@ pub fn get_disk_at(id: u64) -> Option<Box<Disk>> {
         info: [Info { b: 0 as *mut Buf, status: 0 }; NUM],
         ops: [VirtioBlqReq { typ: 0, reserved: 0, sector: 0 }; NUM],
         vdisk_lock: Lock::new(),
+        id,
     });
+
+    let mut status = 0;
+
+    status |= VIRTIO_CONFIG_S_ACKNOWLEDGE;
+    *virtio_reg(id, VIRTIO_MMIO_STATUS) = status;
+
+    status |= VIRTIO_CONFIG_S_DRIVER;
+    *virtio_reg(id, VIRTIO_MMIO_STATUS) = status;
+
+    // negotiate features
+    let mut features = *virtio_reg(id, VIRTIO_MMIO_DEVICE_FEATURES);
+    features &= !(1 << VIRTIO_BLK_F_RO);
+    features &= !(1 << VIRTIO_BLK_F_SCSI);
+    features &= !(1 << VIRTIO_BLK_F_CONFIG_WCE);
+    features &= !(1 << VIRTIO_BLK_F_MQ);
+    features &= !(1 << VIRTIO_F_ANY_LAYOUT);
+    features &= !(1 << VIRTIO_RING_F_EVENT_IDX);
+    features &= !(1 << VIRTIO_RING_F_INDIRECT_DESC);
+    *virtio_reg(id, VIRTIO_MMIO_DRIVER_FEATURES) = features;
 
     Some(disk)
 }

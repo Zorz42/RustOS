@@ -1,6 +1,6 @@
-use kernel_test::{kernel_perf, kernel_test, kernel_test_mod};
-use std::{deserialize, serialize, Rng, Serial, String, Vec, malloc, free};
 use crate::tests::KernelPerf;
+use kernel_test::{kernel_perf, kernel_test, kernel_test_mod};
+use std::{deserialize, free, malloc, serialize, Rng, Serial, String, Vec};
 kernel_test_mod!(crate::tests::A6_vector);
 
 #[kernel_test]
@@ -266,9 +266,7 @@ struct PerfVecPush10 {
 
 impl KernelPerf for PerfVecPush10 {
     fn setup() -> Self {
-        Self {
-            rng: Rng::new(564378254),
-        }
+        Self { rng: Rng::new(564378254) }
     }
 
     fn run(&mut self) {
@@ -286,9 +284,7 @@ struct PerfVecPush1000 {
 
 impl KernelPerf for PerfVecPush1000 {
     fn setup() -> Self {
-        Self {
-            rng: Rng::new(65347852643),
-        }
+        Self { rng: Rng::new(65347852643) }
     }
 
     fn run(&mut self) {

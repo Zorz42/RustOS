@@ -1,10 +1,13 @@
+use crate::riscv::{
+    get_mhartid, get_mstatus, get_sie, set_medeleg, set_mepc, set_mideleg, set_mstatus, set_pmpaddr0, set_pmpcfg0, set_satp, set_sie, set_tp, MSTATUS_MACHINE, MSTATUS_SUPERVISOR, SIE_EXTERNAL,
+    SIE_SOFTWARE, SIE_TIMER,
+};
 use core::arch::asm;
-use crate::riscv::{get_mhartid, get_mstatus, get_sie, MSTATUS_MACHINE, MSTATUS_SUPERVISOR, set_medeleg, set_mepc, set_mideleg, set_mstatus, set_pmpaddr0, set_pmpcfg0, set_satp, set_sie, set_tp, SIE_EXTERNAL, SIE_SOFTWARE, SIE_TIMER};
 
+use crate::main;
+use crate::timer::machine_mode_timer_init;
 use core::arch::global_asm;
 use core::ptr::addr_of;
-use crate::{main};
-use crate::timer::machine_mode_timer_init;
 global_asm!(include_str!("asm/entry.S"));
 
 pub const STACK_SIZE: usize = 64 * 1024; // 64kB

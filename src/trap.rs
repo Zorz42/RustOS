@@ -1,6 +1,6 @@
-use std::println;
 use crate::riscv::{get_core_id, get_scause, get_sepc, get_sip, get_sstatus, get_stval, interrupts_get, set_sip, set_stvec, SSTATUS_SPP};
 use crate::timer::tick;
+use std::println;
 extern "C" {
     fn kernelvec();
 }
@@ -32,8 +32,7 @@ enum InterruptType {
 fn get_interrupt_type() -> InterruptType {
     let scause = get_scause();
 
-    if (scause & 0x8000000000000000) != 0 &&
-        (scause & 0xff) == 9 {
+    if (scause & 0x8000000000000000) != 0 && (scause & 0xff) == 9 {
         todo!();
     } else if scause == 0x8000000000000001 {
         if get_core_id() == 0 {

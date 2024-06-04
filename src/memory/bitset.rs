@@ -1,6 +1,6 @@
 use core::ops::{Deref, DerefMut};
 use core::ptr::{copy_nonoverlapping, write_bytes};
-use std::{Vec};
+use std::Vec;
 
 pub struct BitSetRaw {
     data: *mut u64,
@@ -92,15 +92,11 @@ impl BitSetRaw {
     }
 
     fn get_stack_bitset_addr(&mut self) -> *mut u64 {
-        unsafe {
-            self.data.add(self.get_num_u64())
-        }
+        unsafe { self.data.add(self.get_num_u64()) }
     }
 
     fn get_stack_addr(&mut self) -> *mut i32 {
-        unsafe {
-            self.data.add(2 * self.get_num_u64()) as *mut i32
-        }
+        unsafe { self.data.add(2 * self.get_num_u64()) as *mut i32 }
     }
 
     fn add_to_stack(&mut self, index: usize) {
@@ -123,9 +119,7 @@ impl BitSetRaw {
     fn stack_top(&mut self) -> i32 {
         assert!(self.stack_size >= self.count0);
 
-        unsafe {
-            *self.get_stack_addr().add(self.stack_size - 1)
-        }
+        unsafe { *self.get_stack_addr().add(self.stack_size - 1) }
     }
 
     fn pop_stack(&mut self) {
@@ -157,9 +151,7 @@ impl BitSetRaw {
 
     pub fn get(&self, index: usize) -> bool {
         debug_assert!(index < self.size);
-        unsafe {
-            get_raw(self.data, index)
-        }
+        unsafe { get_raw(self.data, index) }
     }
 
     pub fn get_size_bytes(&self) -> usize {
