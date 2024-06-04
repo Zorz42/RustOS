@@ -1,6 +1,7 @@
 use core::arch::global_asm;
 use crate::boot::NUM_CORES;
 use crate::riscv::{CLINT, get_mhartid, get_mie, get_mstatus, MIE_TIMER, MSTATUS_MMI, set_mie, set_mscratch, set_mstatus, set_mtvec};
+use crate::spinlock::Lock;
 global_asm!(include_str!("asm/kernelvec.S"));
 
 extern "C" {
@@ -9,9 +10,12 @@ extern "C" {
 
 // a scratch area per CPU for machine-mode timer interrupts.
 static TIMER_SCRATCH: [u64; NUM_CORES * 5] = [0; NUM_CORES * 5];
+static TIMER_LOCK: Lock = Lock::new();
 
 pub fn machine_mode_timer_init() {
-    let frequency = 1000;
+    TIMER_LOCK.spinlock();
+
+    let frequency = 100;
     let interval = 1193180 / frequency;
     unsafe {
         *((CLINT + 0x4000 + 8 * get_mhartid()) as *mut u64) = *((CLINT + 0xBFF8) as *mut u64) + interval;
@@ -34,6 +38,8 @@ pub fn machine_mode_timer_init() {
     let mut mie = get_mie();
     mie |= MIE_TIMER;
     set_mie(mie);
+
+    TIMER_LOCK.unlock();
 }
 
 static mut TICKS: u64 = 0;

@@ -20,6 +20,7 @@ mod trap;
 mod memory;
 #[cfg(feature = "run_tests")]
 mod tests;
+mod virtio;
 
 pub fn main() {
     static mut INITIALIZED: bool = false;
