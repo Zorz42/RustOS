@@ -1,5 +1,3 @@
-use std::path::PathBuf;
-
 #[allow(clippy::unwrap_used)]
 fn main() {
     const NUM_SECTORS: usize = 10000;

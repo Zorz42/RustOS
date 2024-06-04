@@ -4,6 +4,7 @@
 use core::panic::PanicInfo;
 use std::println;
 use crate::boot::infinite_loop;
+use crate::disk::disk::scan_for_disks;
 use crate::memory::{get_num_free_pages, init_paging, init_paging_hart, NUM_PAGES};
 use crate::print::{init_print, set_print_color, TextColor};
 use crate::riscv::{enable_fpu, get_core_id, get_mstatus, get_sstatus, interrupts_enable, set_mstatus, set_sstatus};
@@ -33,6 +34,7 @@ pub fn main() {
         interrupts_enable(true);
         enable_fpu();
         init_paging();
+        let disks = scan_for_disks();
 
         unsafe {
             INITIALIZED = true;

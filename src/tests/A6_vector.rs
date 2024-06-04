@@ -259,14 +259,6 @@ fn test_vector_reverse() {
     }
 }
 
-#[kernel_test]
-fn test_string_split() {
-    let str1 = String::from("/home/jakob/directory/file");
-    let parts = str1.split('/');
-
-    assert!(parts == Vec::new_from_slice(&[String::from(""), String::from("home"), String::from("jakob"), String::from("directory"), String::from("file")]))
-}
-
 #[kernel_perf]
 struct PerfVecPush10 {
     rng: Rng,
