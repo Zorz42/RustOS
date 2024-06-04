@@ -2,11 +2,12 @@ pub type PhysAddr = u64;
 pub type VirtAddr = *mut u8;
 
 use core::intrinsics::write_bytes;
+use core::sync::atomic::{fence, Ordering};
 use std::{init_std_memory, println};
 use crate::boot::{NUM_CORES, STACK_SIZE};
 use crate::memory::bitset::{bitset_size_bytes, BitSetRaw};
 use crate::memory::{get_kernel_top_address, HEAP_BASE_ADDR, HEAP_TREE_ADDR, KERNEL_OFFSET, NUM_PAGES, PAGE_SIZE};
-use crate::riscv::{fence, get_satp, set_satp};
+use crate::riscv::{get_satp, set_satp};
 
 pub static mut SEGMENTS_BITSET: BitSetRaw = BitSetRaw::new_empty();
 
@@ -112,20 +113,20 @@ fn create_page_table() -> PageTable {
 
 fn switch_to_page_table(page_table: PageTable) {
     debug_assert_eq!(page_table as u64 % PAGE_SIZE, 0);
-    fence();
+    fence(Ordering::Release);
     unsafe {
         CURRENT_PAGE_TABLE = page_table;
     }
     set_satp((page_table as u64 / PAGE_SIZE) | (8u64 << 60));
-    fence();
+    fence(Ordering::Release);
 }
 
 pub fn refresh_paging() {
     unsafe {
-        fence();
+        fence(Ordering::Release);
         let satp = get_satp();
         set_satp(satp);
-        fence();
+        fence(Ordering::Release);
     }
 }
 

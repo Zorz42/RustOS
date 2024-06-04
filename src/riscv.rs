@@ -149,8 +149,8 @@ csr_get_set!(stval);
 // supervisor interrupt pending
 csr_get_set!(sip);
 
-pub fn fence() {
-    unsafe {
-        asm!("sfence.vma zero, zero");
-    }
+pub fn enable_fpu() {
+    let mut sstatus = get_sstatus();
+    sstatus |= 1 << 13;
+    set_sstatus(sstatus);
 }

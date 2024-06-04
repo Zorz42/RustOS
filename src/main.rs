@@ -6,7 +6,7 @@ use std::println;
 use crate::boot::infinite_loop;
 use crate::memory::{get_num_free_pages, init_paging, init_paging_hart, NUM_PAGES};
 use crate::print::{init_print, set_print_color, TextColor};
-use crate::riscv::{get_core_id, get_mstatus, get_sstatus, interrupts_enable, set_mstatus, set_sstatus};
+use crate::riscv::{enable_fpu, get_core_id, get_mstatus, get_sstatus, interrupts_enable, set_mstatus, set_sstatus};
 #[cfg(feature = "run_tests")]
 use crate::tests::test_runner;
 use crate::trap::init_trap;
@@ -20,12 +20,6 @@ mod trap;
 mod memory;
 #[cfg(feature = "run_tests")]
 mod tests;
-
-fn enable_fpu() {
-    let mut sstatus = get_sstatus();
-    sstatus |= 1 << 13;
-    set_sstatus(sstatus);
-}
 
 pub fn main() {
     static mut INITIALIZED: bool = false;
