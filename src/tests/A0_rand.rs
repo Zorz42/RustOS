@@ -1,7 +1,6 @@
 use kernel_test::{kernel_test, kernel_test_mod};
 
 use std::Rng;
-use crate::println;
 
 kernel_test_mod!(crate::tests::A0_rand);
 

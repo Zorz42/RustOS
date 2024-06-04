@@ -41,16 +41,16 @@ impl HeapTree {
     }
 
     fn allocate_pages(&self) {
-        let from = self.get_base_ptr() as u64 / PAGE_SIZE;
-        let to = (self.get_base_ptr() as u64 + self.get_tree_size() as u64 * 4 + PAGE_SIZE - 1) / PAGE_SIZE;
+        let from = self.tree_ptr as u64 / PAGE_SIZE;
+        let to = (self.tree_ptr as u64 + self.get_tree_size() as u64 * 4 + PAGE_SIZE - 1) / PAGE_SIZE;
         for page in from..to {
-            allocate_page((page * PAGE_SIZE) as *mut u8);
+            allocate_page((page * PAGE_SIZE) as *mut u8, true);
         }
     }
 
     fn deallocate_pages(&self) {
-        let from = self.get_base_ptr() as u64 / PAGE_SIZE;
-        let to = (self.get_base_ptr() as u64 + self.get_tree_size() as u64 * 4 + PAGE_SIZE - 1) / PAGE_SIZE;
+        let from = self.tree_ptr as u64 / PAGE_SIZE;
+        let to = (self.tree_ptr as u64 + self.get_tree_size() as u64 * 4 + PAGE_SIZE - 1) / PAGE_SIZE;
         for page in from..to {
             deallocate_page((page * PAGE_SIZE) as *mut u8);
         }
@@ -119,7 +119,6 @@ impl HeapTree {
     /// Doubles its size
     fn double_size(&mut self) {
         let prev_base_ptr = self.get_base_ptr();
-        self.deallocate_pages();
         self.size *= 2;
         self.allocate_pages();
 

@@ -1,8 +1,6 @@
-use crate::boot::infinite_loop;
-use crate::{panic, println};
+use std::println;
 use crate::riscv::{get_core_id, get_scause, get_sepc, get_sip, get_sstatus, get_stval, interrupts_get, set_sip, set_stvec, SSTATUS_SPP};
 use crate::timer::tick;
-
 extern "C" {
     fn kernelvec();
 }

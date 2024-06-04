@@ -2,7 +2,7 @@ use kernel_test::{kernel_test, kernel_test_mod};
 
 use crate::memory::TESTING_OFFSET;
 use std::{HeapTree, Rng};
-use crate::println;
+use std::println;
 
 kernel_test_mod!(crate::tests::A3_heap_tree);
 
@@ -21,7 +21,7 @@ fn test_heap_tree_alloc() {
     let mut tree = get_heap_tree();
     let mut rng = Rng::new(5473895743);
 
-    for _ in 0..1000 {
+    for i in 0..1000 {
         let _ = tree.alloc(rng.get(0, 8) as u32);
     }
 }

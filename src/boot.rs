@@ -3,7 +3,7 @@ use crate::riscv::{get_mhartid, get_mstatus, get_sie, MSTATUS_MACHINE, MSTATUS_S
 
 use core::arch::global_asm;
 use core::ptr::addr_of;
-use crate::{main, println};
+use crate::{main};
 use crate::timer::machine_mode_timer_init;
 global_asm!(include_str!("asm/entry.S"));
 

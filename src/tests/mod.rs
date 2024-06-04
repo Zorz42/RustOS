@@ -1,12 +1,12 @@
 use core::arch::asm;
 use kernel_test::all_perf_tests;
-use std::{deserialize, serialize, String, Vec};
+use std::{deserialize, print, println, serialize, String, Vec};
 
 //use crate::disk::disk::Disk;
 use crate::timer::get_ticks;
 use kernel_test::all_tests;
 use crate::print::{reset_print_color, set_print_color, TextColor};
-use crate::{print, println};
+use crate::{print};
 use crate::memory::bitset_size_bytes;
 //use crate::disk::filesystem::get_fs;
 //use crate::memory::bitset_size_bytes;

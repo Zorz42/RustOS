@@ -2,11 +2,10 @@ pub type PhysAddr = u64;
 pub type VirtAddr = *mut u8;
 
 use core::intrinsics::write_bytes;
-use std::init_std_memory;
+use std::{init_std_memory, println};
 use crate::boot::{NUM_CORES, STACK_SIZE};
 use crate::memory::bitset::{bitset_size_bytes, BitSetRaw};
 use crate::memory::{get_kernel_top_address, HEAP_BASE_ADDR, HEAP_TREE_ADDR, KERNEL_OFFSET, NUM_PAGES, PAGE_SIZE};
-use crate::println;
 use crate::riscv::{fence, get_satp, set_satp};
 
 pub static mut SEGMENTS_BITSET: BitSetRaw = BitSetRaw::new_empty();
@@ -38,16 +37,12 @@ pub fn free_page(addr: PhysAddr) {
     }
 }
 
-fn page_allocator(page: VirtAddr) {
-    println!("allocating 0x{:x}", page as u64);
-    map_page_auto(page, true, false);
-    println!("done allocating");
+fn page_allocator(page: VirtAddr, ignore_if_exists: bool) {
+    map_page_auto(page, ignore_if_exists, true, false);
 }
 
 fn page_deallocator(page: VirtAddr) {
-    println!("deallocating 0x{:x}", page as u64);
     unmap_page(page);
-    println!("done deallocating");
 }
 
 pub fn init_paging() {
@@ -182,8 +177,11 @@ fn get_address_page_table_entry(virtual_addr: VirtAddr) -> Option<&'static mut P
     Some(get_sub_page_table_entry(curr_table, index as usize))
 }
 
-pub fn map_page(virtual_addr: VirtAddr, physical_addr: PhysAddr, writable: bool, user: bool) {
+pub fn map_page(virtual_addr: VirtAddr, physical_addr: PhysAddr, ignore_if_exists: bool, writable: bool, user: bool) {
     let curr_entry = get_address_page_table_entry(virtual_addr).unwrap();
+    if ignore_if_exists && (*curr_entry & PTE_PRESENT) != 0 {
+        return;
+    }
     debug_assert_eq!(*curr_entry & PTE_PRESENT, 0);
     *curr_entry = create_page_table_entry(physical_addr) | PTE_READ;
     if writable {
@@ -195,8 +193,8 @@ pub fn map_page(virtual_addr: VirtAddr, physical_addr: PhysAddr, writable: bool,
     refresh_paging();
 }
 
-pub fn map_page_auto(virtual_addr: VirtAddr, writable: bool, user: bool) {
-    map_page(virtual_addr, alloc_page(), writable, user);
+pub fn map_page_auto(virtual_addr: VirtAddr, ignore_if_exists: bool, writable: bool, user: bool) {
+    map_page(virtual_addr, alloc_page(), ignore_if_exists, writable, user);
 }
 
 pub fn virt_to_phys(addr: VirtAddr) -> Option<PhysAddr> {

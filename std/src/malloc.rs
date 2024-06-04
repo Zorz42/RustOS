@@ -26,7 +26,7 @@ pub fn malloc(size: usize) -> *mut u8 {
         let ptr_end = ptr as u64 + actual_size as u64;
 
         while (CURR_PAGE as u64) < ptr_end {
-            allocate_page(CURR_PAGE);
+            allocate_page(CURR_PAGE, false);
             CURR_PAGE = CURR_PAGE.add(PAGE_SIZE as usize);
         }
 
