@@ -11,6 +11,7 @@ use crate::tests::test_runner;
 use crate::trap::init_trap;
 use core::panic::PanicInfo;
 use std::println;
+use crate::uart::uart_init;
 
 mod boot;
 mod disk;
@@ -23,6 +24,7 @@ mod tests;
 mod timer;
 mod trap;
 mod virtio;
+mod uart;
 
 pub fn main() {
     static mut INITIALIZED: bool = false;
@@ -30,11 +32,17 @@ pub fn main() {
     if get_core_id() == 0 {
         init_print();
         println!("Initializing kernel with core 0");
+        uart_init();
         init_trap();
         interrupts_enable(true);
         enable_fpu();
         init_paging();
-        let disks = scan_for_disks();
+        let mut disks = scan_for_disks();
+
+        for disk in &mut disks {
+            println!("Reading disk");
+            disk.read(0);
+        }
 
         unsafe {
             INITIALIZED = true;
