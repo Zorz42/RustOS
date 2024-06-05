@@ -15,7 +15,6 @@ strip = true
 lto = true
 codegen-units = 1
 opt-level = 3
-panic = "abort"
 
 [dependencies]
 # this is just a macro, it doesn't get included in the execuable

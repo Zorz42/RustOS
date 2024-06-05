@@ -18,18 +18,19 @@ fn test_disk_persists() {
         let page = get_mounted_disk().alloc_page();
         let addr = (DISK_OFFSET + PAGE_SIZE * page as u64) as *mut u8;
         let mut data = [0; PAGE_SIZE as usize];
+        get_mounted_disk().declare_write(addr as u64, addr as u64 + PAGE_SIZE);
         for i in 0..PAGE_SIZE {
             data[i as usize] = rng.get(0, 1 << 8) as u8;
             unsafe {
-                get_mounted_disk().declare_write(addr.add(i as usize) as u64);
                 *addr.add(i as usize) = data[i as usize];
             }
         }
         unmount_disk();
         mount_disk(get_test_disk());
+
+        get_mounted_disk().declare_read(addr as u64, addr as u64 + PAGE_SIZE);
         for i in 0..PAGE_SIZE {
             unsafe {
-                get_mounted_disk().declare_read(addr.add(i as usize) as u64);
                 assert_eq!(*addr.add(i as usize), data[i as usize]);
             }
         }

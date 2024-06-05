@@ -9,6 +9,7 @@ pub struct MemoryDisk {
     mapped_pages: Vec<i32>,
     is_taken: Option<BitSet>, // which page is taken
     is_mapped: BitSet, // which page is mapped
+    in_vec: BitSet, // which page is in vector
 }
 
 fn id_to_addr(page: i32) -> *mut u8 {
@@ -23,11 +24,13 @@ impl MemoryDisk {
             mapped_pages: Vec::new(),
             is_taken: None,
             is_mapped: BitSet::new(size / 8),
+            in_vec: BitSet::new(size / 8),
         }
     }
 
     pub fn init(&mut self) {
         self.is_taken = Some(BitSet::new(self.disk.size() / 8));
+        self.declare_read(id_to_addr(1) as u64, id_to_addr(1) as u64 + self.get_bitset_num_pages() as u64 * PAGE_SIZE);
         unsafe {
             self.is_taken.as_mut().unwrap().load_from(id_to_addr(1) as *mut u64);
         }
@@ -55,9 +58,14 @@ impl MemoryDisk {
 
     fn map_page(&mut self, addr: u64, load: bool) {
         let idx = (addr - DISK_OFFSET) / PAGE_SIZE;
-        assert!(!self.is_mapped.get(idx as usize));
+        if self.is_mapped.get(idx as usize) {
+            return;
+        }
         self.is_mapped.set(idx as usize, true);
-        self.mapped_pages.push(idx as i32);
+        if !self.in_vec.get(idx as usize) {
+            self.mapped_pages.push(idx as i32);
+        }
+        self.in_vec.set(idx as usize, true);
 
         let addr = addr / PAGE_SIZE * PAGE_SIZE;
         map_page_auto(addr as VirtAddr, false, true, false);
@@ -72,15 +80,34 @@ impl MemoryDisk {
         }
     }
 
-    pub fn declare_write(&mut self, addr: u64) {
-        self.map_page(addr, false);
+    fn map_range(&mut self, low_addr: u64, high_addr: u64, load: bool) {
+        debug_assert!(low_addr <= high_addr);
+        debug_assert!(DISK_OFFSET <= low_addr);
+        debug_assert!(high_addr <= DISK_OFFSET + PAGE_SIZE * self.get_num_pages() as u64);
+
+        let low_page = low_addr / PAGE_SIZE;
+        let high_page = (high_addr + PAGE_SIZE - 1) / PAGE_SIZE;
+
+        for page in low_page..high_page {
+            let page_addr = page * PAGE_SIZE;
+            self.map_page(page_addr, load);
+        }
     }
 
-    pub fn declare_read(&mut self, addr: u64) {
-        self.map_page(addr, true);
+    pub fn declare_write(&mut self, low_addr: u64, high_addr: u64) {
+        self.map_range(low_addr, high_addr, false);
+    }
+
+    pub fn declare_read(&mut self, low_addr: u64, high_addr: u64) {
+        self.map_range(low_addr, high_addr, false);
     }
 
     fn unmap_page(&mut self, page: i32) {
+        if !self.is_mapped.get(page as usize) {
+            return;
+        }
+        self.is_mapped.set(page as usize, false);
+
         let first_sector = page as u64 * 8;
         for sector in first_sector..first_sector + 8 {
             let mut data = [0; 512];
@@ -107,9 +134,12 @@ impl MemoryDisk {
     }
 
     pub fn get_head(&mut self) -> Vec<u8> {
+        self.declare_read(DISK_OFFSET, DISK_OFFSET + 4);
+
         let size = unsafe { *(DISK_OFFSET as *mut i32) } as usize;
         let mut data = Vec::new();
 
+        self.declare_read(DISK_OFFSET + 4, DISK_OFFSET + 4 + size as u64);
         let ptr = (DISK_OFFSET + 4) as *mut u8;
         for i in 0..size {
             data.push(unsafe { *ptr.add(i) });
@@ -119,6 +149,8 @@ impl MemoryDisk {
     }
 
     pub fn set_head(&mut self, data: &Vec<u8>) {
+        self.declare_write(DISK_OFFSET, DISK_OFFSET + 4 + data.size() as u64);
+
         unsafe {
             *(DISK_OFFSET as *mut i32) = data.size() as i32;
         }
