@@ -2,8 +2,8 @@ use core::mem::size_of;
 use core::ptr::{addr_of, write_bytes};
 use core::sync::atomic::{fence, Ordering};
 use crate::spinlock::Lock;
-use crate::virtio::{virtio_reg, VirtioBlqReq, VirtqAvail, VirtqDesc, VirtqUsed, MAX_VIRTIO_ID, NUM, VIRTIO_BLK_F_CONFIG_WCE, VIRTIO_BLK_F_MQ, VIRTIO_BLK_F_RO, VIRTIO_BLK_F_SCSI, VIRTIO_CONFIG_S_ACKNOWLEDGE, VIRTIO_CONFIG_S_DRIVER, VIRTIO_F_ANY_LAYOUT, VIRTIO_MMIO_DEVICE_FEATURES, VIRTIO_MMIO_DEVICE_ID, VIRTIO_MMIO_DRIVER_FEATURES, VIRTIO_MMIO_MAGIC_VALUE, VIRTIO_MMIO_STATUS, VIRTIO_MMIO_VENDOR_ID, VIRTIO_MMIO_VERSION, VIRTIO_RING_F_EVENT_IDX, VIRTIO_RING_F_INDIRECT_DESC, VIRTIO_CONFIG_S_FEATURES_OK, VIRTIO_MMIO_QUEUE_SEL, VIRTIO_MMIO_QUEUE_READY, VIRTIO_MMIO_QUEUE_NUM_MAX, VIRTIO_MMIO_QUEUE_NUM, VIRTIO_MMIO_DEVICE_DESC_LOW, VIRTIO_MMIO_DEVICE_DESC_HIGH, VIRTIO_MMIO_QUEUE_DESC_LOW, VIRTIO_MMIO_QUEUE_DESC_HIGH, VIRTIO_MMIO_DRIVER_DESC_LOW, VIRTIO_MMIO_DRIVER_DESC_HIGH, VIRTIO_CONFIG_S_DRIVER_OK, VRING_DESC_F_NEXT, VIRTIO_BLK_T_OUT, VIRTIO_BLK_T_IN, VRING_DESC_F_WRITE, VIRTIO_MMIO_QUEUE_NOTIFY, VIRTIO_MMIO_INTERRUPT_ACK, VIRTIO_MMIO_INTERRUPT_STATUS};
-use std::{println, Vec};
+use crate::virtio::{virtio_reg, VirtioBlqReq, VirtqAvail, VirtqDesc, VirtqUsed, MAX_VIRTIO_ID, NUM, VIRTIO_BLK_F_CONFIG_WCE, VIRTIO_BLK_F_MQ, VIRTIO_BLK_F_RO, VIRTIO_BLK_F_SCSI, VIRTIO_CONFIG_S_ACKNOWLEDGE, VIRTIO_CONFIG_S_DRIVER, VIRTIO_F_ANY_LAYOUT, VIRTIO_MMIO_DEVICE_FEATURES, VIRTIO_MMIO_DEVICE_ID, VIRTIO_MMIO_DRIVER_FEATURES, VIRTIO_MMIO_MAGIC_VALUE, VIRTIO_MMIO_STATUS, VIRTIO_MMIO_VENDOR_ID, VIRTIO_MMIO_VERSION, VIRTIO_RING_F_EVENT_IDX, VIRTIO_RING_F_INDIRECT_DESC, VIRTIO_CONFIG_S_FEATURES_OK, VIRTIO_MMIO_QUEUE_SEL, VIRTIO_MMIO_QUEUE_READY, VIRTIO_MMIO_QUEUE_NUM_MAX, VIRTIO_MMIO_QUEUE_NUM, VIRTIO_MMIO_DEVICE_DESC_LOW, VIRTIO_MMIO_DEVICE_DESC_HIGH, VIRTIO_MMIO_QUEUE_DESC_LOW, VIRTIO_MMIO_QUEUE_DESC_HIGH, VIRTIO_MMIO_DRIVER_DESC_LOW, VIRTIO_MMIO_DRIVER_DESC_HIGH, VIRTIO_CONFIG_S_DRIVER_OK, VRING_DESC_F_NEXT, VIRTIO_BLK_T_OUT, VIRTIO_BLK_T_IN, VRING_DESC_F_WRITE, VIRTIO_MMIO_QUEUE_NOTIFY, VIRTIO_MMIO_INTERRUPT_ACK, VIRTIO_MMIO_INTERRUPT_STATUS, VIRTIO_MMIO_CONFIG};
+use std::{print, println, Vec};
 use crate::memory::{alloc_page, PAGE_SIZE};
 
 struct Buf {
@@ -59,6 +59,8 @@ pub struct Disk {
     vdisk_lock: Lock,
 
     id: u64,
+
+    size: usize,
 }
 
 pub fn get_disk_at(id: u64) -> Option<&'static mut Disk> {
@@ -82,6 +84,7 @@ pub fn get_disk_at(id: u64) -> Option<&'static mut Disk> {
         ops: [VirtioBlqReq { typ: 0, reserved: 0, sector: 0 }; NUM],
         vdisk_lock: Lock::new(),
         id,
+        size: 0,
     };
 
     unsafe {
@@ -146,6 +149,9 @@ pub fn get_disk_at(id: u64) -> Option<&'static mut Disk> {
     // we are completely ready
     status |= VIRTIO_CONFIG_S_DRIVER_OK;
     *virtio_reg(id, VIRTIO_MMIO_STATUS) = status;
+
+    // get the disk size
+    disk.size = *virtio_reg(id, VIRTIO_MMIO_CONFIG) as usize;
 
     Some(disk)
 }
@@ -262,6 +268,8 @@ impl Disk {
     }
 
     pub fn read(&mut self, sector: usize) -> [u8; 512] {
+        assert!(sector < self.size);
+
         let mut buf = Buf {
             valid: 0,
             disk: 0,
@@ -278,6 +286,29 @@ impl Disk {
 
         buf.data
 
+    }
+
+    pub fn write(&mut self, sector: usize, data: &[u8; 512]) {
+        assert!(sector < self.size);
+
+        let mut buf = Buf {
+            valid: 0,
+            disk: 0,
+            dev: 0,
+            sector: sector as u32,
+            lock: Lock::new(),
+            refcnt: 0,
+            prev: 0 as *mut Buf,
+            next: 0 as *mut Buf,
+            data: data.clone(),
+        };
+
+        self.virtio_disk_rw(&mut buf, true);
+
+    }
+
+    pub const fn size(&self) -> usize {
+        self.size
     }
 }
 

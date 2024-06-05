@@ -1,14 +1,15 @@
 use core::arch::asm;
+use core::ops::{Deref, DerefMut};
+use core::ptr::addr_of;
 use kernel_test::all_perf_tests;
 use std::{deserialize, print, println, serialize, String, Vec};
 
-//use crate::disk::disk::Disk;
+use crate::disk::disk::Disk;
 use crate::memory::bitset_size_bytes;
 use crate::print::{reset_print_color, set_print_color, TextColor};
 use crate::timer::get_ticks;
 use kernel_test::all_tests;
 //use crate::disk::filesystem::get_fs;
-//use crate::memory::bitset_size_bytes;
 
 mod A0_rand;
 mod A1_bitset;
@@ -18,7 +19,7 @@ mod A4_malloc;
 mod A5_box;
 mod A6_vector;
 mod A7_string;
-//mod A8_disk;
+mod A8_disk;
 //mod A9_memory_disk;
 //mod B0_filesystem;
 
@@ -36,30 +37,31 @@ pub(super) fn get_free_space_addr() -> *mut u8 {
     unsafe { ((FREE_SPACE.as_mut_ptr() as u64 + 7) / 8 * 8) as *mut u8 }
 }
 
-//static mut TEST_DISK: Option<Disk> = None;
+static mut TEST_DISK: Option<&'static mut Disk> = None;
 
-/*pub fn get_test_disk() -> Disk {
-    unsafe { TEST_DISK.as_ref().unwrap().clone() }
-}*/
+pub fn get_test_disk() -> &'static mut Disk {
+    unsafe { *TEST_DISK.as_mut().unwrap() }
+}
 
-pub fn test_runner(/*disks: &Vec<Disk>*/) {
-    /*let mut test_disk = None;
+pub fn test_runner(disks: &mut Vec<&'static mut Disk>) {
+    let mut test_disk = None;
     for disk in disks {
         let first_sector = disk.read(0);
         let magic = ((first_sector[511] as u32) << 0) + ((first_sector[510] as u32) << 8) + ((first_sector[509] as u32) << 16) + ((first_sector[508] as u32) << 24);
 
         if magic == TESTDISK_MAGIC_CODE {
-            test_disk = Some(disk.clone());
+            let addr = addr_of!(**disk);
+            test_disk = Some(unsafe { addr as *mut Disk });
         }
     }
 
     if let Some(test_disk) = test_disk {
         unsafe {
-            TEST_DISK = Some(test_disk);
+            TEST_DISK = Some(&mut *test_disk);
         }
     } else {
         panic!("Test disk not found");
-    }*/
+    }
 
     let tests = all_tests!();
 

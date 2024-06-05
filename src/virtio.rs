@@ -22,6 +22,7 @@ pub const VIRTIO_MMIO_DRIVER_DESC_LOW: u64 = 0x090; // physical address for avai
 pub const VIRTIO_MMIO_DRIVER_DESC_HIGH: u64 = 0x094;
 pub const VIRTIO_MMIO_DEVICE_DESC_LOW: u64 = 0x0a0; // physical address for used ring, write-only
 pub const VIRTIO_MMIO_DEVICE_DESC_HIGH: u64 = 0x0a4;
+pub const VIRTIO_MMIO_CONFIG: u64 = 0x100;
 
 pub fn virtio_reg(id: u64, reg: u64) -> &'static mut u32 {
     let addr = VIRTIO_MMIO_BASE + 0x1000 * id + reg;
