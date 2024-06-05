@@ -1,5 +1,7 @@
 #[allow(clippy::unwrap_used)]
 fn main() {
+    //println!("cargo::rerun-if-changed=testdisk.img");
+
     const NUM_SECTORS: usize = 10000;
     let mut testdisk_data = vec![0u8; NUM_SECTORS * 512];
     const MAGIC_CODE: u32 = 0x61732581;

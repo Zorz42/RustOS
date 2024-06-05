@@ -1,5 +1,5 @@
 use core::ptr::copy_nonoverlapping;
-use std::{deserialize, serialize, Serial, Vec, Box};
+use std::{deserialize, serialize, Serial, Vec, Box, println, print};
 
 use crate::disk::disk::Disk;
 use crate::memory::{map_page_auto, VirtAddr, DISK_OFFSET, PAGE_SIZE, unmap_page, BitSet};
@@ -99,7 +99,7 @@ impl MemoryDisk {
     }
 
     pub fn declare_read(&mut self, low_addr: u64, high_addr: u64) {
-        self.map_range(low_addr, high_addr, false);
+        self.map_range(low_addr, high_addr, true);
     }
 
     fn unmap_page(&mut self, page: i32) {
@@ -184,6 +184,8 @@ static mut MOUNTED_DISK: Option<Box<MemoryDisk>> = None;
 
 pub fn unmount_disk() {
     if let Some(mounted_disk) = unsafe { MOUNTED_DISK.as_mut() } {
+        let temp = mounted_disk.get_bitset_num_pages();
+        mounted_disk.declare_write(id_to_addr(1) as u64, id_to_addr(1) as u64 + temp as u64 * PAGE_SIZE);
         unsafe {
             mounted_disk.is_taken.as_mut().unwrap().store_to(id_to_addr(1) as *mut u64);
         }
