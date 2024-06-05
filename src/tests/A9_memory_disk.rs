@@ -3,7 +3,6 @@ use crate::disk::memory_disk::{get_mounted_disk, mount_disk, unmount_disk, DiskB
 use crate::tests::get_test_disk;
 use kernel_test::{kernel_test, kernel_test_mod};
 use std::{deserialize, serialize, Rng, Vec};
-use crate::{print, println};
 kernel_test_mod!(crate::tests::A9_memory_disk);
 
 #[kernel_test]
@@ -22,6 +21,7 @@ fn test_disk_persists() {
         for i in 0..PAGE_SIZE {
             data[i as usize] = rng.get(0, 1 << 8) as u8;
             unsafe {
+                get_mounted_disk().declare_write(addr.add(i as usize) as u64);
                 *addr.add(i as usize) = data[i as usize];
             }
         }
@@ -29,6 +29,7 @@ fn test_disk_persists() {
         mount_disk(get_test_disk());
         for i in 0..PAGE_SIZE {
             unsafe {
+                get_mounted_disk().declare_read(addr.add(i as usize) as u64);
                 assert_eq!(*addr.add(i as usize), data[i as usize]);
             }
         }

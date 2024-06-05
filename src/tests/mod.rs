@@ -20,7 +20,7 @@ mod A5_box;
 mod A6_vector;
 mod A7_string;
 mod A8_disk;
-//mod A9_memory_disk;
+mod A9_memory_disk;
 //mod B0_filesystem;
 
 pub trait KernelPerf {

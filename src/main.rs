@@ -41,9 +41,6 @@ pub fn main() {
         plicinit();
         plicinithart();
 
-        //let disk = &mut disks[0];
-        //disk.read(2);
-
         fence(Ordering::Release);
         unsafe {
             INITIALIZED = true;

@@ -203,7 +203,7 @@ impl BitSetRaw {
     }
 }
 
-/*pub struct BitSet {
+pub struct BitSet {
     bitset: BitSetRaw,
     data: Vec<u8>,
 }
@@ -230,4 +230,4 @@ impl DerefMut for BitSet {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.bitset
     }
-}*/
+}
