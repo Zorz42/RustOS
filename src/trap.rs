@@ -2,6 +2,7 @@ use crate::riscv::{get_core_id, get_scause, get_sepc, get_sip, get_sstatus, get_
 use crate::timer::tick;
 use std::println;
 use crate::disk::disk::disk_irq;
+use crate::plic::{plic_complete, plic_irq};
 
 extern "C" {
     fn kernelvec();
@@ -34,10 +35,11 @@ fn get_interrupt_type() -> InterruptType {
     let scause = get_scause();
 
     if (scause & 0x8000000000000000) != 0 && (scause & 0xff) == 9 {
-        let addr = 0x0c000000 + 0x201004 + get_core_id() * 0x2000;
-        let irq = unsafe { *(addr as *mut u32) };
+        let irq = plic_irq();
 
         disk_irq(irq);
+
+        plic_complete(irq);
 
         InterruptType::OtherDevice
 

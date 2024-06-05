@@ -12,6 +12,7 @@ use crate::trap::init_trap;
 use core::panic::PanicInfo;
 use core::sync::atomic::{fence, Ordering};
 use std::println;
+use crate::plic::{plicinit, plicinithart};
 
 mod boot;
 mod disk;
@@ -24,27 +25,7 @@ mod tests;
 mod timer;
 mod trap;
 mod virtio;
-
-fn plicinit() {
-    for irq in 0..=8 {
-        unsafe {
-            *(0x0c000000 as *mut u32).add(irq) = 1;
-        }
-    }
-}
-
-fn plicinithart() {
-    let val = 0b111111111;
-    let addr1 = 0x0c000000 + 0x2080 + get_core_id() * 0x100;
-    unsafe {
-        *(addr1 as *mut u32) = val;
-    }
-
-    let addr2 = 0x0c000000 + 0x201000 + get_core_id() * 0x2000;
-    unsafe {
-        *(addr2 as *mut u32) = 0;
-    }
-}
+mod plic;
 
 pub fn main() {
     static mut INITIALIZED: bool = false;

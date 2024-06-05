@@ -1,6 +1,6 @@
 use crate::tests::get_test_disk;
 use kernel_test::{kernel_test, kernel_test_mod};
-use std::{println, Rng};
+use std::{print, println, Rng};
 
 kernel_test_mod!(crate::tests::A8_disk);
 
@@ -10,15 +10,13 @@ fn test_disk_write() {
     let mut data = [0; 512];
     let test_disk = get_test_disk();
 
-    for i in 0..1000 {
-        for j in 0..512 {
-            data[j] = rng.get(0, 1 << 8) as u8;
+    for _ in 0..1000 {
+        for i in 0..512 {
+            data[i] = rng.get(0, 1 << 8) as u8;
         }
 
         let sector = rng.get(1, test_disk.size() as u64) as usize;
-        println!("Writing");
         test_disk.write(sector, &data);
-        println!("Done");
     }
 }
 
@@ -28,7 +26,7 @@ fn test_disk_read() {
     let mut data = [0; 512];
     let test_disk = get_test_disk();
 
-    for i in 0..1000 {
+    for _ in 0..1000 {
         let sector = rng.get(0, test_disk.size() as u64) as usize;
         data = test_disk.read(sector);
     }

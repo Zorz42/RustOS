@@ -1,3 +1,4 @@
+use core::arch::asm;
 use core::mem::size_of;
 use core::ptr::{addr_of, write_bytes};
 use core::sync::atomic::{fence, Ordering};
@@ -7,14 +8,14 @@ use std::{print, println, Vec};
 use crate::memory::{alloc_page, PAGE_SIZE};
 
 struct Buf {
-    valid: i32, // has data been read from disk?
+    //valid: i32, // has data been read from disk?
     disk: i32,  // does disk "own" buf?
-    dev: u32,
+    //dev: u32,
     sector: u32,
-    lock: Lock,
-    refcnt: u32,
-    prev: *mut Buf, // LRU cache list
-    next: *mut Buf,
+    //lock: Lock,
+    //refcnt: u32,
+    //prev: *mut Buf, // LRU cache list
+    //next: *mut Buf,
     data: [u8; 512],
 }
 
@@ -215,6 +216,8 @@ impl Disk {
     }
 
     fn virtio_disk_rw(&mut self, buf: &mut Buf, write: bool) {
+        self.vdisk_lock.spinlock();
+
         let idx = self.alloc_3desc().unwrap();
 
         let buf0 = unsafe { &mut *((&mut self.ops[idx[0]]) as *mut VirtioBlqReq) };
@@ -261,24 +264,32 @@ impl Disk {
 
         *virtio_reg(self.id, VIRTIO_MMIO_QUEUE_NOTIFY) = 0;
 
-        while buf.disk == 1 {}
+        while buf.disk == 1 {
+            self.vdisk_lock.unlock();
+            unsafe {
+                asm!("wfi");
+            }
+            self.vdisk_lock.spinlock();
+        }
 
         self.info[idx[0]].b = 0 as *mut Buf;
         self.free_chain(idx[0]);
+
+        self.vdisk_lock.unlock();
     }
 
     pub fn read(&mut self, sector: usize) -> [u8; 512] {
         assert!(sector < self.size);
 
         let mut buf = Buf {
-            valid: 0,
+            //valid: 0,
             disk: 0,
-            dev: 0,
+            //dev: 0,
             sector: sector as u32,
-            lock: Lock::new(),
-            refcnt: 0,
-            prev: 0 as *mut Buf,
-            next: 0 as *mut Buf,
+            //lock: Lock::new(),
+            //refcnt: 0,
+            //prev: 0 as *mut Buf,
+            //next: 0 as *mut Buf,
             data: [0; 512],
         };
 
@@ -292,14 +303,14 @@ impl Disk {
         assert!(sector < self.size);
 
         let mut buf = Buf {
-            valid: 0,
+            //valid: 0,
             disk: 0,
-            dev: 0,
+            //dev: 0,
             sector: sector as u32,
-            lock: Lock::new(),
-            refcnt: 0,
-            prev: 0 as *mut Buf,
-            next: 0 as *mut Buf,
+            //lock: Lock::new(),
+            //refcnt: 0,
+            //prev: 0 as *mut Buf,
+            //next: 0 as *mut Buf,
             data: data.clone(),
         };
 
@@ -335,6 +346,8 @@ pub fn disk_irq(irq: u32) {
 
     let disk = unsafe { &mut *disk_ptr };
 
+    disk.vdisk_lock.spinlock();
+
     *virtio_reg(id, VIRTIO_MMIO_INTERRUPT_ACK) = *virtio_reg(id, VIRTIO_MMIO_INTERRUPT_STATUS) & 0x3;
 
     fence(Ordering::Release);
@@ -352,4 +365,6 @@ pub fn disk_irq(irq: u32) {
 
         disk.used_idx += 1;
     }
+
+    disk.vdisk_lock.unlock();
 }
