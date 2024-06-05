@@ -282,6 +282,7 @@ impl<T: Serial> DiskBox<T> {
             let curr_size = usize::min(PAGE_SIZE as usize, data.size() - idx);
             let page = get_mounted_disk().alloc_page();
             self.pages.push(page);
+            get_mounted_disk().declare_write(id_to_addr(page) as u64, id_to_addr(page) as u64 + curr_size as u64);
             unsafe {
                 copy_nonoverlapping(data.get_unchecked(idx), id_to_addr(page), curr_size);
             }
@@ -303,6 +304,7 @@ impl<T: Serial> DiskBox<T> {
             self.obj.as_mut().unwrap()
         } else {
             let mut data = Vec::new();
+            get_mounted_disk().declare_read(self.translate(0) as u64, self.translate(self.size as usize - 1) as u64 + 1);
             for i in 0..self.size {
                 data.push(unsafe { *self.translate(i as usize) });
             }
