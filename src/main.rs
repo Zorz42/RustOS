@@ -33,6 +33,7 @@ pub fn main() {
     if get_core_id() == 0 {
         init_print();
         println!("Initializing kernel with core 0");
+
         init_trap();
         interrupts_enable(true);
         enable_fpu();
