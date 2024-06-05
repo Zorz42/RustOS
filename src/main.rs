@@ -11,7 +11,6 @@ use crate::tests::test_runner;
 use crate::trap::init_trap;
 use core::panic::PanicInfo;
 use std::println;
-use crate::uart::uart_init;
 
 mod boot;
 mod disk;
@@ -24,7 +23,27 @@ mod tests;
 mod timer;
 mod trap;
 mod virtio;
-mod uart;
+
+fn plicinit() {
+    for irq in 0..=8 {
+        unsafe {
+            *(0x0c000000 as *mut u32).add(irq) = 1;
+        }
+    }
+}
+
+fn plicinithart() {
+    let val = 0b11111111;
+    let addr1 = 0x0c000000 + 0x2080 + get_core_id() * 0x100;
+    unsafe {
+        *(addr1 as *mut u32) = val;
+    }
+
+    let addr2 = 0x0c000000 + 0x201000 + get_core_id() * 0x2000;
+    unsafe {
+        *(addr2 as *mut u32) = 0;
+    }
+}
 
 pub fn main() {
     static mut INITIALIZED: bool = false;
@@ -32,16 +51,18 @@ pub fn main() {
     if get_core_id() == 0 {
         init_print();
         println!("Initializing kernel with core 0");
-        uart_init();
         init_trap();
         interrupts_enable(true);
         enable_fpu();
         init_paging();
         let mut disks = scan_for_disks();
+        plicinit();
+        plicinithart();
 
         for disk in &mut disks {
             println!("Reading disk");
-            disk.read(0);
+            let data = disk.read(0);
+            println!("0x{:x}{:x}{:x}{:x}", data[508], data[509], data[510], data[511])
         }
 
         unsafe {
@@ -54,6 +75,7 @@ pub fn main() {
         interrupts_enable(true);
         enable_fpu();
         init_paging_hart();
+        plicinithart();
     }
 
     println!("Core {} has initialized", get_core_id());

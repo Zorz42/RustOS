@@ -1,6 +1,8 @@
 use crate::riscv::{get_core_id, get_scause, get_sepc, get_sip, get_sstatus, get_stval, interrupts_get, set_sip, set_stvec, SSTATUS_SPP};
 use crate::timer::tick;
 use std::println;
+use crate::disk::disk::disk_irq;
+
 extern "C" {
     fn kernelvec();
 }
@@ -11,9 +13,8 @@ extern "C" fn kerneltrap() {
     assert!(!interrupts_get());
 
     let ty = get_interrupt_type();
-    assert!(ty != InterruptType::Unknown);
 
-    if ty == InterruptType::OtherDevice {
+    if ty == InterruptType::Unknown {
         println!("Interrupt occurred");
         println!("Scause: {}", get_scause());
         println!("Sepc: 0x{:x}", get_sepc());
@@ -33,7 +34,13 @@ fn get_interrupt_type() -> InterruptType {
     let scause = get_scause();
 
     if (scause & 0x8000000000000000) != 0 && (scause & 0xff) == 9 {
-        todo!();
+        let addr = 0x0c000000 + 0x201004 + get_core_id() * 0x2000;
+        let irq = unsafe { *(addr as *mut u32) };
+
+        disk_irq(irq);
+
+        InterruptType::OtherDevice
+
     } else if scause == 0x8000000000000001 {
         if get_core_id() == 0 {
             tick();
@@ -47,7 +54,7 @@ fn get_interrupt_type() -> InterruptType {
 
         InterruptType::Timer
     } else {
-        InterruptType::OtherDevice
+        InterruptType::Unknown
     }
 }
 

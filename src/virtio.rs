@@ -70,11 +70,13 @@ pub struct VirtqAvail {
 
 // one entry in the "used" ring, with which the
 // device tells the driver about completed requests.
+#[repr(C)]
 pub struct VirtqUsedElem {
     pub id: u32, // index of start of completed descriptor chain
     pub len: u32,
 }
 
+#[repr(C)]
 pub struct VirtqUsed {
     pub flags: u16, // always zero
     pub idx: u16,   // device increments when it adds a ring[] entry
