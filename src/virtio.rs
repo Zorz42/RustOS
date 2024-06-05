@@ -94,6 +94,7 @@ pub const VIRTIO_BLK_T_OUT: u32 = 1; // write the disk
 // to be followed by two more descriptors containing
 // the block, and a one-byte status.
 #[derive(Clone, Copy)]
+#[repr(C)]
 pub struct VirtioBlqReq {
     pub typ: u32, // VIRTIO_BLK_T_IN or ..._OUT
     pub reserved: u32,

@@ -8,14 +8,8 @@ use std::{print, println, Vec};
 use crate::memory::{alloc_page, PAGE_SIZE};
 
 struct Buf {
-    //valid: i32, // has data been read from disk?
-    disk: i32,  // does disk "own" buf?
-    //dev: u32,
+    disk: i32,
     sector: u32,
-    //lock: Lock,
-    //refcnt: u32,
-    //prev: *mut Buf, // LRU cache list
-    //next: *mut Buf,
     data: [u8; 512],
 }
 
@@ -282,14 +276,8 @@ impl Disk {
         assert!(sector < self.size);
 
         let mut buf = Buf {
-            //valid: 0,
             disk: 0,
-            //dev: 0,
             sector: sector as u32,
-            //lock: Lock::new(),
-            //refcnt: 0,
-            //prev: 0 as *mut Buf,
-            //next: 0 as *mut Buf,
             data: [0; 512],
         };
 
@@ -303,14 +291,8 @@ impl Disk {
         assert!(sector < self.size);
 
         let mut buf = Buf {
-            //valid: 0,
             disk: 0,
-            //dev: 0,
             sector: sector as u32,
-            //lock: Lock::new(),
-            //refcnt: 0,
-            //prev: 0 as *mut Buf,
-            //next: 0 as *mut Buf,
             data: data.clone(),
         };
 
