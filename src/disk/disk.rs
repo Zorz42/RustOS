@@ -319,6 +319,9 @@ pub fn scan_for_disks() -> Vec<&'static mut Disk> {
 static mut DISKS: [*mut Disk; MAX_VIRTIO_ID as usize] = [0 as *mut Disk; MAX_VIRTIO_ID as usize];
 
 pub fn disk_irq(irq: u32) {
+    if irq == 0 || irq > MAX_VIRTIO_ID as u32 {
+        return;
+    }
     let id = irq as u64 - 1;
 
     let disk_ptr = unsafe { DISKS[id as usize] };
