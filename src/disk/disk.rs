@@ -4,7 +4,7 @@ use core::ptr::{addr_of, write_bytes};
 use core::sync::atomic::{fence, Ordering};
 use crate::spinlock::Lock;
 use crate::virtio::{virtio_reg, VirtioBlqReq, VirtqAvail, VirtqDesc, VirtqUsed, MAX_VIRTIO_ID, NUM, VIRTIO_BLK_F_CONFIG_WCE, VIRTIO_BLK_F_MQ, VIRTIO_BLK_F_RO, VIRTIO_BLK_F_SCSI, VIRTIO_CONFIG_S_ACKNOWLEDGE, VIRTIO_CONFIG_S_DRIVER, VIRTIO_F_ANY_LAYOUT, VIRTIO_MMIO_DEVICE_FEATURES, VIRTIO_MMIO_DEVICE_ID, VIRTIO_MMIO_DRIVER_FEATURES, VIRTIO_MMIO_MAGIC_VALUE, VIRTIO_MMIO_STATUS, VIRTIO_MMIO_VENDOR_ID, VIRTIO_MMIO_VERSION, VIRTIO_RING_F_EVENT_IDX, VIRTIO_RING_F_INDIRECT_DESC, VIRTIO_CONFIG_S_FEATURES_OK, VIRTIO_MMIO_QUEUE_SEL, VIRTIO_MMIO_QUEUE_READY, VIRTIO_MMIO_QUEUE_NUM_MAX, VIRTIO_MMIO_QUEUE_NUM, VIRTIO_MMIO_DEVICE_DESC_LOW, VIRTIO_MMIO_DEVICE_DESC_HIGH, VIRTIO_MMIO_QUEUE_DESC_LOW, VIRTIO_MMIO_QUEUE_DESC_HIGH, VIRTIO_MMIO_DRIVER_DESC_LOW, VIRTIO_MMIO_DRIVER_DESC_HIGH, VIRTIO_CONFIG_S_DRIVER_OK, VRING_DESC_F_NEXT, VIRTIO_BLK_T_OUT, VIRTIO_BLK_T_IN, VRING_DESC_F_WRITE, VIRTIO_MMIO_QUEUE_NOTIFY, VIRTIO_MMIO_INTERRUPT_ACK, VIRTIO_MMIO_INTERRUPT_STATUS, VIRTIO_MMIO_CONFIG};
-use std::{print, println, Vec};
+use std::{Vec};
 use crate::memory::{alloc_page, PAGE_SIZE};
 
 struct Buf {
@@ -307,7 +307,7 @@ impl Disk {
 
 pub fn scan_for_disks() -> Vec<&'static mut Disk> {
     let mut vec = Vec::new();
-    for id in 0..=MAX_VIRTIO_ID {
+    for id in 0..MAX_VIRTIO_ID {
         if let Some(disk) = get_disk_at(id) {
             vec.push(disk);
         }
@@ -316,10 +316,10 @@ pub fn scan_for_disks() -> Vec<&'static mut Disk> {
     vec
 }
 
-static mut DISKS: [*mut Disk; (MAX_VIRTIO_ID + 1) as usize] = [0 as *mut Disk; (MAX_VIRTIO_ID + 1) as usize];
+static mut DISKS: [*mut Disk; MAX_VIRTIO_ID as usize] = [0 as *mut Disk; MAX_VIRTIO_ID as usize];
 
 pub fn disk_irq(irq: u32) {
-    let id = irq as u64;
+    let id = irq as u64 - 1;
 
     let disk_ptr = unsafe { DISKS[id as usize] };
     if disk_ptr == 0 as *mut Disk {

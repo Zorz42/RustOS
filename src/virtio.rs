@@ -1,7 +1,7 @@
 pub const MAX_VIRTIO_ID: u64 = 8;
 
 // virtio mmio control registers, mapped starting at 0x10000000 + 0x1000 * id.
-pub const VIRTIO_MMIO_BASE: u64 = 0x10000000;
+pub const VIRTIO_MMIO_BASE: u64 = 0x10001000;
 pub const VIRTIO_MMIO_MAGIC_VALUE: u64 = 0x000; // 0x74726976
 pub const VIRTIO_MMIO_VERSION: u64 = 0x004; // version; should be 2
 pub const VIRTIO_MMIO_DEVICE_ID: u64 = 0x008; // device type; 1 is net, 2 is disk
