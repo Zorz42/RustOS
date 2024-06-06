@@ -3,7 +3,7 @@ use core::mem::size_of;
 use core::ptr::{addr_of, write_bytes};
 use core::sync::atomic::{fence, Ordering};
 use crate::spinlock::Lock;
-use crate::virtio::{virtio_reg, VirtioBlqReq, VirtqAvail, VirtqDesc, VirtqUsed, MAX_VIRTIO_ID, NUM, VIRTIO_BLK_F_CONFIG_WCE, VIRTIO_BLK_F_MQ, VIRTIO_BLK_F_RO, VIRTIO_BLK_F_SCSI, VIRTIO_CONFIG_S_ACKNOWLEDGE, VIRTIO_CONFIG_S_DRIVER, VIRTIO_F_ANY_LAYOUT, VIRTIO_MMIO_DEVICE_FEATURES, VIRTIO_MMIO_DEVICE_ID, VIRTIO_MMIO_DRIVER_FEATURES, VIRTIO_MMIO_MAGIC_VALUE, VIRTIO_MMIO_STATUS, VIRTIO_MMIO_VENDOR_ID, VIRTIO_MMIO_VERSION, VIRTIO_RING_F_EVENT_IDX, VIRTIO_RING_F_INDIRECT_DESC, VIRTIO_CONFIG_S_FEATURES_OK, VIRTIO_MMIO_QUEUE_SEL, VIRTIO_MMIO_QUEUE_READY, VIRTIO_MMIO_QUEUE_NUM_MAX, VIRTIO_MMIO_QUEUE_NUM, VIRTIO_MMIO_DEVICE_DESC_LOW, VIRTIO_MMIO_DEVICE_DESC_HIGH, VIRTIO_MMIO_QUEUE_DESC_LOW, VIRTIO_MMIO_QUEUE_DESC_HIGH, VIRTIO_MMIO_DRIVER_DESC_LOW, VIRTIO_MMIO_DRIVER_DESC_HIGH, VIRTIO_CONFIG_S_DRIVER_OK, VRING_DESC_F_NEXT, VIRTIO_BLK_T_OUT, VIRTIO_BLK_T_IN, VRING_DESC_F_WRITE, VIRTIO_MMIO_QUEUE_NOTIFY, VIRTIO_MMIO_INTERRUPT_ACK, VIRTIO_MMIO_INTERRUPT_STATUS, VIRTIO_MMIO_CONFIG};
+use crate::virtio::{virtio_reg, VirtioBlqReq, VirtqAvail, VirtqDesc, VirtqUsed, MmioOffset, NUM, VIRTIO_CONFIG_S_ACKNOWLEDGE, VIRTIO_CONFIG_S_DRIVER, VIRTIO_BLK_F_RO, VIRTIO_BLK_F_SCSI, VIRTIO_BLK_F_CONFIG_WCE, VIRTIO_BLK_F_MQ, VIRTIO_F_ANY_LAYOUT, VIRTIO_RING_F_EVENT_IDX, VIRTIO_RING_F_INDIRECT_DESC, VIRTIO_CONFIG_S_FEATURES_OK, VIRTIO_CONFIG_S_DRIVER_OK, VRING_DESC_F_NEXT, VIRTIO_BLK_T_OUT, VIRTIO_BLK_T_IN, VRING_DESC_F_WRITE, MAX_VIRTIO_ID};
 use std::{Vec};
 use crate::memory::{alloc_page, PAGE_SIZE};
 use crate::riscv::get_core_id;
@@ -62,10 +62,10 @@ pub struct Disk {
 }
 
 pub fn get_disk_at(id: u64) -> Option<&'static mut Disk> {
-    if (*virtio_reg(id, VIRTIO_MMIO_MAGIC_VALUE) != 0x74726976
-        || *virtio_reg(id, VIRTIO_MMIO_VERSION) != 2
-        || *virtio_reg(id, VIRTIO_MMIO_DEVICE_ID) != 2
-        || *virtio_reg(id, VIRTIO_MMIO_VENDOR_ID) != 0x554d4551)
+    if (*virtio_reg(id, MmioOffset::MagicValue) != 0x74726976
+        || *virtio_reg(id, MmioOffset::Version) != 2
+        || *virtio_reg(id, MmioOffset::DeviceId) != 2
+        || *virtio_reg(id, MmioOffset::VendorId) != 0x554d4551)
     {
         return None;
     }
@@ -93,13 +93,13 @@ pub fn get_disk_at(id: u64) -> Option<&'static mut Disk> {
     let mut status = 0;
 
     status |= VIRTIO_CONFIG_S_ACKNOWLEDGE;
-    *virtio_reg(id, VIRTIO_MMIO_STATUS) = status;
+    *virtio_reg(id, MmioOffset::Status) = status;
 
     status |= VIRTIO_CONFIG_S_DRIVER;
-    *virtio_reg(id, VIRTIO_MMIO_STATUS) = status;
+    *virtio_reg(id, MmioOffset::Status) = status;
 
     // negotiate features
-    let mut features = *virtio_reg(id, VIRTIO_MMIO_DEVICE_FEATURES);
+    let mut features = *virtio_reg(id, MmioOffset::DeviceFeatures);
     features &= !(1 << VIRTIO_BLK_F_RO);
     features &= !(1 << VIRTIO_BLK_F_SCSI);
     features &= !(1 << VIRTIO_BLK_F_CONFIG_WCE);
@@ -107,21 +107,21 @@ pub fn get_disk_at(id: u64) -> Option<&'static mut Disk> {
     features &= !(1 << VIRTIO_F_ANY_LAYOUT);
     features &= !(1 << VIRTIO_RING_F_EVENT_IDX);
     features &= !(1 << VIRTIO_RING_F_INDIRECT_DESC);
-    *virtio_reg(id, VIRTIO_MMIO_DRIVER_FEATURES) = features;
+    *virtio_reg(id, MmioOffset::DriverFeatures) = features;
 
     status |= VIRTIO_CONFIG_S_FEATURES_OK;
-    *virtio_reg(id, VIRTIO_MMIO_STATUS) = status;
+    *virtio_reg(id, MmioOffset::Status) = status;
 
 
     // reread and check
-    status = *virtio_reg(id, VIRTIO_MMIO_STATUS);
+    status = *virtio_reg(id, MmioOffset::Status);
     assert_eq!(status & VIRTIO_CONFIG_S_FEATURES_OK, VIRTIO_CONFIG_S_FEATURES_OK);
 
-    *virtio_reg(id, VIRTIO_MMIO_QUEUE_SEL) = 0;
+    *virtio_reg(id, MmioOffset::QueueSel) = 0;
 
-    assert_eq!(*virtio_reg(id, VIRTIO_MMIO_QUEUE_READY), 0);
+    assert_eq!(*virtio_reg(id, MmioOffset::QueueReady), 0);
 
-    assert!(*virtio_reg(id, VIRTIO_MMIO_QUEUE_NUM_MAX) >= NUM as u32);
+    assert!(*virtio_reg(id, MmioOffset::QueueNumMax) >= NUM as u32);
 
     disk.desc = alloc_page() as *mut VirtqDesc;
     disk.avail = alloc_page() as *mut VirtqAvail;
@@ -133,24 +133,24 @@ pub fn get_disk_at(id: u64) -> Option<&'static mut Disk> {
         write_bytes(disk.used as *mut u8, 0, PAGE_SIZE as usize);
     }
 
-    *virtio_reg(id, VIRTIO_MMIO_QUEUE_NUM) = NUM as u32;
+    *virtio_reg(id, MmioOffset::QueueNum) = NUM as u32;
 
-    *virtio_reg(id, VIRTIO_MMIO_QUEUE_DESC_LOW) = (disk.desc as u64 & 0xFFFFFFFF) as u32;
-    *virtio_reg(id, VIRTIO_MMIO_QUEUE_DESC_HIGH) = ((disk.desc as u64 >> 32) & 0xFFFFFFFF) as u32;
-    *virtio_reg(id, VIRTIO_MMIO_DRIVER_DESC_LOW) = (disk.avail as u64 & 0xFFFFFFFF) as u32;
-    *virtio_reg(id, VIRTIO_MMIO_DRIVER_DESC_HIGH) = ((disk.avail as u64 >> 32) & 0xFFFFFFFF) as u32;
-    *virtio_reg(id, VIRTIO_MMIO_DEVICE_DESC_LOW) = (disk.used as u64 & 0xFFFFFFFF) as u32;
-    *virtio_reg(id, VIRTIO_MMIO_DEVICE_DESC_HIGH) = ((disk.used as u64 >> 32) & 0xFFFFFFFF) as u32;
+    *virtio_reg(id, MmioOffset::QueueDescLow) = (disk.desc as u64 & 0xFFFFFFFF) as u32;
+    *virtio_reg(id, MmioOffset::QueueDescHigh) = ((disk.desc as u64 >> 32) & 0xFFFFFFFF) as u32;
+    *virtio_reg(id, MmioOffset::DriverDescLow) = (disk.avail as u64 & 0xFFFFFFFF) as u32;
+    *virtio_reg(id, MmioOffset::DriverDescHigh) = ((disk.avail as u64 >> 32) & 0xFFFFFFFF) as u32;
+    *virtio_reg(id, MmioOffset::DeviceDescLow) = (disk.used as u64 & 0xFFFFFFFF) as u32;
+    *virtio_reg(id, MmioOffset::DeviceDescHigh) = ((disk.used as u64 >> 32) & 0xFFFFFFFF) as u32;
 
     // queue is ready
-    *virtio_reg(id, VIRTIO_MMIO_QUEUE_READY) = 1;
+    *virtio_reg(id, MmioOffset::QueueReady) = 1;
 
     // we are completely ready
     status |= VIRTIO_CONFIG_S_DRIVER_OK;
-    *virtio_reg(id, VIRTIO_MMIO_STATUS) = status;
+    *virtio_reg(id, MmioOffset::Status) = status;
 
     // get the disk size
-    disk.size = *virtio_reg(id, VIRTIO_MMIO_CONFIG) as usize;
+    disk.size = *virtio_reg(id, MmioOffset::Config) as usize;
 
     Some(disk)
 }
@@ -260,7 +260,7 @@ impl Disk {
 
         fence(Ordering::Release);
 
-        *virtio_reg(self.id, VIRTIO_MMIO_QUEUE_NOTIFY) = 0;
+        *virtio_reg(self.id, MmioOffset::QueueNotify) = 0;
 
         self.vdisk_lock.unlock();
         if self.irq_waiting {
@@ -348,7 +348,7 @@ pub fn disk_irq(irq: u32) {
     }
     disk.vdisk_lock.spinlock();
 
-    *virtio_reg(id, VIRTIO_MMIO_INTERRUPT_ACK) = *virtio_reg(id, VIRTIO_MMIO_INTERRUPT_STATUS) & 0x3;
+    *virtio_reg(id, MmioOffset::InterruptAck) = *virtio_reg(id, MmioOffset::InterruptStatus) & 0x3;
 
     fence(Ordering::Release);
 

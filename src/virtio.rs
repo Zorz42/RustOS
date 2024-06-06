@@ -2,30 +2,37 @@ pub const MAX_VIRTIO_ID: u64 = 8;
 
 // virtio mmio control registers, mapped starting at 0x10000000 + 0x1000 * id.
 pub const VIRTIO_MMIO_BASE: u64 = 0x10001000;
-pub const VIRTIO_MMIO_MAGIC_VALUE: u64 = 0x000; // 0x74726976
-pub const VIRTIO_MMIO_VERSION: u64 = 0x004; // version; should be 2
-pub const VIRTIO_MMIO_DEVICE_ID: u64 = 0x008; // device type; 1 is net, 2 is disk
-pub const VIRTIO_MMIO_VENDOR_ID: u64 = 0x00c; // 0x554d4551
-pub const VIRTIO_MMIO_DEVICE_FEATURES: u64 = 0x010;
-pub const VIRTIO_MMIO_DRIVER_FEATURES: u64 = 0x020;
-pub const VIRTIO_MMIO_QUEUE_SEL: u64 = 0x030; // select queue, write-only
-pub const VIRTIO_MMIO_QUEUE_NUM_MAX: u64 = 0x034; // max size of current queue, read-only
-pub const VIRTIO_MMIO_QUEUE_NUM: u64 = 0x038; // size of current queue, write-only
-pub const VIRTIO_MMIO_QUEUE_READY: u64 = 0x044; // ready bit
-pub const VIRTIO_MMIO_QUEUE_NOTIFY: u64 = 0x050; // write-only
-pub const VIRTIO_MMIO_INTERRUPT_STATUS: u64 = 0x060; // read-only
-pub const VIRTIO_MMIO_INTERRUPT_ACK: u64 = 0x064; // write-only
-pub const VIRTIO_MMIO_STATUS: u64 = 0x070; // read/write
-pub const VIRTIO_MMIO_QUEUE_DESC_LOW: u64 = 0x080; // physical address for descriptor table, write-only
-pub const VIRTIO_MMIO_QUEUE_DESC_HIGH: u64 = 0x084;
-pub const VIRTIO_MMIO_DRIVER_DESC_LOW: u64 = 0x090; // physical address for available ring, write-only
-pub const VIRTIO_MMIO_DRIVER_DESC_HIGH: u64 = 0x094;
-pub const VIRTIO_MMIO_DEVICE_DESC_LOW: u64 = 0x0a0; // physical address for used ring, write-only
-pub const VIRTIO_MMIO_DEVICE_DESC_HIGH: u64 = 0x0a4;
-pub const VIRTIO_MMIO_CONFIG: u64 = 0x100;
+pub enum MmioOffset {
+    MagicValue = 0x000,
+    Version = 0x004,
+    DeviceId = 0x008,
+    VendorId = 0x00c,
+    DeviceFeatures = 0x010,
+    DeviceFeaturesSel = 0x014,
+    DriverFeatures = 0x020,
+    DriverFeaturesSel = 0x024,
+    DriverPageSize = 0x028,
+    QueueSel = 0x030,
+    QueueNumMax = 0x034,
+    QueueNum = 0x038,
+    QueueAlign = 0x03c,
+    QueuePfn = 0x040,
+    QueueReady = 0x044,
+    QueueNotify = 0x050,
+    InterruptStatus = 0x060,
+    InterruptAck = 0x064,
+    Status = 0x070,
+    QueueDescLow = 0x080,
+    QueueDescHigh = 0x084,
+    DriverDescLow = 0x090,
+    DriverDescHigh = 0x094,
+    DeviceDescLow = 0x0a0,
+    DeviceDescHigh = 0x0a4,
+    Config = 0x100,
+}
 
-pub fn virtio_reg(id: u64, reg: u64) -> &'static mut u32 {
-    let addr = VIRTIO_MMIO_BASE + 0x1000 * id + reg;
+pub fn virtio_reg(id: u64, reg: MmioOffset) -> &'static mut u32 {
+    let addr = VIRTIO_MMIO_BASE + 0x1000 * id + reg as u64;
     unsafe { &mut *(addr as *mut u32) }
 }
 
