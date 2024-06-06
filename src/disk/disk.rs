@@ -6,6 +6,7 @@ use crate::spinlock::Lock;
 use crate::virtio::{virtio_reg, VirtioBlqReq, VirtqAvail, VirtqDesc, VirtqUsed, MAX_VIRTIO_ID, NUM, VIRTIO_BLK_F_CONFIG_WCE, VIRTIO_BLK_F_MQ, VIRTIO_BLK_F_RO, VIRTIO_BLK_F_SCSI, VIRTIO_CONFIG_S_ACKNOWLEDGE, VIRTIO_CONFIG_S_DRIVER, VIRTIO_F_ANY_LAYOUT, VIRTIO_MMIO_DEVICE_FEATURES, VIRTIO_MMIO_DEVICE_ID, VIRTIO_MMIO_DRIVER_FEATURES, VIRTIO_MMIO_MAGIC_VALUE, VIRTIO_MMIO_STATUS, VIRTIO_MMIO_VENDOR_ID, VIRTIO_MMIO_VERSION, VIRTIO_RING_F_EVENT_IDX, VIRTIO_RING_F_INDIRECT_DESC, VIRTIO_CONFIG_S_FEATURES_OK, VIRTIO_MMIO_QUEUE_SEL, VIRTIO_MMIO_QUEUE_READY, VIRTIO_MMIO_QUEUE_NUM_MAX, VIRTIO_MMIO_QUEUE_NUM, VIRTIO_MMIO_DEVICE_DESC_LOW, VIRTIO_MMIO_DEVICE_DESC_HIGH, VIRTIO_MMIO_QUEUE_DESC_LOW, VIRTIO_MMIO_QUEUE_DESC_HIGH, VIRTIO_MMIO_DRIVER_DESC_LOW, VIRTIO_MMIO_DRIVER_DESC_HIGH, VIRTIO_CONFIG_S_DRIVER_OK, VRING_DESC_F_NEXT, VIRTIO_BLK_T_OUT, VIRTIO_BLK_T_IN, VRING_DESC_F_WRITE, VIRTIO_MMIO_QUEUE_NOTIFY, VIRTIO_MMIO_INTERRUPT_ACK, VIRTIO_MMIO_INTERRUPT_STATUS, VIRTIO_MMIO_CONFIG};
 use std::{Vec};
 use crate::memory::{alloc_page, PAGE_SIZE};
+use crate::riscv::get_core_id;
 
 struct Buf {
     disk: i32,
@@ -56,6 +57,8 @@ pub struct Disk {
     id: u64,
 
     size: usize,
+
+    irq_waiting: bool, // if an irq was cancelled because it was locked. do it when it unlocks
 }
 
 pub fn get_disk_at(id: u64) -> Option<&'static mut Disk> {
@@ -80,6 +83,7 @@ pub fn get_disk_at(id: u64) -> Option<&'static mut Disk> {
         vdisk_lock: Lock::new(),
         id,
         size: 0,
+        irq_waiting: false,
     };
 
     unsafe {
@@ -258,18 +262,25 @@ impl Disk {
 
         *virtio_reg(self.id, VIRTIO_MMIO_QUEUE_NOTIFY) = 0;
 
+        self.vdisk_lock.unlock();
+        if self.irq_waiting {
+            disk_irq(self.id as u32 + 1);
+        }
         while buf.disk == 1 {
-            self.vdisk_lock.unlock();
             unsafe {
                 asm!("wfi");
             }
-            self.vdisk_lock.spinlock();
         }
+        self.vdisk_lock.spinlock();
 
         self.info[idx[0]].b = 0 as *mut Buf;
         self.free_chain(idx[0]);
 
         self.vdisk_lock.unlock();
+
+        if self.irq_waiting {
+            disk_irq(self.id as u32 + 1);
+        }
     }
 
     pub fn read(&mut self, sector: usize) -> [u8; 512] {
@@ -331,6 +342,10 @@ pub fn disk_irq(irq: u32) {
 
     let disk = unsafe { &mut *disk_ptr };
 
+    if disk.vdisk_lock.locked_by() == get_core_id() as i32 {
+        disk.irq_waiting = true;
+        return;
+    }
     disk.vdisk_lock.spinlock();
 
     *virtio_reg(id, VIRTIO_MMIO_INTERRUPT_ACK) = *virtio_reg(id, VIRTIO_MMIO_INTERRUPT_STATUS) & 0x3;

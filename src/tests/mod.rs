@@ -9,6 +9,7 @@ use crate::memory::bitset_size_bytes;
 use crate::print::{reset_print_color, set_print_color, TextColor};
 use crate::timer::get_ticks;
 use kernel_test::all_tests;
+use crate::disk::filesystem::get_fs;
 //use crate::disk::filesystem::get_fs;
 
 mod A0_rand;
@@ -99,16 +100,16 @@ pub fn test_runner(disks: &mut Vec<&'static mut Disk>) {
     reset_print_color();
 }
 
-/*pub fn perf_test_runner() {
+pub fn perf_test_runner() {
     set_print_color(TextColor::Pink, TextColor::Black);
     all_perf_tests!();
     println!();
     reset_print_color();
-}*/
+}
 
-/*const PERF_COOLDOWN_DURATION_MS: u32 = 1000;
-const PERF_WARMUP_DURATION_MS: u32 = 1000;
-const PERF_TEST_DURATION_MS: u32 = 3000;
+const PERF_COOLDOWN_DURATION_MS: u64 = 1000;
+const PERF_WARMUP_DURATION_MS: u64 = 1000;
+const PERF_TEST_DURATION_MS: u64 = 3000;
 const PERF_FILE: &str = "perf.data";
 const PERF_FILE_SAVE: &str = "perf-new.data";
 
@@ -224,4 +225,4 @@ fn run_perf_test<T: KernelPerf>(name: &str) {
     println!();
 
     save_perf_data(name, perf_ms);
-}*/
+}
