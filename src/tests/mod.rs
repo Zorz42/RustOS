@@ -165,7 +165,7 @@ fn run_perf_test<T: KernelPerf>(name: &str) {
     let start_time = get_ticks();
     while get_ticks() - start_time < PERF_COOLDOWN_DURATION_MS {
         unsafe {
-            asm!("hlt");
+            asm!("wfi");
         }
     }
 

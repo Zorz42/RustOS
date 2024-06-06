@@ -5,6 +5,7 @@ edition = "2021"
 
 [features]
 run_tests = []
+run_perf = []
 
 [profile.dev]
 opt-level = 0
