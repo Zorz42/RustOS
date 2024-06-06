@@ -26,6 +26,7 @@ mod timer;
 mod trap;
 mod virtio;
 mod plic;
+mod keyboard;
 
 fn find_root_disk(disks: &mut Vec<&'static mut Disk>) -> &'static mut Disk {
     let mut root_disk = None;
@@ -63,9 +64,10 @@ pub fn main() {
         interrupts_enable(true);
         enable_fpu();
         init_paging();
-        let mut disks = scan_for_disks();
         plicinit();
         plicinithart();
+
+        let mut disks = scan_for_disks();
 
         #[cfg(feature = "run_tests")]
         {
