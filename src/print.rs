@@ -66,8 +66,8 @@ impl Writer {
     fn write_char(&mut self, c: u8) {
         let addr = 0x10000000 as *mut u8;
         unsafe {
-            while *addr.add(5) & (1 << 5) == 0 {}
-            *addr = c;
+            while addr.add(5).read_volatile() & (1 << 5) == 0 {}
+            addr.write_volatile(c);
         }
     }
 

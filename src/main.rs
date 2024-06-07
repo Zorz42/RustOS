@@ -26,7 +26,7 @@ mod timer;
 mod trap;
 mod virtio;
 mod plic;
-mod keyboard;
+mod input;
 
 fn find_root_disk(disks: &mut Vec<&'static mut Disk>) -> &'static mut Disk {
     let mut root_disk = None;

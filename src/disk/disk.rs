@@ -3,7 +3,7 @@ use core::mem::size_of;
 use core::ptr::{addr_of, write_bytes};
 use core::sync::atomic::{fence, Ordering};
 use crate::spinlock::Lock;
-use crate::virtio::{virtio_reg_read, VirtioBlqReq, VirtqAvail, VirtqDesc, VirtqUsed, MmioOffset, NUM, VIRTIO_CONFIG_S_ACKNOWLEDGE, VIRTIO_CONFIG_S_DRIVER, VIRTIO_BLK_F_RO, VIRTIO_BLK_F_SCSI, VIRTIO_BLK_F_CONFIG_WCE, VIRTIO_BLK_F_MQ, VIRTIO_F_ANY_LAYOUT, VIRTIO_RING_F_EVENT_IDX, VIRTIO_RING_F_INDIRECT_DESC, VIRTIO_CONFIG_S_FEATURES_OK, VIRTIO_CONFIG_S_DRIVER_OK, VRING_DESC_F_NEXT, VIRTIO_BLK_T_OUT, VIRTIO_BLK_T_IN, VRING_DESC_F_WRITE, MAX_VIRTIO_ID, virtio_reg_write};
+use crate::virtio::{virtio_reg_read, VirtioBlqReq, VirtqAvail, VirtqDesc, VirtqUsed, MmioOffset, NUM, VIRTIO_CONFIG_S_ACKNOWLEDGE, VIRTIO_CONFIG_S_DRIVER, VIRTIO_BLK_F_RO, VIRTIO_BLK_F_SCSI, VIRTIO_BLK_F_CONFIG_WCE, VIRTIO_BLK_F_MQ, VIRTIO_F_ANY_LAYOUT, VIRTIO_RING_F_EVENT_IDX, VIRTIO_RING_F_INDIRECT_DESC, VIRTIO_CONFIG_S_FEATURES_OK, VIRTIO_CONFIG_S_DRIVER_OK, VRING_DESC_F_NEXT, VIRTIO_BLK_T_OUT, VIRTIO_BLK_T_IN, VRING_DESC_F_WRITE, MAX_VIRTIO_ID, virtio_reg_write, VIRTIO_MAGIC};
 use std::{Vec};
 use crate::memory::{alloc_page, PAGE_SIZE};
 use crate::riscv::get_core_id;
@@ -62,7 +62,7 @@ pub struct Disk {
 }
 
 pub fn get_disk_at(id: u64) -> Option<&'static mut Disk> {
-    if (virtio_reg_read(id, MmioOffset::MagicValue) != 0x74726976
+    if (virtio_reg_read(id, MmioOffset::MagicValue) != VIRTIO_MAGIC
         || virtio_reg_read(id, MmioOffset::Version) != 2
         || virtio_reg_read(id, MmioOffset::DeviceId) != 2
         || virtio_reg_read(id, MmioOffset::VendorId) != 0x554d4551)
