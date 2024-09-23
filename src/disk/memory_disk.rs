@@ -1,5 +1,5 @@
 use core::ptr::copy_nonoverlapping;
-use std::{deserialize, serialize, Serial, Vec, Box, println, print};
+use std::{deserialize, serialize, Serial, Vec, Box};
 
 use crate::disk::disk::Disk;
 use crate::memory::{map_page_auto, VirtAddr, DISK_OFFSET, PAGE_SIZE, unmap_page, BitSet};
@@ -12,7 +12,7 @@ pub struct MemoryDisk {
     in_vec: BitSet, // which page is in vector
 }
 
-fn id_to_addr(page: i32) -> *mut u8 {
+const fn id_to_addr(page: i32) -> *mut u8 {
     (DISK_OFFSET + page as u64 * PAGE_SIZE) as *mut u8
 }
 
@@ -74,7 +74,7 @@ impl MemoryDisk {
             for sector in first_sector..first_sector + 8 {
                 let mut data = self.disk.read(sector as usize);
                 unsafe {
-                    copy_nonoverlapping(data.as_mut_ptr(), (DISK_OFFSET + sector * 512) as *mut u8, 512)
+                    copy_nonoverlapping(data.as_mut_ptr(), (DISK_OFFSET + sector * 512) as *mut u8, 512);
                 }
             }
         }
@@ -300,9 +300,7 @@ impl<T: Serial> DiskBox<T> {
     }
 
     pub fn get(&mut self) -> &mut T {
-        if self.obj.is_some() {
-            self.obj.as_mut().unwrap()
-        } else {
+        if self.obj.is_none() {
             let mut data = Vec::new();
             get_mounted_disk().declare_read(self.translate(0) as u64, self.translate(self.size as usize - 1) as u64 + 1);
             for i in 0..self.size {
@@ -311,8 +309,8 @@ impl<T: Serial> DiskBox<T> {
 
             let obj = deserialize(&data);
             self.obj = Some(obj);
-            self.obj.as_mut().unwrap()
         }
+        self.obj.as_mut().unwrap()
     }
 
     // same as *get() = obj, but does not load it from disk

@@ -1,5 +1,6 @@
 use crate::spinlock::Lock;
 use core::fmt;
+use core::fmt::Write;
 
 #[allow(dead_code)]
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -22,7 +23,7 @@ pub enum TextColor {
     White,
 }
 
-fn text_color_to_rgb(color: TextColor) -> (u8, u8, u8) {
+const fn text_color_to_rgb(color: TextColor) -> (u8, u8, u8) {
     match color {
         TextColor::Black => (0, 0, 0),
         TextColor::Blue => (0, 0, 170),
@@ -49,9 +50,17 @@ struct Writer {
     background_color: (u8, u8, u8),
 }
 
+fn write_byte(c: u8) {
+    let addr = 0x10000000 as *mut u8;
+    unsafe {
+        while addr.add(5).read_volatile() & (1 << 5) == 0 {}
+        addr.write_volatile(c);
+    }
+}
+
 impl Writer {
-    const fn new() -> Writer {
-        Writer {
+    const fn new() -> Self {
+        Self {
             x: 0,
             text_color: (255, 255, 255),
             background_color: (0, 0, 0),
@@ -61,14 +70,6 @@ impl Writer {
     fn set_color(&mut self, text_color: TextColor, background_color: TextColor) {
         self.text_color = text_color_to_rgb(text_color);
         self.background_color = text_color_to_rgb(background_color);
-    }
-
-    fn write_char(&mut self, c: u8) {
-        let addr = 0x10000000 as *mut u8;
-        unsafe {
-            while addr.add(5).read_volatile() & (1 << 5) == 0 {}
-            addr.write_volatile(c);
-        }
     }
 
     fn move_cursor_back(&mut self) {
@@ -89,17 +90,16 @@ pub fn init_print() {
 #[doc(hidden)]
 pub fn _print(args: fmt::Arguments) {
     PRINT_LOCK.spinlock();
-    use core::fmt::Write;
     unsafe {
         WRITER.write_fmt(args).unwrap();
     }
     PRINT_LOCK.unlock();
 }
 
-impl fmt::Write for Writer {
+impl Write for Writer {
     fn write_str(&mut self, s: &str) -> fmt::Result {
         for c in s.bytes() {
-            self.write_char(c);
+            write_byte(c);
         }
         Ok(())
     }

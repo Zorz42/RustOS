@@ -30,7 +30,7 @@ impl Lock {
         assert_eq!(unsafe { amoswap(&self.acquired as *const i32 as *mut i32, 0) }, 1);
     }
 
-    pub fn locked_by(&self) -> i32 {
+    pub const fn locked_by(&self) -> i32 {
         if self.acquired == 0 {
             -1
         } else {

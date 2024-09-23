@@ -118,7 +118,7 @@ impl Directory {
     }
 
     // path is reversed, so you can pop it when going to the next folder
-    fn get_directory_full(&mut self, mut path: Vec<String>) -> Option<&mut Directory> {
+    fn get_directory_full(&mut self, mut path: Vec<String>) -> Option<&mut Self> {
         if let Some(dir) = path.pop() {
             if let Some(subdir) = self.get_directory(&dir) {
                 subdir.get_directory_full(path)
@@ -130,7 +130,7 @@ impl Directory {
         }
     }
 
-    pub fn get_directory(&mut self, name: &String) -> Option<&mut Directory> {
+    pub fn get_directory(&mut self, name: &String) -> Option<&mut Self> {
         for subdir in &mut self.subdirs {
             if subdir.get().name == *name {
                 return Some(subdir.get());
@@ -143,11 +143,11 @@ impl Directory {
         (&mut self.files).into_iter().find(|file| file.name == *name)
     }
 
-    pub fn create_directory(&mut self, name: String) -> &mut Directory {
+    pub fn create_directory(&mut self, name: String) -> &mut Self {
         if self.get_directory(&name).is_some() {
             self.get_directory(&name).unwrap()
         } else {
-            self.subdirs.push(DiskBox::new(Directory::new(name))).get()
+            self.subdirs.push(DiskBox::new(Self::new(name))).get()
         }
     }
 
@@ -159,7 +159,7 @@ impl Directory {
         }
     }
 
-    fn create_directory_full(&mut self, mut dirs: Vec<String>) -> &mut Directory {
+    fn create_directory_full(&mut self, mut dirs: Vec<String>) -> &mut Self {
         if let Some(dir_name) = dirs.pop() {
             let dir = self.create_directory(dir_name);
             dir.create_directory_full(dirs)
@@ -195,7 +195,7 @@ impl Directory {
         swap(&mut self.subdirs, &mut old_dirs);
 
         for mut dir in old_dirs {
-            if (dir.get().name == *name) {
+            if dir.get().name == *name {
                 dir.get().clear();
                 DiskBox::delete(dir);
             } else {
@@ -204,15 +204,15 @@ impl Directory {
         }
     }
 
-    pub fn get_files(&self) -> &Vec<File> {
+    pub const fn get_files(&self) -> &Vec<File> {
         &self.files
     }
 
-    pub fn get_directories(&mut self) -> &mut Vec<DiskBox<Directory>> {
+    pub fn get_directories(&mut self) -> &mut Vec<DiskBox<Self>> {
         &mut self.subdirs
     }
 
-    pub fn get_name(&self) -> &String {
+    pub const fn get_name(&self) -> &String {
         &self.name
     }
 }

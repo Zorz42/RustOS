@@ -33,8 +33,8 @@ pub const fn bitset_size_bytes(size: usize) -> usize {
 }
 
 impl BitSetRaw {
-    pub const fn new_empty() -> BitSetRaw {
-        BitSetRaw {
+    pub const fn new_empty() -> Self {
+        Self {
             data: 0 as *mut u64,
             size: 0,
             count0: 0,
@@ -42,9 +42,9 @@ impl BitSetRaw {
         }
     }
 
-    pub fn new(size: usize, addr: *mut u64) -> BitSetRaw {
+    pub fn new(size: usize, addr: *mut u64) -> Self {
         debug_assert_eq!(addr as u64 % 8, 0);
-        let mut res = BitSetRaw {
+        let mut res = Self {
             data: addr,
             size,
             count0: 0,
@@ -55,9 +55,9 @@ impl BitSetRaw {
     }
 
     /// Takes from memory, does not clear
-    pub fn new_from(size: usize, addr: *mut u64) -> BitSetRaw {
+    pub fn new_from(size: usize, addr: *mut u64) -> Self {
         debug_assert_eq!(addr as u64 % 8, 0);
-        let mut res = BitSetRaw {
+        let mut res = Self {
             data: addr,
             size,
             count0: 0,
@@ -154,15 +154,15 @@ impl BitSetRaw {
         unsafe { get_raw(self.data, index) }
     }
 
-    pub fn get_size_bytes(&self) -> usize {
+    pub const fn get_size_bytes(&self) -> usize {
         bitset_size_bytes(self.size)
     }
 
-    pub fn get_size(&self) -> usize {
+    pub const fn get_size(&self) -> usize {
         self.size
     }
 
-    fn get_num_u64(&self) -> usize {
+    const fn get_num_u64(&self) -> usize {
         (self.size + 63) / 64
     }
 
@@ -188,7 +188,7 @@ impl BitSetRaw {
         self.setup_stack();
     }
 
-    pub fn get_count0(&self) -> usize {
+    pub const fn get_count0(&self) -> usize {
         self.count0
     }
 

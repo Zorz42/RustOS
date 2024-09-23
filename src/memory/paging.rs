@@ -7,7 +7,7 @@ use crate::memory::{get_kernel_top_address, HEAP_BASE_ADDR, HEAP_TREE_ADDR, KERN
 use crate::riscv::{get_satp, set_satp};
 use core::intrinsics::write_bytes;
 use core::sync::atomic::{fence, Ordering};
-use std::{init_std_memory, println};
+use std::init_std_memory;
 
 pub static mut SEGMENTS_BITSET: BitSetRaw = BitSetRaw::new_empty();
 
@@ -46,7 +46,7 @@ fn page_deallocator(page: VirtAddr) {
 
 pub fn init_paging() {
     // for now just add 20 pages because apparently kernel writes after the end for some reason
-    let mut kernel_end = (get_kernel_top_address() - 1) / PAGE_SIZE * PAGE_SIZE;
+    let kernel_end = (get_kernel_top_address() - 1) / PAGE_SIZE * PAGE_SIZE;
     let bitset_size_bytes = bitset_size_bytes(NUM_PAGES as usize);
     let bitset_size_pages = (bitset_size_bytes as u64 + PAGE_SIZE - 1) / PAGE_SIZE;
     let kernel_size_pages = (kernel_end - KERNEL_OFFSET) / PAGE_SIZE;
@@ -120,12 +120,10 @@ fn switch_to_page_table(page_table: PageTable) {
 }
 
 pub fn refresh_paging() {
-    unsafe {
-        fence(Ordering::Release);
-        let satp = get_satp();
-        set_satp(satp);
-        fence(Ordering::Release);
-    }
+    fence(Ordering::Release);
+    let satp = get_satp();
+    set_satp(satp);
+    fence(Ordering::Release);
 }
 
 fn get_sub_page_table_entry(table: PageTable, index: usize) -> &'static mut PageTableEntry {
@@ -133,7 +131,7 @@ fn get_sub_page_table_entry(table: PageTable, index: usize) -> &'static mut Page
     unsafe { &mut *table.add(index) }
 }
 
-fn get_entry_addr(entry: PageTableEntry) -> Option<PageTable> {
+const fn get_entry_addr(entry: PageTableEntry) -> Option<PageTable> {
     if (entry & PTE_PRESENT) == 0 {
         None
     } else {
@@ -141,7 +139,7 @@ fn get_entry_addr(entry: PageTableEntry) -> Option<PageTable> {
     }
 }
 
-fn is_entry_table(entry: PageTableEntry) -> bool {
+const fn is_entry_table(entry: PageTableEntry) -> bool {
     (entry & (PTE_PRESENT | PTE_READ | PTE_WRITE | PTE_EXECUTE)) == PTE_PRESENT
 }
 

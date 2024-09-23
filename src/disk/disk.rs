@@ -62,10 +62,10 @@ pub struct Disk {
 }
 
 pub fn get_disk_at(id: u64) -> Option<&'static mut Disk> {
-    if (virtio_reg_read(id, MmioOffset::MagicValue) != VIRTIO_MAGIC
+    if virtio_reg_read(id, MmioOffset::MagicValue) != VIRTIO_MAGIC
         || virtio_reg_read(id, MmioOffset::Version) != 2
         || virtio_reg_read(id, MmioOffset::DeviceId) != 2
-        || virtio_reg_read(id, MmioOffset::VendorId) != 0x554d4551)
+        || virtio_reg_read(id, MmioOffset::VendorId) != 0x554d4551
     {
         return None;
     }
@@ -166,7 +166,7 @@ impl Disk {
         None
     }
 
-    fn get_desc(&self, idx: usize) -> &mut VirtqDesc {
+    fn get_desc(&mut self, idx: usize) -> &mut VirtqDesc {
         assert!(idx < NUM);
         unsafe { &mut *self.desc.add(idx) }
     }
@@ -185,10 +185,10 @@ impl Disk {
     fn alloc_3desc(&mut self) -> Option<[usize; 3]> {
         let mut res = [0; 3];
 
-        for i in 0..3 {
+        for (i, r) in res.iter_mut().enumerate() {
             let desc = self.alloc_desc();
             if let Some(desc) = desc {
-                res[i] = desc;
+                *r = desc;
             } else {
                 for j in 0..i {
                     self.free_desc(j);
@@ -207,9 +207,8 @@ impl Disk {
             self.free_desc(idx);
             if (flags & VRING_DESC_F_NEXT) == 0 {
                 break;
-            } else {
-                idx = next;
             }
+            idx = next;
         }
     }
 
@@ -238,8 +237,10 @@ impl Disk {
 
         self.info[idx[0]].status = 0xFF;
 
+
+        let addr = addr_of!(self.info[idx[0]].status) as u64;
         let desc2 = self.get_desc(idx[2]);
-        desc2.addr = addr_of!(self.info[idx[0]].status) as u64;
+        desc2.addr = addr;
         desc2.len = 1;
         desc2.flags = VRING_DESC_F_WRITE;
         desc2.next = 0;
@@ -304,7 +305,7 @@ impl Disk {
         let mut buf = Buf {
             disk: 0,
             sector: sector as u32,
-            data: data.clone(),
+            data: *data,
         };
 
         self.virtio_disk_rw(&mut buf, true);
