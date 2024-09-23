@@ -113,7 +113,6 @@ pub fn get_disk_at(id: u64) -> Option<&'static mut Disk> {
     status |= VIRTIO_CONFIG_S_FEATURES_OK;
     virtio_reg_write(id, MmioOffset::Status, status);
 
-
     // reread and check
     status = virtio_reg_read(id, MmioOffset::Status);
     assert_eq!(status & VIRTIO_CONFIG_S_FEATURES_OK, VIRTIO_CONFIG_S_FEATURES_OK);

@@ -24,8 +24,8 @@ pub fn machine_mode_timer_init() {
     }
 
     unsafe {
-        TIMER_SCRATCH[(5 * get_mhartid()) as usize + 3] = CLINT + 0x4000 + 8 * get_mhartid();
-        TIMER_SCRATCH[(5 * get_mhartid()) as usize + 4] = interval;
+        TIMER_SCRATCH[(5 * get_mhartid() + 3) as usize] = CLINT + 0x4000 + 8 * get_mhartid();
+        TIMER_SCRATCH[(5 * get_mhartid() + 4) as usize] = interval;
 
         set_mscratch(addr_of!(TIMER_SCRATCH[(5 * get_mhartid()) as usize]) as u64);
     }
