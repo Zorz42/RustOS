@@ -5,7 +5,7 @@ struct Device {
 }
 
 fn get_input_device_at(id: u64) -> Option<Device> {
-    if virtio_reg_read(id, MmioOffset::MagicValue) != VIRTIO_MAGIC ||
+    if virtio_reg_read(id, MmioOffset::MagicValue) != VIRTIO_MAGIC
 
         {
         return None;
