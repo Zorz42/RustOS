@@ -29,7 +29,7 @@ pub const fn bitset_size_bytes(size: usize) -> usize {
     let s1 = (size + 63) / 64 * 8; // for actual bits
     let s2 = (size + 63) / 64 * 8; // for bits "is on stack"
     let s3 = size * 4; // for the stack
-    return s1 + s2 + s3;
+    s1 + s2 + s3
 }
 
 impl BitSetRaw {

@@ -2,7 +2,7 @@ use crate::boot::{infinite_loop, NUM_CORES};
 use crate::riscv::{get_mhartid, get_mie, get_mstatus, set_mie, set_mscratch, set_mstatus, set_mtvec, CLINT, MIE_TIMER, MSTATUS_MMI};
 use crate::spinlock::Lock;
 use core::arch::global_asm;
-use core::ptr::write_volatile;
+use core::ptr::{addr_of, write_volatile};
 global_asm!(include_str!("asm/kernelvec.S"));
 
 extern "C" {
@@ -11,7 +11,7 @@ extern "C" {
 
 // a scratch area per CPU for machine-mode timer interrupts.
 #[used]
-static TIMER_SCRATCH: [u64; NUM_CORES * 5] = [0; NUM_CORES * 5];
+static mut TIMER_SCRATCH: [u64; NUM_CORES * 5] = [0; NUM_CORES * 5];
 static TIMER_LOCK: Lock = Lock::new();
 
 pub fn machine_mode_timer_init() {
@@ -23,13 +23,12 @@ pub fn machine_mode_timer_init() {
         write_volatile((CLINT + 0x4000 + 8 * get_mhartid()) as *mut u64, *((CLINT + 0xBFF8) as *mut u64) + interval);
     }
 
-    let addr = unsafe { core::ptr::addr_of!(TIMER_SCRATCH).add((5 * get_mhartid()) as usize) as *mut u64 };
     unsafe {
-        write_volatile(addr.add(3), CLINT + 0x4000 + 8 * get_mhartid());
-        write_volatile(addr.add(4), interval);
-    }
+        TIMER_SCRATCH[(5 * get_mhartid()) as usize + 3] = CLINT + 0x4000 + 8 * get_mhartid();
+        TIMER_SCRATCH[(5 * get_mhartid()) as usize + 4] = interval;
 
-    set_mscratch(addr as u64);
+        set_mscratch(addr_of!(TIMER_SCRATCH[(5 * get_mhartid()) as usize]) as u64);
+    }
 
     set_mtvec(timervec as u64);
 

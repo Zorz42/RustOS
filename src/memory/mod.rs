@@ -25,5 +25,5 @@ extern "C" {
 }
 
 pub fn get_kernel_top_address() -> u64 {
-    unsafe { &_end as *const u8 as u64 }
+    unsafe { &_end as *const u8 as u64 + 20 * PAGE_SIZE }
 }

@@ -46,7 +46,7 @@ fn page_deallocator(page: VirtAddr) {
 
 pub fn init_paging() {
     // for now just add 20 pages because apparently kernel writes after the end for some reason
-    let mut kernel_end = (get_kernel_top_address() + 10 * PAGE_SIZE - 1) / PAGE_SIZE * PAGE_SIZE;
+    let mut kernel_end = (get_kernel_top_address() - 1) / PAGE_SIZE * PAGE_SIZE;
     let bitset_size_bytes = bitset_size_bytes(NUM_PAGES as usize);
     let bitset_size_pages = (bitset_size_bytes as u64 + PAGE_SIZE - 1) / PAGE_SIZE;
     let kernel_size_pages = (kernel_end - KERNEL_OFFSET) / PAGE_SIZE;
