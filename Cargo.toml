@@ -13,9 +13,10 @@ lto = false
 
 [profile.release]
 strip = true
-lto = true
+lto = "fat"
 codegen-units = 1
 opt-level = 3
+panic = "abort"
 
 [dependencies]
 # this is just a macro, it doesn't get included in the execuable
