@@ -219,15 +219,15 @@ impl Disk {
         }
     }
 
-    fn virtio_disk_rw(&mut self, buf: &mut Buf, write: bool) {
+    fn virtio_disk_rw(&mut self, mut data: &[u8; 512], sector: u32, write: bool) {
         self.vdisk_lock.spinlock();
 
         let idx = self.alloc_3desc().unwrap();
 
-        let buf0 = VirtioBlqReq {
+        let mut buf0 = VirtioBlqReq {
             typ: if write { VIRTIO_BLK_T_OUT } else { VIRTIO_BLK_T_IN },
             reserved: 0,
-            sector: buf.sector as u64,
+            sector: sector as u64,
         };
 
         let desc0 = self.get_desc(idx[0]);
@@ -237,13 +237,13 @@ impl Disk {
         desc0.next = idx[1] as u16;
 
         let desc1 = self.get_desc(idx[1]);
-        desc1.addr = buf.data.as_ptr() as u64;
+        desc1.addr = data.as_ptr() as u64;
         desc1.len = 512;
         desc1.flags = if write {0} else {VRING_DESC_F_WRITE};
         desc1.flags |= VRING_DESC_F_NEXT;
         desc1.next = idx[2] as u16;
 
-        let status = 0xFF;
+        let mut status = 0xFF;
 
         let addr = addr_of!(status) as u64;
         let desc2 = self.get_desc(idx[2]);
@@ -252,10 +252,10 @@ impl Disk {
         desc2.flags = VRING_DESC_F_WRITE;
         desc2.next = 0;
 
-        black_box(status); // because virtio does stuff to it
-        black_box(buf0);
+        status = black_box(status); // because virtio does stuff to it
+        buf0 = black_box(buf0);
+        data = black_box(data);
 
-        buf.disk = 1;
         self.info[idx[0]] = true;
 
         unsafe {
@@ -303,8 +303,7 @@ impl Disk {
             sector: sector as u32,
             data: [0; 512],
         };
-
-        self.virtio_disk_rw(&mut buf, false);
+        self.virtio_disk_rw(&buf.data, buf.sector, false);
 
         buf.data
 
@@ -319,7 +318,7 @@ impl Disk {
             data: *data,
         };
 
-        self.virtio_disk_rw(&mut buf, true);
+        self.virtio_disk_rw(&buf.data, buf.sector, true);
 
     }
 
