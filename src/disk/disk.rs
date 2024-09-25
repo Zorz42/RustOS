@@ -5,7 +5,7 @@ use core::ptr::{addr_of, write_bytes};
 use core::sync::atomic::{fence, Ordering};
 use crate::spinlock::Lock;
 use crate::virtio::{virtio_reg_read, VirtqAvail, VirtqDesc, VirtqUsed, MmioOffset, NUM, VIRTIO_CONFIG_S_ACKNOWLEDGE, VIRTIO_CONFIG_S_DRIVER, VIRTIO_BLK_F_RO, VIRTIO_BLK_F_SCSI, VIRTIO_BLK_F_CONFIG_WCE, VIRTIO_BLK_F_MQ, VIRTIO_F_ANY_LAYOUT, VIRTIO_RING_F_EVENT_IDX, VIRTIO_RING_F_INDIRECT_DESC, VIRTIO_CONFIG_S_FEATURES_OK, VIRTIO_CONFIG_S_DRIVER_OK, VRING_DESC_F_NEXT, VRING_DESC_F_WRITE, MAX_VIRTIO_ID, virtio_reg_write, VIRTIO_MAGIC};
-use std::{Vec};
+use std::{println, Vec};
 use crate::memory::{alloc_page, PAGE_SIZE};
 use crate::riscv::get_core_id;
 
@@ -27,8 +27,6 @@ pub struct VirtioBlqReq {
 }
 
 struct Buf {
-    disk: i32,
-    sector: u32,
     data: [u8; 512],
 }
 
@@ -219,7 +217,7 @@ impl Disk {
         }
     }
 
-    fn virtio_disk_rw(&mut self, mut data: &[u8; 512], sector: u32, write: bool) {
+    fn virtio_disk_rw(&mut self, data: &[u8; 512], sector: u32, write: bool) {
         self.vdisk_lock.spinlock();
 
         let idx = self.alloc_3desc().unwrap();
@@ -254,7 +252,6 @@ impl Disk {
 
         status = black_box(status); // because virtio does stuff to it
         buf0 = black_box(buf0);
-        data = black_box(data);
 
         self.info[idx[0]] = true;
 
@@ -298,27 +295,20 @@ impl Disk {
     pub fn read(&mut self, sector: usize) -> [u8; 512] {
         assert!(sector < self.size);
 
-        let mut buf = Buf {
-            disk: 0,
-            sector: sector as u32,
-            data: [0; 512],
-        };
-        self.virtio_disk_rw(&buf.data, buf.sector, false);
+        let data = [0; 512];
+        self.virtio_disk_rw(&data, sector as u32, false);
 
-        buf.data
-
+        data
     }
 
     pub fn write(&mut self, sector: usize, data: &[u8; 512]) {
         assert!(sector < self.size);
 
         let mut buf = Buf {
-            disk: 0,
-            sector: sector as u32,
             data: *data,
         };
 
-        self.virtio_disk_rw(&buf.data, buf.sector, true);
+        self.virtio_disk_rw(&buf.data, sector as u32, true);
 
     }
 
