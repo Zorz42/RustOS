@@ -263,106 +263,6 @@ impl Gpu {
         let rect = &response.pmodes[0].r;
         self.pixels_size = (rect.width, rect.height);
     }
-
-    /*fn virtio_disk_rw(&mut self, buf: &mut Buf, write: bool) {
-        self.vdisk_lock.spinlock();
-
-        let idx = self.alloc_3desc().unwrap();
-
-        let buf0 = unsafe { &mut *((&mut self.ops[idx[0]]) as *mut VirtioBlqReq) };
-        buf0.typ = if write { VIRTIO_BLK_T_OUT } else { VIRTIO_BLK_T_IN };
-        buf0.reserved = 0;
-        buf0.sector = buf.sector as u64;
-
-        let desc0 = self.get_desc(idx[0]);
-        desc0.addr = addr_of!(*buf0) as u64;
-        desc0.len = size_of::<VirtioBlqReq>() as u32;
-        desc0.flags = VRING_DESC_F_NEXT;
-        desc0.next = idx[1] as u16;
-
-        let desc1 = self.get_desc(idx[1]);
-        desc1.addr = buf.data.as_ptr() as u64;
-        desc1.len = 512;
-        desc1.flags = if write {0} else {VRING_DESC_F_WRITE};
-        desc1.flags |= VRING_DESC_F_NEXT;
-        desc1.next = idx[2] as u16;
-
-        self.info[idx[0]].status = 0xFF;
-
-
-        let addr = addr_of!(self.info[idx[0]].status) as u64;
-        let desc2 = self.get_desc(idx[2]);
-        desc2.addr = addr;
-        desc2.len = 1;
-        desc2.flags = VRING_DESC_F_WRITE;
-        desc2.next = 0;
-
-        buf.disk = 1;
-        self.info[idx[0]].b = buf;
-
-        unsafe {
-            let idx2 = (*self.avail).idx as usize;
-            (*self.avail).ring[idx2 % NUM] = idx[0] as u16;
-        }
-
-        fence(Ordering::Release);
-
-        unsafe {
-            (*self.avail).idx += 1;
-        }
-
-        fence(Ordering::Release);
-
-        virtio_reg_write(self.id, MmioOffset::QueueNotify, 0);
-
-        self.vdisk_lock.unlock();
-        if self.irq_waiting {
-            gpu_irq(self.id as u32 + 1);
-        }
-        while buf.disk == 1 {
-            unsafe {
-                asm!("wfi");
-            }
-        }
-        self.vdisk_lock.spinlock();
-
-        self.info[idx[0]].b = 0 as *mut Buf;
-        self.free_chain(idx[0]);
-
-        self.vdisk_lock.unlock();
-
-        if self.irq_waiting {
-            gpu_irq(self.id as u32 + 1);
-        }
-    }
-
-    pub fn read(&mut self, sector: usize) -> [u8; 512] {
-        assert!(sector < self.size);
-
-        let mut buf = Buf {
-            disk: 0,
-            sector: sector as u32,
-            data: [0; 512],
-        };
-
-        self.virtio_disk_rw(&mut buf, false);
-
-        buf.data
-
-    }
-
-    pub fn write(&mut self, sector: usize, data: &[u8; 512]) {
-        assert!(sector < self.size);
-
-        let mut buf = Buf {
-            disk: 0,
-            sector: sector as u32,
-            data: *data,
-        };
-
-        self.virtio_disk_rw(&mut buf, true);
-
-    }*/
 }
 
 static mut GPU: Option<&'static mut Gpu> = None;
@@ -409,8 +309,6 @@ pub fn gpu_irq(irq: u32) {
     while gpu.used_idx != used.idx {
         fence(Ordering::Release);
         let id = used.ring[gpu.used_idx as usize % NUM].id;
-
-        //assert_eq!(gpu.info[id as usize].status, 0);
 
         gpu.info[id as usize].ready = 1;
 
