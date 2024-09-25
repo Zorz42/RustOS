@@ -290,6 +290,8 @@ impl Disk {
         if self.irq_waiting {
             disk_irq(self.id as u32 + 1);
         }
+
+        black_box(data); // we need that data all the way through
     }
 
     pub fn read(&mut self, sector: usize) -> [u8; 512] {
