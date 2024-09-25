@@ -274,7 +274,7 @@ impl Disk {
         if self.irq_waiting {
             disk_irq(self.id as u32 + 1);
         }
-        while self.info[idx[0]] == true {
+        while self.info[idx[0]] {
             unsafe {
                 asm!("wfi");
             }
@@ -304,11 +304,7 @@ impl Disk {
     pub fn write(&mut self, sector: usize, data: &[u8; 512]) {
         assert!(sector < self.size);
 
-        let mut buf = Buf {
-            data: *data,
-        };
-
-        self.virtio_disk_rw(&buf.data, sector as u32, true);
+        self.virtio_disk_rw(&data.clone(), sector as u32, true);
 
     }
 
