@@ -4,7 +4,7 @@ use core::ptr::{addr_of, write_bytes};
 use core::sync::atomic::{fence, Ordering};
 use std::println;
 use crate::spinlock::Lock;
-use crate::virtio::{virtio_reg_read, VirtioBlqReq, VirtqAvail, VirtqDesc, VirtqUsed, MmioOffset, NUM, VIRTIO_CONFIG_S_ACKNOWLEDGE, VIRTIO_CONFIG_S_DRIVER, VIRTIO_F_ANY_LAYOUT, VIRTIO_RING_F_EVENT_IDX, VIRTIO_RING_F_INDIRECT_DESC, VIRTIO_CONFIG_S_FEATURES_OK, VIRTIO_CONFIG_S_DRIVER_OK, VRING_DESC_F_NEXT, VIRTIO_BLK_T_OUT, VIRTIO_BLK_T_IN, VRING_DESC_F_WRITE, MAX_VIRTIO_ID, virtio_reg_write, VIRTIO_MAGIC, VIRTIO_GPU_CMD_GET_DISPLAY_INFO, VirtioGpuCtrlHead, VirtioGpuRespDisplayInfo, VIRTIO_GPU_MAX_SCANOUTS};
+use crate::virtio::{virtio_reg_read, VirtqAvail, VirtqDesc, VirtqUsed, MmioOffset, NUM, VIRTIO_CONFIG_S_ACKNOWLEDGE, VIRTIO_CONFIG_S_DRIVER, VIRTIO_F_ANY_LAYOUT, VIRTIO_RING_F_EVENT_IDX, VIRTIO_RING_F_INDIRECT_DESC, VIRTIO_CONFIG_S_FEATURES_OK, VIRTIO_CONFIG_S_DRIVER_OK, VRING_DESC_F_NEXT, VRING_DESC_F_WRITE, MAX_VIRTIO_ID, virtio_reg_write, VIRTIO_MAGIC, VIRTIO_GPU_CMD_GET_DISPLAY_INFO, VirtioGpuCtrlHead, VirtioGpuRespDisplayInfo, VIRTIO_GPU_CMD_RESOURCE_CREATE_2D, VirtioGpuResourceCreate2D};
 use crate::memory::{alloc_page, PAGE_SIZE};
 use crate::riscv::get_core_id;
 
@@ -53,6 +53,8 @@ pub struct Gpu {
     irq_waiting: bool, // if an irq was cancelled because it was locked. do it when it unlocks
 
     pixels_size: (u32, u32),
+
+    framebuffer: *mut u8,
 }
 
 pub fn get_gpu_at(id: u64) -> Option<&'static mut Gpu> {
@@ -84,6 +86,7 @@ pub fn get_gpu_at(id: u64) -> Option<&'static mut Gpu> {
         id,
         irq_waiting: false,
         pixels_size: (0, 0),
+        framebuffer: 0 as *mut u8,
     };
 
     let mut status = 0;
@@ -263,6 +266,76 @@ impl Gpu {
         let rect = &response.pmodes[0].r;
         self.pixels_size = (rect.width, rect.height);
     }
+
+    fn virtio_create_resource(&mut self) {
+        self.vgpu_lock.spinlock();
+
+        let idx = self.alloc_3desc().unwrap();
+
+        let mut req = VirtioGpuResourceCreate2D {
+            hdr: VirtioGpuCtrlHead {
+                cmd: VIRTIO_GPU_CMD_RESOURCE_CREATE_2D,
+                flags: 0,
+                fence_id: 0,
+                ctx_id: 0,
+                padding: 0,
+            },
+            resource_id: 1,
+            format: 67,
+            width: self.pixels_size.0,
+            height: self.pixels_size.1,
+        };
+
+        let desc0 = self.get_desc(idx[0]);
+        desc0.addr = addr_of!(req) as u64;
+        desc0.len = size_of::<VirtioGpuResourceCreate2D>() as u32;
+        desc0.flags = VRING_DESC_F_NEXT;
+        desc0.next = idx[1] as u16;
+
+        let page = alloc_page();
+
+        let desc1 = self.get_desc(idx[1]);
+        desc1.addr = page;
+        desc1.len = size_of::<VirtioGpuCtrlHead>() as u32;
+        desc1.flags = VRING_DESC_F_WRITE;
+        desc1.next = 0;
+
+        self.info[idx[0]].ready = 0;
+
+        unsafe {
+            let idx2 = (*self.avail).idx as usize;
+            (*self.avail).ring[idx2 % NUM] = idx[0] as u16;
+        }
+
+        fence(Ordering::Release);
+
+        unsafe {
+            (*self.avail).idx += 1;
+        }
+
+        fence(Ordering::Release);
+
+        virtio_reg_write(self.id, MmioOffset::QueueNotify, 0);
+
+        self.vgpu_lock.unlock();
+        if self.irq_waiting {
+            gpu_irq(self.id as u32 + 1);
+        }
+        while self.info[idx[0]].ready == 0 {
+            unsafe {
+                asm!("wfi");
+            }
+        }
+        self.vgpu_lock.spinlock();
+
+        self.free_chain(idx[0]);
+
+        self.vgpu_lock.unlock();
+
+        if self.irq_waiting {
+            gpu_irq(self.id as u32 + 1);
+        }
+    }
 }
 
 static mut GPU: Option<&'static mut Gpu> = None;
@@ -275,6 +348,7 @@ pub fn init_gpu() {
                 GPU = Some(gpu);
                 GPU_ID = id;
                 GPU.as_mut().unwrap().virtio_fetch_resolution();
+                GPU.as_mut().unwrap().virtio_create_resource();
                 println!("Detected screen with resolution {} x {}", GPU.as_ref().unwrap().pixels_size.0, GPU.as_ref().unwrap().pixels_size.1)
             }
             break;

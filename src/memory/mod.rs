@@ -18,7 +18,7 @@ pub const FRAMEBUFFER_OFFSET: u64 = ID_MAP_END + 3 * FRAME_SIZE;
 pub const DISK_OFFSET: u64 = ID_MAP_END + 4 * FRAME_SIZE;
 
 pub use bitset::{bitset_size_bytes, BitSetRaw, BitSet};
-pub use paging::{alloc_page, free_page, get_num_free_pages, init_paging, init_paging_hart, map_page, map_page_auto, unmap_page, virt_to_phys, PhysAddr, VirtAddr};
+pub use paging::{alloc_page, alloc_continuous_pages, free_page, get_num_free_pages, init_paging, init_paging_hart, map_page, map_page_auto, unmap_page, virt_to_phys, PhysAddr, VirtAddr};
 
 extern "C" {
     pub static _end: u8;

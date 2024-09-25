@@ -8,6 +8,7 @@ use crate::riscv::{get_satp, set_satp};
 use core::intrinsics::write_bytes;
 use core::sync::atomic::{fence, Ordering};
 use std::init_std_memory;
+use crate::panic;
 
 pub static mut SEGMENTS_BITSET: BitSetRaw = BitSetRaw::new_empty();
 
@@ -16,15 +17,32 @@ pub fn get_num_free_pages() -> u64 {
 }
 
 pub fn alloc_page() -> PhysAddr {
-    unsafe {
-        let index = SEGMENTS_BITSET.get_zero_element();
-        if let Some(index) = index {
-            SEGMENTS_BITSET.set(index, true);
-            index as u64 * PAGE_SIZE + KERNEL_OFFSET
-        } else {
-            panic!("Out of memory");
+    let index = unsafe { SEGMENTS_BITSET.get_zero_element() };
+    if let Some(index) = index {
+        unsafe { SEGMENTS_BITSET.set(index, true) };
+        index as u64 * PAGE_SIZE + KERNEL_OFFSET
+    } else {
+        panic!("Out of memory");
+    }
+}
+
+pub fn alloc_continuous_pages(num: u64) -> PhysAddr {
+    for i in 0..=NUM_PAGES - num {
+        let mut all_free = true;
+        for j in 0..num {
+            if unsafe { SEGMENTS_BITSET.get(i as usize + j as usize) } {
+                all_free = false;
+                break;
+            }
+        }
+        if all_free {
+            for k in 0..num {
+                unsafe { SEGMENTS_BITSET.set(i as usize + k as usize, true) };
+            }
+            return i * PAGE_SIZE + KERNEL_OFFSET;
         }
     }
+    panic!("Out of memory");
 }
 
 pub fn free_page(addr: PhysAddr) {
