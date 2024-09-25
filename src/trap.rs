@@ -2,6 +2,7 @@ use crate::riscv::{get_core_id, get_scause, get_sepc, get_sip, get_sstatus, get_
 use crate::timer::tick;
 use std::println;
 use crate::disk::disk::disk_irq;
+use crate::gpu::gpu_irq;
 use crate::plic::{plic_complete, plic_irq};
 
 extern "C" {
@@ -38,6 +39,7 @@ fn get_interrupt_type() -> InterruptType {
         let irq = plic_irq();
 
         disk_irq(irq);
+        gpu_irq(irq);
 
         plic_complete(irq);
 

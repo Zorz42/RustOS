@@ -12,6 +12,7 @@ use core::sync::atomic::{fence, Ordering};
 use std::{println, Vec};
 use crate::disk::filesystem::{close_fs, init_fs};
 use crate::disk::memory_disk::mount_disk;
+use crate::gpu::init_gpu;
 use crate::plic::{plicinit, plicinithart};
 
 mod boot;
@@ -26,7 +27,7 @@ mod timer;
 mod trap;
 mod virtio;
 mod plic;
-mod input;
+mod gpu;
 
 fn find_root_disk(disks: &mut Vec<&'static mut Disk>) -> &'static mut Disk {
     let mut root_disk = None;
@@ -68,6 +69,7 @@ pub fn main() {
         plicinithart();
 
         let mut disks = scan_for_disks();
+        init_gpu();
 
         #[cfg(feature = "run_tests")]
         {

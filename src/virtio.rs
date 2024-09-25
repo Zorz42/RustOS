@@ -115,3 +115,41 @@ pub struct VirtioBlqReq {
     pub reserved: u32,
     pub sector: u64,
 }
+
+pub const VIRTIO_GPU_CMD_GET_DISPLAY_INFO: u32 = 0x0100; // get display width, height, etc
+pub const VIRTIO_GPU_MAX_SCANOUTS: u32 = 16;
+
+#[derive(Clone, Copy, Debug)]
+#[repr(C)]
+pub struct VirtioGpuCtrlHead {
+    pub cmd: u32,
+    pub flags: u32,
+    pub fence_id: u64,
+    pub ctx_id: u32,
+    pub padding: u32,
+}
+
+#[derive(Debug)]
+#[repr(C)]
+pub struct VirtioGpuRect {
+    pub x: u32,
+    pub y: u32,
+    pub width: u32,
+    pub height: u32,
+}
+
+#[derive(Debug)]
+#[repr(C)]
+pub struct VirtioGpuDisplayOne {
+    pub r: VirtioGpuRect,
+    pub enabled: u32,
+    pub flags: u32,
+}
+
+#[derive(Debug)]
+#[repr(C)]
+pub struct VirtioGpuRespDisplayInfo {
+    pub hdr: VirtioGpuCtrlHead,
+    pub display_cnt: u32,
+    pub pmodes: [VirtioGpuDisplayOne; VIRTIO_GPU_MAX_SCANOUTS as usize],
+}

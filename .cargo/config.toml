@@ -19,5 +19,4 @@ qemu-system-riscv64
 -device virtio-gpu-device
 -device virtio-keyboard-device
 -global virtio-mmio.force-legacy=false
--nographic
 -kernel """
