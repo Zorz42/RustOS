@@ -150,6 +150,5 @@ pub struct VirtioGpuDisplayOne {
 #[repr(C)]
 pub struct VirtioGpuRespDisplayInfo {
     pub hdr: VirtioGpuCtrlHead,
-    pub display_cnt: u32,
     pub pmodes: [VirtioGpuDisplayOne; VIRTIO_GPU_MAX_SCANOUTS as usize],
 }

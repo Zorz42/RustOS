@@ -269,7 +269,8 @@ impl Gpu {
 
         let response = unsafe { &*(page as *const VirtioGpuRespDisplayInfo) };
 
-        println!("Got response: {:?}", response);
+        let rect = &response.pmodes[0].r;
+        self.pixels_size = (rect.width, rect.height);
     }
 
     /*fn virtio_disk_rw(&mut self, buf: &mut Buf, write: bool) {
@@ -383,6 +384,7 @@ pub fn init_gpu() {
                 GPU = Some(gpu);
                 GPU_ID = id;
                 GPU.as_mut().unwrap().virtio_fetch_resolution();
+                println!("Detected screen with resolution {} x {}", GPU.as_ref().unwrap().pixels_size.0, GPU.as_ref().unwrap().pixels_size.1)
             }
             break;
         }
