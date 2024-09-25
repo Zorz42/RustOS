@@ -219,17 +219,8 @@ impl Gpu {
         let desc1 = self.get_desc(idx[1]);
         desc1.addr = page;
         desc1.len = size_of::<VirtioGpuRespDisplayInfo>() as u32;
-        desc1.flags = VRING_DESC_F_WRITE | VRING_DESC_F_NEXT;
-        desc1.next = idx[2] as u16;
-
-        self.info[idx[0]].status = 0xFF;
-
-        let addr = addr_of!(self.info[idx[0]].status) as u64;
-        let desc2 = self.get_desc(idx[2]);
-        desc2.addr = addr;
-        desc2.len = 1;
-        desc2.flags = VRING_DESC_F_WRITE;
-        desc2.next = 0;
+        desc1.flags = VRING_DESC_F_WRITE;
+        desc1.next = 0;
 
         self.info[idx[0]].ready = 0;
 
