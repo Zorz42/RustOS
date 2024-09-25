@@ -144,7 +144,7 @@ impl Writer {
             addr.write_volatile(c);
         }
 
-        /*if c == b'\n' {
+        if c == b'\n' {
             self.new_line();
             return;
         }
@@ -154,11 +154,11 @@ impl Writer {
         }
         let width_chars = (get_screen_size().0 as usize - 2 * BORDER_PADDING) / CHAR_HEIGHT;
         let height_chars = (get_screen_size().1 as usize - 2 * BORDER_PADDING) / CHAR_HEIGHT;
-        set_char(self.x, height_chars, c, self.text_color, self.background_color);
+        set_char(self.x, height_chars - 1, c, self.text_color, self.background_color);
         self.x += 1;
         if self.x >= width_chars {
             self.new_line();
-        }*/
+        }
     }
 
     fn move_cursor_back(&mut self) {
@@ -182,6 +182,7 @@ pub fn _print(args: fmt::Arguments) {
     unsafe {
         WRITER.write_fmt(args).unwrap();
     }
+    refresh_screen();
     PRINT_LOCK.unlock();
 }
 
