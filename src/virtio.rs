@@ -99,23 +99,6 @@ pub struct VirtqUsed {
     pub ring: [VirtqUsedElem; NUM],
 }
 
-// these are specific to virtio block devices, e.g. disks,
-// described in Section 5.2 of the spec.
-
-pub const VIRTIO_BLK_T_IN: u32 = 0; // read the disk
-pub const VIRTIO_BLK_T_OUT: u32 = 1; // write the disk
-
-// the format of the first descriptor in a disk request.
-// to be followed by two more descriptors containing
-// the block, and a one-byte status.
-#[derive(Clone, Copy)]
-#[repr(C)]
-pub struct VirtioBlqReq {
-    pub typ: u32, // VIRTIO_BLK_T_IN or ..._OUT
-    pub reserved: u32,
-    pub sector: u64,
-}
-
 pub const VIRTIO_GPU_CMD_GET_DISPLAY_INFO: u32 = 0x0100;
 pub const VIRTIO_GPU_CMD_RESOURCE_CREATE_2D: u32 = 0x0101;
 pub const VIRTIO_GPU_CMD_SET_SCANOUT: u32 = 0x0103;
