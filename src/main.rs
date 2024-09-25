@@ -12,7 +12,7 @@ use core::sync::atomic::{fence, Ordering};
 use std::{println, Vec};
 use crate::disk::filesystem::{close_fs, init_fs};
 use crate::disk::memory_disk::mount_disk;
-use crate::gpu::init_gpu;
+use crate::gpu::{init_gpu, refresh_screen};
 use crate::plic::{plicinit, plicinithart};
 
 mod boot;
@@ -28,6 +28,7 @@ mod trap;
 mod virtio;
 mod plic;
 mod gpu;
+mod font;
 
 fn find_root_disk(disks: &mut Vec<&'static mut Disk>) -> &'static mut Disk {
     let mut root_disk = None;
@@ -52,15 +53,6 @@ pub fn main() {
     static mut INITIALIZED: bool = false;
 
     if get_core_id() == 0 {
-        init_print();
-        println!("Initializing kernel with core 0");
-        #[cfg(debug_assertions)]
-        {
-            set_print_color(TextColor::LightGreen, TextColor::Black);
-            println!("Debug mode enabled (this message should not be present in release builds)");
-            reset_print_color();
-        }
-
         init_trap();
         interrupts_enable(true);
         enable_fpu();
@@ -70,6 +62,16 @@ pub fn main() {
 
         let mut disks = scan_for_disks();
         init_gpu();
+        refresh_screen();
+        init_print();
+
+        println!("Initializing kernel with core 0");
+        #[cfg(debug_assertions)]
+        {
+            set_print_color(TextColor::LightGreen, TextColor::Black);
+            println!("Debug mode enabled (this message should not be present in release builds)");
+            reset_print_color();
+        }
 
         #[cfg(feature = "run_tests")]
         {

@@ -118,6 +118,9 @@ pub struct VirtioBlqReq {
 
 pub const VIRTIO_GPU_CMD_GET_DISPLAY_INFO: u32 = 0x0100;
 pub const VIRTIO_GPU_CMD_RESOURCE_CREATE_2D: u32 = 0x0101;
+pub const VIRTIO_GPU_CMD_SET_SCANOUT: u32 = 0x0103;
+pub const VIRTIO_GPU_CMD_RESOURCE_FLUSH: u32 = 0x0104;
+pub const VIRTIO_GPU_CMD_TRANSFER_TO_HOST_2D: u32 = 0x0105;
 pub const VIRTIO_GPU_CMD_RESOURCE_ATTACH_BACKING: u32 = 0x0106;
 pub const VIRTIO_GPU_MAX_SCANOUTS: u32 = 16;
 
@@ -172,5 +175,30 @@ pub struct VirtioGpuResourceAttachBacking {
 pub struct VirtioGpuMemEntry {
     pub addr: u64,
     pub length: u32,
+    pub padding: u32,
+}
+
+#[repr(C)]
+pub struct VirtioGpuSetScanout {
+    pub hdr: VirtioGpuCtrlHead,
+    pub r: VirtioGpuRect,
+    pub scanout_id: u32,
+    pub resource_id: u32,
+}
+
+#[repr(C)]
+pub struct VirtioGpuTransferToHost2D {
+    pub hdr: VirtioGpuCtrlHead,
+    pub r: VirtioGpuRect,
+    pub offset: u64,
+    pub resource_id: u32,
+    pub padding: u32,
+}
+
+#[repr(C)]
+pub struct VirtioGpuResourceFlush {
+    pub hdr: VirtioGpuCtrlHead,
+    pub r: VirtioGpuRect,
+    pub resource_id: u32,
     pub padding: u32,
 }
