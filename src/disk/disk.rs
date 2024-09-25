@@ -1,4 +1,5 @@
 use core::arch::asm;
+use core::hint::black_box;
 use core::mem::size_of;
 use core::ptr::{addr_of, write_bytes};
 use core::sync::atomic::{fence, Ordering};
@@ -31,12 +32,6 @@ struct Buf {
     data: [u8; 512],
 }
 
-#[derive(Clone, Copy)]
-struct Info {
-    b: *mut Buf,
-    status: u8,
-}
-
 pub struct Disk {
     // a set (not a ring) of DMA descriptors, with which the
     // driver tells the device where to read and write individual
@@ -63,17 +58,13 @@ pub struct Disk {
     // track info about in-flight operations,
     // for use when completion interrupt arrives.
     // indexed by first descriptor index of chain.
-    info: [Info; NUM],
-
-    // disk command headers.
-    // one-for-one with descriptors, for convenience.
-    ops: [VirtioBlqReq; NUM],
+    info: [bool; NUM],
 
     vdisk_lock: Lock,
 
-    id: u64,
+    id: u64, // virtio device id
 
-    size: usize,
+    size: usize, // size of the disk
 
     irq_waiting: bool, // if an irq was cancelled because it was locked. do it when it unlocks
 }
@@ -95,8 +86,7 @@ pub fn get_disk_at(id: u64) -> Option<&'static mut Disk> {
         used: 0 as *mut VirtqUsed,
         free: [true; NUM],
         used_idx: 0,
-        info: [Info { b: 0 as *mut Buf, status: 0 }; NUM],
-        ops: [VirtioBlqReq { typ: 0, reserved: 0, sector: 0 }; NUM],
+        info: [false; NUM],
         vdisk_lock: Lock::new(),
         id,
         size: 0,
@@ -234,13 +224,14 @@ impl Disk {
 
         let idx = self.alloc_3desc().unwrap();
 
-        let buf0 = unsafe { &mut *((&mut self.ops[idx[0]]) as *mut VirtioBlqReq) };
-        buf0.typ = if write { VIRTIO_BLK_T_OUT } else { VIRTIO_BLK_T_IN };
-        buf0.reserved = 0;
-        buf0.sector = buf.sector as u64;
+        let buf0 = VirtioBlqReq {
+            typ: if write { VIRTIO_BLK_T_OUT } else { VIRTIO_BLK_T_IN },
+            reserved: 0,
+            sector: buf.sector as u64,
+        };
 
         let desc0 = self.get_desc(idx[0]);
-        desc0.addr = addr_of!(*buf0) as u64;
+        desc0.addr = addr_of!(buf0) as u64;
         desc0.len = size_of::<VirtioBlqReq>() as u32;
         desc0.flags = VRING_DESC_F_NEXT;
         desc0.next = idx[1] as u16;
@@ -252,18 +243,20 @@ impl Disk {
         desc1.flags |= VRING_DESC_F_NEXT;
         desc1.next = idx[2] as u16;
 
-        self.info[idx[0]].status = 0xFF;
+        let status = 0xFF;
 
-
-        let addr = addr_of!(self.info[idx[0]].status) as u64;
+        let addr = addr_of!(status) as u64;
         let desc2 = self.get_desc(idx[2]);
         desc2.addr = addr;
         desc2.len = 1;
         desc2.flags = VRING_DESC_F_WRITE;
         desc2.next = 0;
 
+        black_box(status); // because virtio does stuff to it
+        black_box(buf0);
+
         buf.disk = 1;
-        self.info[idx[0]].b = buf;
+        self.info[idx[0]] = true;
 
         unsafe {
             let idx2 = (*self.avail).idx as usize;
@@ -284,14 +277,15 @@ impl Disk {
         if self.irq_waiting {
             disk_irq(self.id as u32 + 1);
         }
-        while buf.disk == 1 {
+        while self.info[idx[0]] == true {
             unsafe {
                 asm!("wfi");
             }
         }
         self.vdisk_lock.spinlock();
 
-        self.info[idx[0]].b = 0 as *mut Buf;
+        assert_eq!(status, 0);
+        self.info[idx[0]] = false;
         self.free_chain(idx[0]);
 
         self.vdisk_lock.unlock();
@@ -376,10 +370,9 @@ pub fn disk_irq(irq: u32) {
         fence(Ordering::Release);
         let id = used.ring[disk.used_idx as usize % NUM].id;
 
-        assert_eq!(disk.info[id as usize].status, 0);
-
-        let buf = unsafe { &mut *disk.info[id as usize].b };
-        buf.disk = 0;
+        unsafe {
+            disk.info[id as usize] = false;
+        }
 
         disk.used_idx += 1;
     }

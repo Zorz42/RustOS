@@ -2,11 +2,97 @@ use core::arch::asm;
 use core::mem::size_of;
 use core::ptr::{addr_of, write_bytes};
 use core::sync::atomic::{fence, Ordering};
-use std::{println, Rng};
 use crate::spinlock::Lock;
-use crate::virtio::{virtio_reg_read, VirtqAvail, VirtqDesc, VirtqUsed, MmioOffset, NUM, VIRTIO_CONFIG_S_ACKNOWLEDGE, VIRTIO_CONFIG_S_DRIVER, VIRTIO_F_ANY_LAYOUT, VIRTIO_RING_F_EVENT_IDX, VIRTIO_RING_F_INDIRECT_DESC, VIRTIO_CONFIG_S_FEATURES_OK, VIRTIO_CONFIG_S_DRIVER_OK, VRING_DESC_F_NEXT, VRING_DESC_F_WRITE, MAX_VIRTIO_ID, virtio_reg_write, VIRTIO_MAGIC, VIRTIO_GPU_CMD_GET_DISPLAY_INFO, VirtioGpuCtrlHead, VirtioGpuRespDisplayInfo, VIRTIO_GPU_CMD_RESOURCE_CREATE_2D, VirtioGpuResourceCreate2D, VirtioGpuResourceAttachBacking, VIRTIO_GPU_CMD_RESOURCE_ATTACH_BACKING, VirtioGpuMemEntry, VirtioGpuSetScanout, VIRTIO_GPU_CMD_SET_SCANOUT, VirtioGpuRect, VirtioGpuTransferToHost2D, VIRTIO_GPU_CMD_TRANSFER_TO_HOST_2D, VirtioGpuResourceFlush, VIRTIO_GPU_CMD_RESOURCE_FLUSH};
+use crate::virtio::{virtio_reg_read, VirtqAvail, VirtqDesc, VirtqUsed, MmioOffset, NUM, VIRTIO_CONFIG_S_ACKNOWLEDGE, VIRTIO_CONFIG_S_DRIVER, VIRTIO_F_ANY_LAYOUT, VIRTIO_RING_F_EVENT_IDX, VIRTIO_RING_F_INDIRECT_DESC, VIRTIO_CONFIG_S_FEATURES_OK, VIRTIO_CONFIG_S_DRIVER_OK, VRING_DESC_F_NEXT, VRING_DESC_F_WRITE, MAX_VIRTIO_ID, virtio_reg_write, VIRTIO_MAGIC};
 use crate::memory::{alloc_continuous_pages, alloc_page, PAGE_SIZE};
 use crate::riscv::get_core_id;
+
+pub const VIRTIO_GPU_CMD_GET_DISPLAY_INFO: u32 = 0x0100;
+pub const VIRTIO_GPU_CMD_RESOURCE_CREATE_2D: u32 = 0x0101;
+pub const VIRTIO_GPU_CMD_SET_SCANOUT: u32 = 0x0103;
+pub const VIRTIO_GPU_CMD_RESOURCE_FLUSH: u32 = 0x0104;
+pub const VIRTIO_GPU_CMD_TRANSFER_TO_HOST_2D: u32 = 0x0105;
+pub const VIRTIO_GPU_CMD_RESOURCE_ATTACH_BACKING: u32 = 0x0106;
+pub const VIRTIO_GPU_MAX_SCANOUTS: u32 = 16;
+
+#[derive(Clone, Copy)]
+#[repr(C)]
+pub struct VirtioGpuCtrlHead {
+    pub cmd: u32,
+    pub flags: u32,
+    pub fence_id: u64,
+    pub ctx_id: u32,
+    pub padding: u32,
+}
+
+#[repr(C)]
+pub struct VirtioGpuRect {
+    pub x: u32,
+    pub y: u32,
+    pub width: u32,
+    pub height: u32,
+}
+
+#[repr(C)]
+pub struct VirtioGpuDisplayOne {
+    pub r: VirtioGpuRect,
+    pub enabled: u32,
+    pub flags: u32,
+}
+
+#[repr(C)]
+pub struct VirtioGpuRespDisplayInfo {
+    pub hdr: VirtioGpuCtrlHead,
+    pub pmodes: [VirtioGpuDisplayOne; VIRTIO_GPU_MAX_SCANOUTS as usize],
+}
+
+#[repr(C)]
+pub struct VirtioGpuResourceCreate2D {
+    pub hdr: VirtioGpuCtrlHead,
+    pub resource_id: u32,
+    pub format: u32,
+    pub width: u32,
+    pub height: u32,
+}
+
+#[repr(C)]
+pub struct VirtioGpuResourceAttachBacking {
+    pub hdr: VirtioGpuCtrlHead,
+    pub resource_id: u32,
+    pub nr_entries: u32,
+}
+
+#[repr(C)]
+pub struct VirtioGpuMemEntry {
+    pub addr: u64,
+    pub length: u32,
+    pub padding: u32,
+}
+
+#[repr(C)]
+pub struct VirtioGpuSetScanout {
+    pub hdr: VirtioGpuCtrlHead,
+    pub r: VirtioGpuRect,
+    pub scanout_id: u32,
+    pub resource_id: u32,
+}
+
+#[repr(C)]
+pub struct VirtioGpuTransferToHost2D {
+    pub hdr: VirtioGpuCtrlHead,
+    pub r: VirtioGpuRect,
+    pub offset: u64,
+    pub resource_id: u32,
+    pub padding: u32,
+}
+
+#[repr(C)]
+pub struct VirtioGpuResourceFlush {
+    pub hdr: VirtioGpuCtrlHead,
+    pub r: VirtioGpuRect,
+    pub resource_id: u32,
+    pub padding: u32,
+}
 
 #[derive(Clone, Copy)]
 struct Info {
