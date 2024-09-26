@@ -51,10 +51,6 @@ pub const VIRTIO_CONFIG_S_DRIVER_OK: u32 = 1 << 2;
 pub const VIRTIO_CONFIG_S_FEATURES_OK: u32 = 1 << 3;
 
 // device feature bits
-pub const VIRTIO_BLK_F_RO: u32 = 5; // Disk is read-only
-pub const VIRTIO_BLK_F_SCSI: u32 = 7; // Supports scsi command passthru
-pub const VIRTIO_BLK_F_CONFIG_WCE: u32 = 11; // Writeback mode available in config
-pub const VIRTIO_BLK_F_MQ: u32 = 12; // support more than one vq
 pub const VIRTIO_F_ANY_LAYOUT: u32 = 27;
 pub const VIRTIO_RING_F_INDIRECT_DESC: u32 = 28;
 pub const VIRTIO_RING_F_EVENT_IDX: u32 = 29;

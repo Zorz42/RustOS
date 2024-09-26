@@ -4,10 +4,15 @@ use core::mem::size_of;
 use core::ptr::{addr_of, write_bytes};
 use core::sync::atomic::{fence, Ordering};
 use crate::spinlock::Lock;
-use crate::virtio::{virtio_reg_read, VirtqAvail, VirtqDesc, VirtqUsed, MmioOffset, NUM, VIRTIO_CONFIG_S_ACKNOWLEDGE, VIRTIO_CONFIG_S_DRIVER, VIRTIO_BLK_F_RO, VIRTIO_BLK_F_SCSI, VIRTIO_BLK_F_CONFIG_WCE, VIRTIO_BLK_F_MQ, VIRTIO_F_ANY_LAYOUT, VIRTIO_RING_F_EVENT_IDX, VIRTIO_RING_F_INDIRECT_DESC, VIRTIO_CONFIG_S_FEATURES_OK, VIRTIO_CONFIG_S_DRIVER_OK, VRING_DESC_F_NEXT, VRING_DESC_F_WRITE, MAX_VIRTIO_ID, virtio_reg_write, VIRTIO_MAGIC};
-use std::{println, Vec};
+use crate::virtio::definitions::{virtio_reg_read, VirtqAvail, VirtqDesc, VirtqUsed, MmioOffset, NUM, VIRTIO_CONFIG_S_ACKNOWLEDGE, VIRTIO_CONFIG_S_DRIVER, VIRTIO_F_ANY_LAYOUT, VIRTIO_RING_F_EVENT_IDX, VIRTIO_RING_F_INDIRECT_DESC, VIRTIO_CONFIG_S_FEATURES_OK, VIRTIO_CONFIG_S_DRIVER_OK, VRING_DESC_F_NEXT, VRING_DESC_F_WRITE, MAX_VIRTIO_ID, virtio_reg_write, VIRTIO_MAGIC};
+use std::Vec;
 use crate::memory::{alloc_page, virt_to_phys, VirtAddr, PAGE_SIZE};
 use crate::riscv::get_core_id;
+
+pub const VIRTIO_BLK_F_RO: u32 = 5; // Disk is read-only
+pub const VIRTIO_BLK_F_SCSI: u32 = 7; // Supports scsi command passthru
+pub const VIRTIO_BLK_F_CONFIG_WCE: u32 = 11; // Writeback mode available in config
+pub const VIRTIO_BLK_F_MQ: u32 = 12; // support more than one vq
 
 // these are specific to virtio block devices, e.g. disks,
 // described in Section 5.2 of the spec.
@@ -274,11 +279,14 @@ impl Disk {
         if self.irq_waiting {
             disk_irq(self.id as u32 + 1);
         }
+
         while self.info[idx[0]] {
             unsafe {
                 asm!("wfi");
             }
+            self.info = black_box(self.info); // interrupt might change it
         }
+
         self.vdisk_lock.spinlock();
 
         assert_eq!(status, 0);
