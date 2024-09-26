@@ -1,11 +1,12 @@
 use core::arch::asm;
 use core::hint::black_box;
-use core::mem::{uninitialized, MaybeUninit};
+use core::mem::MaybeUninit;
 use core::ptr::{addr_of, write_bytes};
 use core::sync::atomic::{fence, Ordering};
 use crate::memory::{alloc_page, virt_to_phys, VirtAddr, PAGE_SIZE};
 use crate::riscv::get_core_id;
 use crate::spinlock::Lock;
+use crate::timer::get_ticks;
 use crate::virtio::definitions::{virtio_reg_addr, virtio_reg_read, virtio_reg_write, MmioOffset, VirtqAvail, VirtqDesc, VirtqUsed, MAX_VIRTIO_ID, NUM, VIRTIO_CONFIG_S_ACKNOWLEDGE, VIRTIO_CONFIG_S_DRIVER, VIRTIO_CONFIG_S_DRIVER_OK, VIRTIO_CONFIG_S_FEATURES_OK, VIRTIO_F_ANY_LAYOUT, VIRTIO_MAGIC, VIRTIO_RING_F_EVENT_IDX, VIRTIO_RING_F_INDIRECT_DESC, VRING_DESC_F_NEXT, VRING_DESC_F_WRITE};
 
 pub struct VirtioDevice {
@@ -20,7 +21,7 @@ pub struct VirtioDevice {
     info: [bool; NUM],
     lock: Lock,
     virtio_id: u64,
-    irq_waiting: bool,
+    irq_waiting: u32,
 }
 
 const ARRAY_REPEAT_VALUE: Option<VirtioDevice> = None;
@@ -47,7 +48,7 @@ impl VirtioDevice {
                 info: [false; NUM],
                 lock: Lock::new(),
                 virtio_id: id,
-                irq_waiting: false,
+                irq_waiting: 0,
             });
         }
 
@@ -117,15 +118,12 @@ impl VirtioDevice {
     }
 
     fn alloc_1desc(&mut self) -> Option<usize> {
-        //self.lock.spinlock();
         for i in 0..NUM {
             if self.free[i] {
                 self.free[i] = false;
-                //self.lock.unlock();
                 return Some(i);
             }
         }
-        //self.lock.unlock();
         None
     }
 
@@ -182,7 +180,6 @@ impl VirtioDevice {
     }
 
     fn free_chain(&mut self, mut idx: usize) {
-        //self.lock.spinlock();
         loop {
             let flags = self.get_desc(idx).flags;
             let next = self.get_desc(idx).next as usize;
@@ -192,11 +189,10 @@ impl VirtioDevice {
             }
             idx = next;
         }
-        //self.lock.unlock();
     }
 
     fn virtio_send(&mut self, idx: usize) {
-        //self.lock.spinlock();
+        self.lock.spinlock();
 
         self.info[idx] = true;
 
@@ -215,25 +211,32 @@ impl VirtioDevice {
 
         virtio_reg_write(self.virtio_id, MmioOffset::QueueNotify, 0);
 
-        //self.lock.unlock();
+        self.lock.unlock();
 
-        if self.irq_waiting {
-            virtio_irq(self.virtio_id as u32 + 1);
-        }
+        let start_time = get_ticks();
 
         while self.info[idx] {
+            while self.irq_waiting > 0 {
+                virtio_irq(self.virtio_id as u32 + 1);
+                self.irq_waiting -= 1;
+                break;
+            }
+
+            if get_ticks() - start_time > 10000 {
+                panic!("virtio_send timeout");
+            }
+
+            self.info = black_box(self.info); // interrupt might changed it
+            self.irq_waiting = black_box(self.irq_waiting);
             unsafe {
                 asm!("wfi");
             }
-            self.info = black_box(self.info); // interrupt might changed it
-        }
-
-        if self.irq_waiting {
-            virtio_irq(self.virtio_id as u32 + 1);
         }
     }
 
     pub fn virtio_send_rww<Arg1,Res1,Res2>(&mut self, arg1: &Arg1) -> (Res1, Res2) {
+        self.lock.spinlock();
+
         let idx = self.alloc_3desc().unwrap();
 
         let desc0 = self.get_desc(idx[0]);
@@ -259,15 +262,23 @@ impl VirtioDevice {
         desc2.flags = VRING_DESC_F_WRITE;
         desc2.next = 0;
 
+        self.lock.unlock();
+
         self.virtio_send(idx[0]);
 
+        self.lock.spinlock();
+
         self.free_chain(idx[0]);
+
+        self.lock.unlock();
 
         black_box(arg1); // we need that data all the way through
         (black_box(res1), black_box(res2)) // because virtio does stuff to it
     }
 
     pub fn virtio_send_rrw<Arg1,Arg2,Res1>(&mut self, arg1: &Arg1, arg2: &Arg2) -> Res1 {
+        self.lock.spinlock();
+
         let idx = self.alloc_3desc().unwrap();
 
         let desc0 = self.get_desc(idx[0]);
@@ -291,9 +302,13 @@ impl VirtioDevice {
         desc2.flags = VRING_DESC_F_WRITE;
         desc2.next = 0;
 
+        self.lock.unlock();
+
         self.virtio_send(idx[0]);
 
+        self.lock.spinlock();
         self.free_chain(idx[0]);
+        self.lock.unlock();
 
         black_box(arg1); // we need that data all the way through
         black_box(arg2);
@@ -309,11 +324,11 @@ pub fn virtio_irq(irq: u32) {
 
     if let Some(device) = unsafe { DEVICES[id as usize].as_mut() } {
         if device.lock.locked_by() == get_core_id() as i32 {
-            device.irq_waiting = true;
+            device.irq_waiting += 1;
             return;
         }
 
-        //device.lock.spinlock();
+        device.lock.spinlock();
 
         virtio_reg_write(id, MmioOffset::InterruptAck, virtio_reg_read(id, MmioOffset::InterruptStatus) & 0x3);
 
@@ -330,6 +345,6 @@ pub fn virtio_irq(irq: u32) {
             device.used_idx += 1;
         }
 
-        //device.lock.unlock();
+        device.lock.unlock();
     }
 }

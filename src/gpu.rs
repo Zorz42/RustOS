@@ -5,7 +5,9 @@ use core::sync::atomic::{fence, Ordering};
 use crate::spinlock::Lock;
 use crate::virtio::definitions::{virtio_reg_read, VirtqAvail, VirtqDesc, VirtqUsed, MmioOffset, NUM, VIRTIO_CONFIG_S_ACKNOWLEDGE, VIRTIO_CONFIG_S_DRIVER, VIRTIO_F_ANY_LAYOUT, VIRTIO_RING_F_EVENT_IDX, VIRTIO_RING_F_INDIRECT_DESC, VIRTIO_CONFIG_S_FEATURES_OK, VIRTIO_CONFIG_S_DRIVER_OK, VRING_DESC_F_NEXT, VRING_DESC_F_WRITE, MAX_VIRTIO_ID, virtio_reg_write, VIRTIO_MAGIC};
 use crate::memory::{alloc_continuous_pages, alloc_page, PAGE_SIZE};
+use crate::panic;
 use crate::riscv::get_core_id;
+use crate::timer::get_ticks;
 
 pub const VIRTIO_GPU_CMD_GET_DISPLAY_INFO: u32 = 0x0100;
 pub const VIRTIO_GPU_CMD_RESOURCE_CREATE_2D: u32 = 0x0101;
@@ -659,9 +661,15 @@ impl Gpu {
         if self.irq_waiting {
             gpu_irq(self.id as u32 + 1);
         }
+
+        let start_time = get_ticks();
         while self.info[idx[0]].ready == 0 {
             unsafe {
                 asm!("wfi");
+            }
+
+            if get_ticks() - start_time > 1000 {
+                panic!("GPU transfer to host timeout");
             }
         }
         self.vgpu_lock.spinlock();
@@ -733,9 +741,15 @@ impl Gpu {
         if self.irq_waiting {
             gpu_irq(self.id as u32 + 1);
         }
+
+        let start_time = get_ticks();
         while self.info[idx[0]].ready == 0 {
             unsafe {
                 asm!("wfi");
+            }
+
+            if get_ticks() - start_time > 1000 {
+                panic!("GPU flush resource timeout");
             }
         }
         self.vgpu_lock.spinlock();
@@ -750,8 +764,8 @@ impl Gpu {
     }
 
     fn refresh_screen(&mut self) {
-        self.virtio_transfer_to_host();
-        self.virtio_flush_resource();
+        //self.virtio_transfer_to_host();
+        //self.virtio_flush_resource();
     }
 }
 

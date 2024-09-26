@@ -1,5 +1,7 @@
 use core::ptr::addr_of;
+use std::println;
 use crate::riscv::{amoswap, get_core_id};
+use crate::timer::get_ticks;
 
 pub struct Lock {
     acquired: i32,
