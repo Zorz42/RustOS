@@ -1,8 +1,12 @@
-use core::ptr::write_bytes;
-use crate::disk::disk::Disk;
-use crate::memory::{alloc_page, PAGE_SIZE};
+use core::arch::asm;
+use core::hint::black_box;
+use core::mem::{uninitialized, MaybeUninit};
+use core::ptr::{addr_of, write_bytes};
+use core::sync::atomic::{fence, Ordering};
+use crate::memory::{alloc_page, virt_to_phys, VirtAddr, PAGE_SIZE};
+use crate::riscv::get_core_id;
 use crate::spinlock::Lock;
-use crate::virtio::definitions::{virtio_reg_read, virtio_reg_write, MmioOffset, VirtqAvail, VirtqDesc, VirtqUsed, MAX_VIRTIO_ID, NUM, VIRTIO_CONFIG_S_ACKNOWLEDGE, VIRTIO_CONFIG_S_DRIVER, VIRTIO_CONFIG_S_DRIVER_OK, VIRTIO_CONFIG_S_FEATURES_OK, VIRTIO_F_ANY_LAYOUT, VIRTIO_MAGIC, VIRTIO_RING_F_EVENT_IDX, VIRTIO_RING_F_INDIRECT_DESC, VRING_DESC_F_NEXT};
+use crate::virtio::definitions::{virtio_reg_addr, virtio_reg_read, virtio_reg_write, MmioOffset, VirtqAvail, VirtqDesc, VirtqUsed, MAX_VIRTIO_ID, NUM, VIRTIO_CONFIG_S_ACKNOWLEDGE, VIRTIO_CONFIG_S_DRIVER, VIRTIO_CONFIG_S_DRIVER_OK, VIRTIO_CONFIG_S_FEATURES_OK, VIRTIO_F_ANY_LAYOUT, VIRTIO_MAGIC, VIRTIO_RING_F_EVENT_IDX, VIRTIO_RING_F_INDIRECT_DESC, VRING_DESC_F_NEXT, VRING_DESC_F_WRITE};
 
 pub struct VirtioDevice {
     // three virtqueues
@@ -31,6 +35,7 @@ impl VirtioDevice {
         {
             return None;
         }
+
 
         unsafe {
             DEVICES[id as usize] = Some(Self {
@@ -108,16 +113,19 @@ impl VirtioDevice {
     }
 
     pub fn get_config_address(&self) -> *mut u8 {
-        virtio_reg_read(self.virtio_id, MmioOffset::Config) as *mut u8
+        virtio_reg_addr(self.virtio_id, MmioOffset::Config)
     }
 
     fn alloc_1desc(&mut self) -> Option<usize> {
+        //self.lock.spinlock();
         for i in 0..NUM {
             if self.free[i] {
                 self.free[i] = false;
+                //self.lock.unlock();
                 return Some(i);
             }
         }
+        //self.lock.unlock();
         None
     }
 
@@ -174,6 +182,7 @@ impl VirtioDevice {
     }
 
     fn free_chain(&mut self, mut idx: usize) {
+        //self.lock.spinlock();
         loop {
             let flags = self.get_desc(idx).flags;
             let next = self.get_desc(idx).next as usize;
@@ -183,5 +192,144 @@ impl VirtioDevice {
             }
             idx = next;
         }
+        //self.lock.unlock();
+    }
+
+    fn virtio_send(&mut self, idx: usize) {
+        //self.lock.spinlock();
+
+        self.info[idx] = true;
+
+        unsafe {
+            let idx2 = (*self.avail).idx as usize;
+            (*self.avail).ring[idx2 % NUM] = idx as u16;
+        }
+
+        fence(Ordering::Release);
+
+        unsafe {
+            (*self.avail).idx += 1;
+        }
+
+        fence(Ordering::Release);
+
+        virtio_reg_write(self.virtio_id, MmioOffset::QueueNotify, 0);
+
+        //self.lock.unlock();
+
+        if self.irq_waiting {
+            virtio_irq(self.virtio_id as u32 + 1);
+        }
+
+        while self.info[idx] {
+            unsafe {
+                asm!("wfi");
+            }
+            self.info = black_box(self.info); // interrupt might changed it
+        }
+
+        if self.irq_waiting {
+            virtio_irq(self.virtio_id as u32 + 1);
+        }
+    }
+
+    pub fn virtio_send_rww<Arg1,Res1,Res2>(&mut self, arg1: &Arg1) -> (Res1, Res2) {
+        let idx = self.alloc_3desc().unwrap();
+
+        let desc0 = self.get_desc(idx[0]);
+        desc0.addr = virt_to_phys(arg1 as *const Arg1 as VirtAddr).unwrap();
+        desc0.len = size_of::<Arg1>() as u32;
+        desc0.flags = VRING_DESC_F_NEXT;
+        desc0.next = idx[1] as u16;
+
+        let res1 = unsafe { MaybeUninit::zeroed().assume_init() };
+
+        let desc1 = self.get_desc(idx[1]);
+        desc1.addr = addr_of!(res1) as u64;
+        desc1.len = size_of::<Res1>() as u32;
+        desc1.flags = VRING_DESC_F_WRITE | VRING_DESC_F_NEXT;
+        desc1.next = idx[2] as u16;
+
+        let res2 = unsafe { MaybeUninit::zeroed().assume_init() };
+
+        let addr = addr_of!(res2) as u64;
+        let desc2 = self.get_desc(idx[2]);
+        desc2.addr = addr;
+        desc2.len = size_of::<Res2>() as u32;
+        desc2.flags = VRING_DESC_F_WRITE;
+        desc2.next = 0;
+
+        self.virtio_send(idx[0]);
+
+        self.free_chain(idx[0]);
+
+        black_box(arg1); // we need that data all the way through
+        (black_box(res1), black_box(res2)) // because virtio does stuff to it
+    }
+
+    pub fn virtio_send_rrw<Arg1,Arg2,Res1>(&mut self, arg1: &Arg1, arg2: &Arg2) -> Res1 {
+        let idx = self.alloc_3desc().unwrap();
+
+        let desc0 = self.get_desc(idx[0]);
+        desc0.addr = virt_to_phys(arg1 as *const Arg1 as VirtAddr).unwrap();
+        desc0.len = size_of::<Arg1>() as u32;
+        desc0.flags = VRING_DESC_F_NEXT;
+        desc0.next = idx[1] as u16;
+
+        let desc1 = self.get_desc(idx[1]);
+        desc1.addr = virt_to_phys(arg2 as *const Arg2 as VirtAddr).unwrap();
+        desc1.len = size_of::<Arg2>() as u32;
+        desc1.flags = VRING_DESC_F_NEXT;
+        desc1.next = idx[2] as u16;
+
+        let res1 = unsafe { MaybeUninit::zeroed().assume_init() };
+
+        let addr = addr_of!(res1) as u64;
+        let desc2 = self.get_desc(idx[2]);
+        desc2.addr = addr;
+        desc2.len = size_of::<Res1>() as u32;
+        desc2.flags = VRING_DESC_F_WRITE;
+        desc2.next = 0;
+
+        self.virtio_send(idx[0]);
+
+        self.free_chain(idx[0]);
+
+        black_box(arg1); // we need that data all the way through
+        black_box(arg2);
+        black_box(res1) // because virtio does stuff to it
+    }
+}
+
+pub fn virtio_irq(irq: u32) {
+    if irq == 0 || irq > MAX_VIRTIO_ID as u32 {
+        return;
+    }
+    let id = irq as u64 - 1;
+
+    if let Some(device) = unsafe { DEVICES[id as usize].as_mut() } {
+        if device.lock.locked_by() == get_core_id() as i32 {
+            device.irq_waiting = true;
+            return;
+        }
+
+        //device.lock.spinlock();
+
+        virtio_reg_write(id, MmioOffset::InterruptAck, virtio_reg_read(id, MmioOffset::InterruptStatus) & 0x3);
+
+        fence(Ordering::Release);
+
+        let used = unsafe { &mut *device.used };
+
+        while device.used_idx != used.idx {
+            fence(Ordering::Release);
+            let id = used.ring[device.used_idx as usize % NUM].id;
+
+            device.info[id as usize] = false;
+
+            device.used_idx += 1;
+        }
+
+        //device.lock.unlock();
     }
 }

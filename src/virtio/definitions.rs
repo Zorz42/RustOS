@@ -34,13 +34,18 @@ pub enum MmioOffset {
     Config = 0x100,
 }
 
-pub fn virtio_reg_read(id: u64, reg: MmioOffset) -> u32 {
+pub fn virtio_reg_addr(id: u64, reg: MmioOffset) -> *mut u8 {
     let addr = VIRTIO_MMIO_BASE + 0x1000 * id + reg as u64;
+    addr as *mut u8
+}
+
+pub fn virtio_reg_read(id: u64, reg: MmioOffset) -> u32 {
+    let addr = virtio_reg_addr(id, reg);
     unsafe { (addr as *mut u32).read_volatile() }
 }
 
 pub fn virtio_reg_write(id: u64, reg: MmioOffset, val: u32) {
-    let addr = VIRTIO_MMIO_BASE + 0x1000 * id + reg as u64;
+    let addr = virtio_reg_addr(id, reg);
     unsafe { (addr as *mut u32).write_volatile(val); }
 }
 

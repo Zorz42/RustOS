@@ -1,2 +1,2 @@
 pub mod definitions;
-mod device;
+pub mod device;

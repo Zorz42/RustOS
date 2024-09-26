@@ -10,7 +10,7 @@ use crate::print::{reset_print_color, set_print_color, TextColor};
 use crate::timer::get_ticks;
 use kernel_test::all_tests;
 use crate::disk::filesystem::get_fs;
-//use crate::disk::filesystem::get_fs;
+use crate::ROOT_MAGIC;
 
 mod A0_rand;
 mod A1_bitset;
@@ -38,31 +38,32 @@ pub(super) fn get_free_space_addr() -> *mut u8 {
     unsafe { ((FREE_SPACE.as_mut_ptr() as u64 + 7) / 8 * 8) as *mut u8 }
 }
 
-static mut TEST_DISK: Option<&'static mut Disk> = None;
+static mut TEST_DISK: Option<Disk> = None;
 
 pub fn get_test_disk() -> &'static mut Disk {
-    unsafe { *TEST_DISK.as_mut().unwrap() }
+    unsafe { TEST_DISK.as_mut().unwrap() }
 }
 
-pub fn test_runner(disks: &mut Vec<&'static mut Disk>) {
+pub fn test_runner(disks: &mut Vec<Disk>) {
+
     let mut test_disk = None;
     for disk in disks {
         let first_sector = disk.read(0);
         let magic = ((first_sector[511] as u32) << 0) + ((first_sector[510] as u32) << 8) + ((first_sector[509] as u32) << 16) + ((first_sector[508] as u32) << 24);
 
-        if magic == TESTDISK_MAGIC_CODE {
-            let addr = addr_of!(**disk);
-            test_disk = Some(unsafe { addr as *mut Disk });
+        if magic != ROOT_MAGIC {
+            test_disk = Some(disk.clone());
         }
     }
 
-    if let Some(test_disk) = test_disk {
-        unsafe {
-            TEST_DISK = Some(&mut *test_disk);
-        }
-    } else {
+    if test_disk.is_none() {
         panic!("Test disk not found");
     }
+
+    unsafe {
+        TEST_DISK = test_disk;
+    }
+
 
     let tests = all_tests!();
 

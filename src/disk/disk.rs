@@ -5,9 +5,10 @@ use core::ptr::{addr_of, write_bytes};
 use core::sync::atomic::{fence, Ordering};
 use crate::spinlock::Lock;
 use crate::virtio::definitions::{virtio_reg_read, VirtqAvail, VirtqDesc, VirtqUsed, MmioOffset, NUM, VIRTIO_CONFIG_S_ACKNOWLEDGE, VIRTIO_CONFIG_S_DRIVER, VIRTIO_F_ANY_LAYOUT, VIRTIO_RING_F_EVENT_IDX, VIRTIO_RING_F_INDIRECT_DESC, VIRTIO_CONFIG_S_FEATURES_OK, VIRTIO_CONFIG_S_DRIVER_OK, VRING_DESC_F_NEXT, VRING_DESC_F_WRITE, MAX_VIRTIO_ID, virtio_reg_write, VIRTIO_MAGIC};
-use std::Vec;
+use std::{println, Vec};
 use crate::memory::{alloc_page, virt_to_phys, VirtAddr, PAGE_SIZE};
 use crate::riscv::get_core_id;
+use crate::virtio::device::VirtioDevice;
 
 pub const VIRTIO_BLK_F_RO: u32 = 5; // Disk is read-only
 pub const VIRTIO_BLK_F_SCSI: u32 = 7; // Supports scsi command passthru
@@ -31,49 +32,40 @@ pub struct VirtioBlqReq {
     pub sector: u64,
 }
 
-struct Buf {
-    data: [u8; 512],
-}
-
 pub struct Disk {
-    // a set (not a ring) of DMA descriptors, with which the
-    // driver tells the device where to read and write individual
-    // disk operations. there are NUM descriptors.
-    // most commands consist of a "chain" (a linked list) of a couple of
-    // these descriptors.
-    desc: *mut VirtqDesc,
-
-    // a ring in which the driver writes descriptor numbers
-    // that the driver would like the device to process.  it only
-    // includes the head descriptor of each chain. the ring has
-    // NUM elements.
-    avail: *mut VirtqAvail,
-
-    // a ring in which the device writes descriptor numbers that
-    // the device has finished processing (just the head of each chain).
-    // there are NUM used ring entries.
-    used: *mut VirtqUsed,
-
-    // our own book-keeping.
-    free: [bool; NUM], // is a descriptor free?
-    used_idx: u16,     // we've looked this far in used[2..NUM].
-
-    // track info about in-flight operations,
-    // for use when completion interrupt arrives.
-    // indexed by first descriptor index of chain.
-    info: [bool; NUM],
-
-    vdisk_lock: Lock,
-
-    id: u64, // virtio device id
-
-    size: usize, // size of the disk
-
-    irq_waiting: bool, // if an irq was cancelled because it was locked. do it when it unlocks
+    virtio_device: &'static mut VirtioDevice,
+    size: usize,
 }
 
-pub fn get_disk_at(id: u64) -> Option<&'static mut Disk> {
-    if virtio_reg_read(id, MmioOffset::MagicValue) != VIRTIO_MAGIC
+impl Clone for Disk {
+    fn clone(&self) -> Self {
+        Self {
+            virtio_device: unsafe { &mut *(self.virtio_device as *const VirtioDevice as *mut VirtioDevice) },
+            size: self.size,
+        }
+    }
+}
+
+pub fn get_disk_at(id: u64) -> Option<Disk> {
+    let mut features = !0;
+    features &= !(1 << VIRTIO_BLK_F_RO);
+    features &= !(1 << VIRTIO_BLK_F_SCSI);
+    features &= !(1 << VIRTIO_BLK_F_CONFIG_WCE);
+    features &= !(1 << VIRTIO_BLK_F_MQ);
+
+    let device = VirtioDevice::get_device_at(id, 2, 2, 0x554d4551, features);
+
+    if let Some(device) = device {
+        let size = unsafe { *(device.get_config_address() as *mut u64) } as usize;
+
+        Some(Disk {
+            virtio_device: device,
+            size,
+        })
+    } else {
+        None
+    }
+    /*if virtio_reg_read(id, MmioOffset::MagicValue) != VIRTIO_MAGIC
         || virtio_reg_read(id, MmioOffset::Version) != 2
         || virtio_reg_read(id, MmioOffset::DeviceId) != 2
         || virtio_reg_read(id, MmioOffset::VendorId) != 0x554d4551
@@ -162,11 +154,11 @@ pub fn get_disk_at(id: u64) -> Option<&'static mut Disk> {
     // get the disk size
     disk.size = virtio_reg_read(id, MmioOffset::Config) as usize;
 
-    Some(disk)
+    Some(disk)*/
 }
 
 impl Disk {
-    fn alloc_desc(&mut self) -> Option<usize> {
+    /*fn alloc_desc(&mut self) -> Option<usize> {
         for i in 0..NUM {
             if self.free[i] {
                 self.free[i] = false;
@@ -220,9 +212,9 @@ impl Disk {
             }
             idx = next;
         }
-    }
+    }*/
 
-    fn virtio_disk_rw(&mut self, data: &[u8; 512], sector: u32, write: bool) {
+    /*fn virtio_disk_rw(&mut self, data: &[u8; 512], sector: u32, write: bool) {
         self.vdisk_lock.spinlock();
 
         let idx = self.alloc_3desc().unwrap();
@@ -300,21 +292,36 @@ impl Disk {
         }
 
         black_box(data); // we need that data all the way through
-    }
+    }*/
 
     pub fn read(&mut self, sector: usize) -> [u8; 512] {
         assert!(sector < self.size);
 
-        let data = [0; 512];
-        self.virtio_disk_rw(&data, sector as u32, false);
-        black_box(data) // because data is being written to
+        let req = VirtioBlqReq {
+            typ: VIRTIO_BLK_T_IN,
+            reserved: 0,
+            sector: sector as u64,
+        };
+
+        let res: ([u8; 512], u8) = self.virtio_device.virtio_send_rww(&req);
+
+        assert_eq!(res.1, 0);
+
+        black_box(res.0) // because data is being written to
     }
 
     pub fn write(&mut self, sector: usize, data: &[u8; 512]) {
         assert!(sector < self.size);
 
-        self.virtio_disk_rw(data, sector as u32, true);
+        let req = VirtioBlqReq {
+            typ: VIRTIO_BLK_T_OUT,
+            reserved: 0,
+            sector: sector as u64,
+        };
 
+        let res: u8 = self.virtio_device.virtio_send_rrw(&req, data);
+
+        assert_eq!(res, 0);
     }
 
     pub const fn size(&self) -> usize {
@@ -322,7 +329,7 @@ impl Disk {
     }
 }
 
-pub fn scan_for_disks() -> Vec<&'static mut Disk> {
+pub fn scan_for_disks() -> Vec<Disk> {
     let mut vec = Vec::new();
     for id in 0..MAX_VIRTIO_ID {
         if let Some(disk) = get_disk_at(id) {
@@ -333,7 +340,7 @@ pub fn scan_for_disks() -> Vec<&'static mut Disk> {
     vec
 }
 
-static mut DISKS: [*mut Disk; MAX_VIRTIO_ID as usize] = [0 as *mut Disk; MAX_VIRTIO_ID as usize];
+/*static mut DISKS: [*mut Disk; MAX_VIRTIO_ID as usize] = [0 as *mut Disk; MAX_VIRTIO_ID as usize];
 
 pub fn disk_irq(irq: u32) {
     if irq == 0 || irq > MAX_VIRTIO_ID as u32 {
@@ -372,4 +379,4 @@ pub fn disk_irq(irq: u32) {
     }
 
     disk.vdisk_lock.unlock();
-}
+}*/

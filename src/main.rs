@@ -30,11 +30,11 @@ mod plic;
 mod gpu;
 mod font;
 
-fn find_root_disk(disks: &mut Vec<&'static mut Disk>) -> &'static mut Disk {
-    let mut root_disk = None;
+pub const ROOT_MAGIC: u32 = 0x63726591;
+
+fn find_root_disk(disks: &mut Vec<Disk>) -> Disk {
     for disk in disks {
         let first_sector = disk.read(0);
-        let root_magic = 0x63726591;
 
         let mut magic = 0;
 
@@ -42,11 +42,11 @@ fn find_root_disk(disks: &mut Vec<&'static mut Disk>) -> &'static mut Disk {
             magic += (first_sector[511 - i] as u32) << (8 * i);
         }
 
-        if root_magic == magic {
-            root_disk = Some(*disk as *mut Disk);
+        if ROOT_MAGIC == magic {
+            return disk.clone();
         }
     }
-    unsafe { &mut **root_disk.as_mut().unwrap() }
+    panic!("Root disk not found")
 }
 
 pub fn main() {
@@ -60,10 +60,9 @@ pub fn main() {
         plicinit();
         plicinithart();
 
-        let mut disks = scan_for_disks();
         init_gpu();
-        refresh_screen();
         init_print();
+        let mut disks = scan_for_disks();
 
         println!("Initializing kernel with core 0");
         #[cfg(debug_assertions)]
@@ -79,10 +78,10 @@ pub fn main() {
             test_runner(&mut disks);
         }
 
-        let root_disk = find_root_disk(&mut disks);
+        let mut root_disk = find_root_disk(&mut disks);
 
         close_fs();
-        mount_disk(root_disk);
+        mount_disk(&mut root_disk);
         init_fs();
 
         #[cfg(feature = "run_perf")]

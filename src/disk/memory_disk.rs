@@ -5,7 +5,7 @@ use crate::disk::disk::Disk;
 use crate::memory::{map_page_auto, VirtAddr, DISK_OFFSET, PAGE_SIZE, unmap_page, BitSet};
 
 pub struct MemoryDisk {
-    disk: &'static mut Disk,
+    disk: Disk,
     mapped_pages: Vec<i32>,
     is_taken: Option<BitSet>, // which page is taken
     is_mapped: BitSet, // which page is mapped
@@ -17,10 +17,10 @@ const fn id_to_addr(page: i32) -> *mut u8 {
 }
 
 impl MemoryDisk {
-    pub fn new(disk: &'static mut Disk) -> Self {
+    pub fn new(disk: &mut Disk) -> Self {
         let size = disk.size();
         Self {
-            disk,
+            disk: disk.clone(),
             mapped_pages: Vec::new(),
             is_taken: None,
             is_mapped: BitSet::new(size / 8),
@@ -200,7 +200,7 @@ pub fn unmount_disk() {
     }
 }
 
-pub fn mount_disk(disk: &'static mut Disk) {
+pub fn mount_disk(disk: &mut Disk) {
     unmount_disk();
 
     let mounted_disk = Box::new(MemoryDisk::new(disk));
