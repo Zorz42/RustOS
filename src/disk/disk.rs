@@ -6,7 +6,7 @@ use core::sync::atomic::{fence, Ordering};
 use crate::spinlock::Lock;
 use crate::virtio::{virtio_reg_read, VirtqAvail, VirtqDesc, VirtqUsed, MmioOffset, NUM, VIRTIO_CONFIG_S_ACKNOWLEDGE, VIRTIO_CONFIG_S_DRIVER, VIRTIO_BLK_F_RO, VIRTIO_BLK_F_SCSI, VIRTIO_BLK_F_CONFIG_WCE, VIRTIO_BLK_F_MQ, VIRTIO_F_ANY_LAYOUT, VIRTIO_RING_F_EVENT_IDX, VIRTIO_RING_F_INDIRECT_DESC, VIRTIO_CONFIG_S_FEATURES_OK, VIRTIO_CONFIG_S_DRIVER_OK, VRING_DESC_F_NEXT, VRING_DESC_F_WRITE, MAX_VIRTIO_ID, virtio_reg_write, VIRTIO_MAGIC};
 use std::{println, Vec};
-use crate::memory::{alloc_page, PAGE_SIZE};
+use crate::memory::{alloc_page, virt_to_phys, VirtAddr, PAGE_SIZE};
 use crate::riscv::get_core_id;
 
 // these are specific to virtio block devices, e.g. disks,
@@ -235,7 +235,7 @@ impl Disk {
         desc0.next = idx[1] as u16;
 
         let desc1 = self.get_desc(idx[1]);
-        desc1.addr = data.as_ptr() as u64;
+        desc1.addr = virt_to_phys(data.as_ptr() as VirtAddr).unwrap();
         desc1.len = 512;
         desc1.flags = if write {0} else {VRING_DESC_F_WRITE};
         desc1.flags |= VRING_DESC_F_NEXT;
@@ -299,14 +299,13 @@ impl Disk {
 
         let data = [0; 512];
         self.virtio_disk_rw(&data, sector as u32, false);
-
-        data
+        black_box(data) // because data is being written to
     }
 
     pub fn write(&mut self, sector: usize, data: &[u8; 512]) {
         assert!(sector < self.size);
 
-        self.virtio_disk_rw(&data.clone(), sector as u32, true);
+        self.virtio_disk_rw(data, sector as u32, true);
 
     }
 

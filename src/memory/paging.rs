@@ -3,7 +3,7 @@ pub type VirtAddr = *mut u8;
 
 use crate::boot::{NUM_CORES, STACK_SIZE};
 use crate::memory::bitset::{bitset_size_bytes, BitSetRaw};
-use crate::memory::{get_kernel_top_address, HEAP_BASE_ADDR, HEAP_TREE_ADDR, KERNEL_OFFSET, NUM_PAGES, PAGE_SIZE};
+use crate::memory::{get_kernel_top_address, HEAP_BASE_ADDR, HEAP_TREE_ADDR, ID_MAP_END, KERNEL_OFFSET, NUM_PAGES, PAGE_SIZE};
 use crate::riscv::{get_satp, set_satp};
 use core::intrinsics::write_bytes;
 use core::sync::atomic::{fence, Ordering};
@@ -211,6 +211,10 @@ pub fn map_page_auto(virtual_addr: VirtAddr, ignore_if_exists: bool, writable: b
 }
 
 pub fn virt_to_phys(addr: VirtAddr) -> Option<PhysAddr> {
+    if (addr as u64) < ID_MAP_END {
+        return Some(addr as PhysAddr);
+    }
+
     let entry = get_address_page_table_entry(addr).unwrap();
     Some(get_entry_addr(*entry)? as PhysAddr)
 }
