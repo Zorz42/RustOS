@@ -1,7 +1,6 @@
 use crate::riscv::{get_core_id, get_scause, get_sepc, get_sip, get_sstatus, get_stval, interrupts_get, set_sip, set_stvec, SSTATUS_SPP};
 use crate::timer::tick;
 use std::println;
-use crate::gpu::gpu_irq;
 use crate::plic::{plic_complete, plic_irq};
 use crate::virtio::device::virtio_irq;
 
@@ -38,8 +37,6 @@ fn get_interrupt_type() -> InterruptType {
     if (scause & 0x8000000000000000) != 0 && (scause & 0xff) == 9 {
         let irq = plic_irq();
 
-        //disk_irq(irq);
-        gpu_irq(irq);
         virtio_irq(irq);
 
         plic_complete(irq);

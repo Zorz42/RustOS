@@ -60,8 +60,8 @@ pub fn main() {
         plicinit();
         plicinithart();
 
-        init_gpu();
         init_print();
+        init_gpu();
         let mut disks = scan_for_disks();
 
         println!("Initializing kernel with core 0");

@@ -223,9 +223,6 @@ impl VirtioDevice {
 
         while unsafe { read_volatile(&mut self.info[idx]) } {
             if get_ticks() - start_time > 3000 {
-                println!("avail idx = {}", unsafe { (*self.avail).idx });
-                println!("used idx = {}", unsafe { (*self.used).idx });
-
                 panic!("virtio_send timeout");
             }
 
@@ -257,9 +254,8 @@ impl VirtioDevice {
 
         let res2 = unsafe { MaybeUninit::zeroed().assume_init() };
 
-        let addr = addr_of!(res2) as u64;
         let desc2 = self.get_desc(idx[2]);
-        desc2.addr = addr;
+        desc2.addr = addr_of!(res2) as u64;
         desc2.len = size_of::<Res2>() as u32;
         desc2.flags = VRING_DESC_F_WRITE;
         desc2.next = 0;
@@ -273,7 +269,7 @@ impl VirtioDevice {
         self.lock.unlock();
 
         black_box(arg1); // we need that data all the way through
-        (black_box(res1), black_box(res2)) // because virtio does stuff to it
+        black_box((res1, res2)) // because virtio does stuff to it
     }
 
     pub fn virtio_send_rrw<Arg1,Arg2,Res1>(&mut self, arg1: &Arg1, arg2: &Arg2) -> Res1 {
@@ -295,9 +291,8 @@ impl VirtioDevice {
 
         let res1 = unsafe { MaybeUninit::zeroed().assume_init() };
 
-        let addr = addr_of!(res1) as u64;
         let desc2 = self.get_desc(idx[2]);
-        desc2.addr = addr;
+        desc2.addr = addr_of!(res1) as u64;
         desc2.len = size_of::<Res1>() as u32;
         desc2.flags = VRING_DESC_F_WRITE;
         desc2.next = 0;
@@ -312,6 +307,37 @@ impl VirtioDevice {
 
         black_box(arg1); // we need that data all the way through
         black_box(arg2);
+        black_box(res1) // because virtio does stuff to it
+    }
+
+    pub fn virtio_send_rw<Arg1,Res1>(&mut self, arg1: &Arg1) -> Res1 {
+        self.lock.spinlock();
+
+        let idx = self.alloc_2desc().unwrap();
+
+        let desc0 = self.get_desc(idx[0]);
+        desc0.addr = virt_to_phys(arg1 as *const Arg1 as VirtAddr).unwrap();
+        desc0.len = size_of::<Arg1>() as u32;
+        desc0.flags = VRING_DESC_F_NEXT;
+        desc0.next = idx[1] as u16;
+
+        let res1 = unsafe { MaybeUninit::zeroed().assume_init() };
+
+        let desc1 = self.get_desc(idx[1]);
+        desc1.addr = addr_of!(res1) as u64;
+        desc1.len = size_of::<Res1>() as u32;
+        desc1.flags = VRING_DESC_F_WRITE;
+        desc1.next = 0;
+
+        self.lock.unlock();
+
+        self.virtio_send(idx[0]);
+
+        self.lock.spinlock();
+        self.free_chain(idx[0]);
+        self.lock.unlock();
+
+        black_box(arg1); // we need that data all the way through
         black_box(res1) // because virtio does stuff to it
     }
 }

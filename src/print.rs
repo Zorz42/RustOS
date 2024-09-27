@@ -4,7 +4,6 @@ use crate::font::{CHAR_HEIGHT, CHAR_WIDTH, DEFAULT_FONT};
 use crate::gpu::{get_framebuffer, get_screen_size, refresh_screen};
 use crate::spinlock::Lock;
 use core::fmt::Write;
-use crate::riscv::get_core_id;
 
 #[allow(dead_code)]
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -144,7 +143,7 @@ impl Writer {
             addr.write_volatile(c);
         }
 
-        if c == b'\n' {
+        /*if c == b'\n' {
             self.new_line();
             return;
         }
@@ -158,7 +157,7 @@ impl Writer {
         self.x += 1;
         if self.x >= width_chars {
             self.new_line();
-        }
+        }*/
     }
 
     fn move_cursor_back(&mut self) {
@@ -182,11 +181,11 @@ pub fn _print(args: fmt::Arguments) {
     unsafe {
         WRITER.write_fmt(args).unwrap();
     }
-    refresh_screen();
+    //refresh_screen();
     PRINT_LOCK.unlock();
 }
 
-impl fmt::Write for Writer {
+impl Write for Writer {
     fn write_str(&mut self, s: &str) -> fmt::Result {
         for c in s.bytes() {
             self.write_char(c);

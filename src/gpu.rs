@@ -1,21 +1,17 @@
-use core::arch::asm;
-use core::mem::size_of;
-use core::ptr::{addr_of, write_bytes};
-use core::sync::atomic::{fence, Ordering};
-use crate::spinlock::Lock;
-use crate::virtio::definitions::{virtio_reg_read, VirtqAvail, VirtqDesc, VirtqUsed, MmioOffset, NUM, VIRTIO_CONFIG_S_ACKNOWLEDGE, VIRTIO_CONFIG_S_DRIVER, VIRTIO_F_ANY_LAYOUT, VIRTIO_RING_F_EVENT_IDX, VIRTIO_RING_F_INDIRECT_DESC, VIRTIO_CONFIG_S_FEATURES_OK, VIRTIO_CONFIG_S_DRIVER_OK, VRING_DESC_F_NEXT, VRING_DESC_F_WRITE, MAX_VIRTIO_ID, virtio_reg_write, VIRTIO_MAGIC};
-use crate::memory::{alloc_continuous_pages, alloc_page, PAGE_SIZE};
-use crate::panic;
-use crate::riscv::get_core_id;
-use crate::timer::get_ticks;
+use std::println;
+use crate::memory::{alloc_continuous_pages, PAGE_SIZE};
+use crate::virtio::definitions::MAX_VIRTIO_ID;
+use crate::virtio::device::VirtioDevice;
 
-pub const VIRTIO_GPU_CMD_GET_DISPLAY_INFO: u32 = 0x0100;
-pub const VIRTIO_GPU_CMD_RESOURCE_CREATE_2D: u32 = 0x0101;
-pub const VIRTIO_GPU_CMD_SET_SCANOUT: u32 = 0x0103;
-pub const VIRTIO_GPU_CMD_RESOURCE_FLUSH: u32 = 0x0104;
-pub const VIRTIO_GPU_CMD_TRANSFER_TO_HOST_2D: u32 = 0x0105;
-pub const VIRTIO_GPU_CMD_RESOURCE_ATTACH_BACKING: u32 = 0x0106;
-pub const VIRTIO_GPU_MAX_SCANOUTS: u32 = 16;
+const VIRTIO_GPU_CMD_GET_DISPLAY_INFO: u32 = 0x0100;
+const VIRTIO_GPU_CMD_RESOURCE_CREATE_2D: u32 = 0x0101;
+const VIRTIO_GPU_CMD_SET_SCANOUT: u32 = 0x0103;
+const VIRTIO_GPU_CMD_RESOURCE_FLUSH: u32 = 0x0104;
+const VIRTIO_GPU_CMD_TRANSFER_TO_HOST_2D: u32 = 0x0105;
+const VIRTIO_GPU_CMD_RESOURCE_ATTACH_BACKING: u32 = 0x0106;
+const VIRTIO_GPU_MAX_SCANOUTS: u32 = 16;
+const VIRTIO_GPU_RESP_OK_NODATA: u32 = 0x1100;
+const VIRTIO_GPU_RESP_OK_DISPLAY_INFO: u32 = 0x1101;
 
 #[derive(Clone, Copy)]
 #[repr(C)]
@@ -103,50 +99,28 @@ struct Info {
 }
 
 struct Gpu {
-    // a set (not a ring) of DMA descriptors, with which the
-    // driver tells the device where to read and write individual
-    // disk operations. there are NUM descriptors.
-    // most commands consist of a "chain" (a linked list) of a couple of
-    // these descriptors.
-    desc: *mut VirtqDesc,
-
-    // a ring in which the driver writes descriptor numbers
-    // that the driver would like the device to process.  it only
-    // includes the head descriptor of each chain. the ring has
-    // NUM elements.
-    avail: *mut VirtqAvail,
-
-    // a ring in which the device writes descriptor numbers that
-    // the device has finished processing (just the head of each chain).
-    // there are NUM used ring entries.
-    used: *mut VirtqUsed,
-
-    // our own book-keeping.
-    free: [bool; NUM], // is a descriptor free?
-    used_idx: u16,     // we've looked this far in used[2..NUM].
-
-    // track info about in-flight operations,
-    // for use when completion interrupt arrives.
-    // indexed by first descriptor index of chain.
-    info: [Info; NUM],
-
-    // disk command headers.
-    // one-for-one with descriptors, for convenience.
-    ops: [VirtioGpuCtrlHead; NUM],
-
-    vgpu_lock: Lock,
-
-    id: u64,
-
-    irq_waiting: bool, // if an irq was cancelled because it was locked. do it when it unlocks
+    virtio_device: &'static mut VirtioDevice,
 
     pixels_size: (u32, u32),
 
     framebuffer: *mut u32,
 }
 
-fn get_gpu_at(id: u64) -> Option<&'static mut Gpu> {
-    if virtio_reg_read(id, MmioOffset::MagicValue) != VIRTIO_MAGIC
+fn get_gpu_at(id: u64) -> Option<Gpu> {
+    let device = VirtioDevice::get_device_at(id, 2, 2, 0x554d4551, !0);
+
+    if let Some(device) = device {
+        Some(Gpu {
+            virtio_device: device,
+            pixels_size: (0, 0),
+            framebuffer: 0 as *mut u32,
+        })
+    } else {
+        None
+    }
+
+
+    /*if virtio_reg_read(id, MmioOffset::MagicValue) != VIRTIO_MAGIC
         || virtio_reg_read(id, MmioOffset::Version) != 2
         || virtio_reg_read(id, MmioOffset::DeviceId) != 16
         || virtio_reg_read(id, MmioOffset::VendorId) != 0x554d4551
@@ -231,86 +205,32 @@ fn get_gpu_at(id: u64) -> Option<&'static mut Gpu> {
     status |= VIRTIO_CONFIG_S_DRIVER_OK;
     virtio_reg_write(id, MmioOffset::Status, status);
 
-    Some(gpu)
+    Some(gpu)*/
 }
 
 impl Gpu {
-    fn alloc_desc(&mut self) -> Option<usize> {
-        for i in 0..NUM {
-            if self.free[i] {
-                self.free[i] = false;
-                return Some(i);
-            }
-        }
-        None
-    }
-
-    fn get_desc(&mut self, idx: usize) -> &mut VirtqDesc {
-        assert!(idx < NUM);
-        unsafe { &mut *self.desc.add(idx) }
-    }
-
-    fn free_desc(&mut self, idx: usize) {
-        assert!(!self.free[idx]);
-
-        let desc = self.get_desc(idx);
-        desc.next = 0;
-        desc.flags = 0;
-        desc.next = 0;
-        desc.len = 0;
-        self.free[idx] = true;
-    }
-
-    fn alloc_3desc(&mut self) -> Option<[usize; 3]> {
-        let mut res = [0; 3];
-
-        for (i, r) in res.iter_mut().enumerate() {
-            let desc = self.alloc_desc();
-            if let Some(desc) = desc {
-                *r = desc;
-            } else {
-                for j in 0..i {
-                    self.free_desc(j);
-                }
-                return None;
-            }
-        }
-
-        Some(res)
-    }
-
-    fn alloc_2desc(&mut self) -> Option<[usize; 2]> {
-        let mut res = [0; 2];
-
-        for (i, r) in res.iter_mut().enumerate() {
-            let desc = self.alloc_desc();
-            if let Some(desc) = desc {
-                *r = desc;
-            } else {
-                for j in 0..i {
-                    self.free_desc(j);
-                }
-                return None;
-            }
-        }
-
-        Some(res)
-    }
-
-    fn free_chain(&mut self, mut idx: usize) {
-        loop {
-            let flags = self.get_desc(idx).flags;
-            let next = self.get_desc(idx).next as usize;
-            self.free_desc(idx);
-            if (flags & VRING_DESC_F_NEXT) == 0 {
-                break;
-            }
-            idx = next;
-        }
-    }
-
     fn virtio_fetch_resolution(&mut self) {
-        self.vgpu_lock.spinlock();
+        let req = VirtioGpuCtrlHead {
+            cmd: VIRTIO_GPU_CMD_GET_DISPLAY_INFO,
+            flags: 0,
+            fence_id: 0,
+            ctx_id: 0,
+            padding: 0,
+        };
+
+        let resp: VirtioGpuRespDisplayInfo = self.virtio_device.virtio_send_rw(&req);
+
+        //assert_eq!(resp.hdr.cmd, VIRTIO_GPU_RESP_OK_DISPLAY_INFO);
+
+        let rect = &resp.pmodes[0].r;
+        self.pixels_size = (rect.width, rect.height);
+
+        println!("Resolution: {}x{}", self.pixels_size.0, self.pixels_size.1);
+
+        println!("looping...");
+        loop {}
+
+        /*self.vgpu_lock.spinlock();
 
         let idx = self.alloc_3desc().unwrap();
 
@@ -370,11 +290,28 @@ impl Gpu {
         let response = unsafe { &*(page as *const VirtioGpuRespDisplayInfo) };
 
         let rect = &response.pmodes[0].r;
-        self.pixels_size = (rect.width, rect.height);
+        self.pixels_size = (rect.width, rect.height);*/
     }
 
     fn virtio_create_resource(&mut self) {
-        self.vgpu_lock.spinlock();
+        let req = VirtioGpuResourceCreate2D {
+            hdr: VirtioGpuCtrlHead {
+                cmd: VIRTIO_GPU_CMD_RESOURCE_CREATE_2D,
+                flags: 0,
+                fence_id: 0,
+                ctx_id: 0,
+                padding: 0,
+            },
+            resource_id: 1,
+            format: 67,
+            width: self.pixels_size.0,
+            height: self.pixels_size.1,
+        };
+
+        let resp: VirtioGpuCtrlHead = self.virtio_device.virtio_send_rw(&req);
+        assert_eq!(resp.cmd, VIRTIO_GPU_RESP_OK_NODATA);
+
+        /*self.vgpu_lock.spinlock();
 
         let idx = self.alloc_2desc().unwrap();
 
@@ -440,11 +377,37 @@ impl Gpu {
 
         if self.irq_waiting {
             gpu_irq(self.id as u32 + 1);
-        }
+        }*/
     }
 
     fn virtio_create_framebuffer(&mut self) {
-        self.vgpu_lock.spinlock();
+        let req = VirtioGpuResourceAttachBacking {
+            hdr: VirtioGpuCtrlHead {
+                cmd: VIRTIO_GPU_CMD_RESOURCE_ATTACH_BACKING,
+                flags: 0,
+                fence_id: 0,
+                ctx_id: 0,
+                padding: 0,
+            },
+            resource_id: 1,
+            nr_entries: 1,
+        };
+
+        let framebuffer_size = (self.pixels_size.0 * self.pixels_size.1 * 4) as u64;
+        let num_pages = (framebuffer_size + PAGE_SIZE - 1) / PAGE_SIZE;
+
+        self.framebuffer = alloc_continuous_pages(num_pages) as *mut u32;
+
+        let req2 = VirtioGpuMemEntry {
+            addr: self.framebuffer as u64,
+            length: framebuffer_size as u32,
+            padding: 0,
+        };
+
+        let resp: VirtioGpuCtrlHead = self.virtio_device.virtio_send_rrw(&req, &req2);
+        assert_eq!(resp.cmd, VIRTIO_GPU_RESP_OK_NODATA);
+
+        /*self.vgpu_lock.spinlock();
 
         let idx = self.alloc_3desc().unwrap();
 
@@ -525,11 +488,32 @@ impl Gpu {
 
         if self.irq_waiting {
             gpu_irq(self.id as u32 + 1);
-        }
+        }*/
     }
 
     fn virtio_set_scanout(&mut self) {
-        self.vgpu_lock.spinlock();
+        let req = VirtioGpuSetScanout {
+            hdr: VirtioGpuCtrlHead {
+                cmd: VIRTIO_GPU_CMD_SET_SCANOUT,
+                flags: 0,
+                fence_id: 0,
+                ctx_id: 0,
+                padding: 0,
+            },
+            r: VirtioGpuRect {
+                x: 0,
+                y: 0,
+                width: self.pixels_size.0,
+                height: self.pixels_size.1,
+            },
+            scanout_id: 0,
+            resource_id: 1,
+        };
+
+        let resp: VirtioGpuCtrlHead = self.virtio_device.virtio_send_rw(&req);
+        assert_eq!(resp.cmd, VIRTIO_GPU_RESP_OK_NODATA);
+
+        /*self.vgpu_lock.spinlock();
 
         let idx = self.alloc_2desc().unwrap();
 
@@ -599,11 +583,33 @@ impl Gpu {
 
         if self.irq_waiting {
             gpu_irq(self.id as u32 + 1);
-        }
+        }*/
     }
 
     fn virtio_transfer_to_host(&mut self) {
-        self.vgpu_lock.spinlock();
+        let req = VirtioGpuTransferToHost2D {
+            hdr: VirtioGpuCtrlHead {
+                cmd: VIRTIO_GPU_CMD_TRANSFER_TO_HOST_2D,
+                flags: 0,
+                fence_id: 0,
+                ctx_id: 0,
+                padding: 0,
+            },
+            r: VirtioGpuRect {
+                x: 0,
+                y: 0,
+                width: self.pixels_size.0,
+                height: self.pixels_size.1,
+            },
+            offset: 0,
+            resource_id: 1,
+            padding: 0,
+        };
+
+        let resp: VirtioGpuCtrlHead = self.virtio_device.virtio_send_rw(&req);
+        assert_eq!(resp.cmd, VIRTIO_GPU_RESP_OK_NODATA);
+
+        /*self.vgpu_lock.spinlock();
 
         let idx = self.alloc_2desc().unwrap();
 
@@ -680,11 +686,32 @@ impl Gpu {
 
         if self.irq_waiting {
             gpu_irq(self.id as u32 + 1);
-        }
+        }*/
     }
 
     fn virtio_flush_resource(&mut self) {
-        self.vgpu_lock.spinlock();
+        let req = VirtioGpuResourceFlush {
+            hdr: VirtioGpuCtrlHead {
+                cmd: VIRTIO_GPU_CMD_RESOURCE_FLUSH,
+                flags: 0,
+                fence_id: 0,
+                ctx_id: 0,
+                padding: 0,
+            },
+            r: VirtioGpuRect {
+                x: 0,
+                y: 0,
+                width: self.pixels_size.0,
+                height: self.pixels_size.1,
+            },
+            resource_id: 1,
+            padding: 0,
+        };
+
+        let resp: VirtioGpuCtrlHead = self.virtio_device.virtio_send_rw(&req);
+        assert_eq!(resp.cmd, VIRTIO_GPU_RESP_OK_NODATA);
+
+        /*self.vgpu_lock.spinlock();
 
         let idx = self.alloc_2desc().unwrap();
 
@@ -760,7 +787,7 @@ impl Gpu {
 
         if self.irq_waiting {
             gpu_irq(self.id as u32 + 1);
-        }
+        }*/
     }
 
     fn refresh_screen(&mut self) {
@@ -769,15 +796,13 @@ impl Gpu {
     }
 }
 
-static mut GPU: Option<&'static mut Gpu> = None;
-static mut GPU_ID: u64 = 0;
+static mut GPU: Option<Gpu> = None;
 
 pub fn init_gpu() {
     for id in 0..MAX_VIRTIO_ID {
         if let Some(gpu) = get_gpu_at(id) {
             unsafe {
                 GPU = Some(gpu);
-                GPU_ID = id;
                 GPU.as_mut().unwrap().virtio_fetch_resolution();
                 GPU.as_mut().unwrap().virtio_create_resource();
                 GPU.as_mut().unwrap().virtio_create_framebuffer();
@@ -800,7 +825,7 @@ pub fn get_screen_size() -> (u32, u32) {
     unsafe { GPU.as_ref().unwrap().pixels_size }
 }
 
-pub fn gpu_irq(irq: u32) {
+/*pub fn gpu_irq(irq: u32) {
     if irq == 0 || irq > MAX_VIRTIO_ID as u32 {
         return;
     }
@@ -834,4 +859,4 @@ pub fn gpu_irq(irq: u32) {
     }
 
     gpu.vgpu_lock.unlock();
-}
+}*/
