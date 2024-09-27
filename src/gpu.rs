@@ -1,4 +1,3 @@
-use std::println;
 use crate::memory::{alloc_continuous_pages, PAGE_SIZE};
 use crate::virtio::definitions::MAX_VIRTIO_ID;
 use crate::virtio::device::VirtioDevice;
@@ -93,24 +92,18 @@ pub struct VirtioGpuResourceFlush {
 
 struct Gpu {
     virtio_device: &'static mut VirtioDevice,
-
     pixels_size: (u32, u32),
-
     framebuffer: *mut u32,
 }
 
 fn get_gpu_at(id: u64) -> Option<Gpu> {
     let device = VirtioDevice::get_device_at(id, 2, 16, 0x554d4551, !0);
 
-    if let Some(device) = device {
-        Some(Gpu {
-            virtio_device: device,
-            pixels_size: (0, 0),
-            framebuffer: 0 as *mut u32,
-        })
-    } else {
-        None
-    }
+    device.map(|device| Gpu {
+        virtio_device: device,
+        pixels_size: (0, 0),
+        framebuffer: 0 as *mut u32,
+    })
 }
 
 impl Gpu {

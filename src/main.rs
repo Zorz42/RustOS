@@ -4,7 +4,7 @@
 use crate::boot::infinite_loop;
 use crate::disk::disk::{Disk, scan_for_disks};
 use crate::memory::{get_num_free_pages, init_paging, init_paging_hart, NUM_PAGES};
-use crate::print::{init_print, reset_print_color, set_char, set_print_color, TextColor};
+use crate::print::{init_print, reset_print_color, set_print_color, TextColor};
 use crate::riscv::{enable_fpu, get_core_id, interrupts_enable};
 use crate::trap::init_trap;
 use core::panic::PanicInfo;
@@ -12,7 +12,7 @@ use core::sync::atomic::{fence, Ordering};
 use std::{println, Vec};
 use crate::disk::filesystem::{close_fs, init_fs};
 use crate::disk::memory_disk::mount_disk;
-use crate::gpu::{init_gpu, refresh_screen};
+use crate::gpu::init_gpu;
 use crate::plic::{plicinit, plicinithart};
 
 mod boot;
@@ -78,10 +78,10 @@ pub fn main() {
             test_runner(&mut disks);
         }
 
-        let mut root_disk = find_root_disk(&mut disks);
+        let root_disk = find_root_disk(&mut disks);
 
         close_fs();
-        mount_disk(&mut root_disk);
+        mount_disk(&root_disk);
         init_fs();
 
         #[cfg(feature = "run_perf")]

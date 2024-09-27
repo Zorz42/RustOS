@@ -17,7 +17,7 @@ const fn id_to_addr(page: i32) -> *mut u8 {
 }
 
 impl MemoryDisk {
-    pub fn new(disk: &mut Disk) -> Self {
+    pub fn new(disk: &Disk) -> Self {
         let size = disk.size();
         Self {
             disk: disk.clone(),
@@ -44,7 +44,7 @@ impl MemoryDisk {
         self.is_taken.as_mut().unwrap()
     }
 
-    pub fn get_num_pages(&self) -> usize {
+    pub const fn get_num_pages(&self) -> usize {
         self.disk.size() / 8
     }
 
@@ -52,7 +52,7 @@ impl MemoryDisk {
         self.get_is_taken().get_count0()
     }
 
-    pub fn get_size(&self) -> usize {
+    pub const fn get_size(&self) -> usize {
         self.get_num_pages() * PAGE_SIZE as usize
     }
 
@@ -200,7 +200,7 @@ pub fn unmount_disk() {
     }
 }
 
-pub fn mount_disk(disk: &mut Disk) {
+pub fn mount_disk(disk: &Disk) {
     unmount_disk();
 
     let mounted_disk = Box::new(MemoryDisk::new(disk));

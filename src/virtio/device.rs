@@ -3,7 +3,6 @@ use core::hint::black_box;
 use core::mem::MaybeUninit;
 use core::ptr::{addr_of, read_volatile, write_bytes, write_volatile};
 use core::sync::atomic::{fence, Ordering};
-use std::println;
 use crate::memory::{alloc_page, virt_to_phys, VirtAddr, PAGE_SIZE};
 use crate::riscv::get_core_id;
 use crate::spinlock::Lock;
@@ -114,7 +113,7 @@ impl VirtioDevice {
         Some(device)
     }
 
-    pub fn get_config_address(&self) -> *mut u8 {
+    pub const fn get_config_address(&self) -> *mut u8 {
         virtio_reg_addr(self.virtio_id, MmioOffset::Config)
     }
 
@@ -221,10 +220,8 @@ impl VirtioDevice {
             self.irq_waiting = false;
         }
 
-        while unsafe { read_volatile(&mut self.info[idx]) } {
-            if get_ticks() - start_time > 3000 {
-                panic!("virtio_send timeout");
-            }
+        while unsafe { read_volatile(&self.info[idx]) } {
+            assert!(get_ticks() - start_time < 3000, "virtio_send timeout");
 
             self.irq_waiting = black_box(self.irq_waiting);
             unsafe {

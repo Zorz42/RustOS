@@ -34,7 +34,7 @@ pub enum MmioOffset {
     Config = 0x100,
 }
 
-pub fn virtio_reg_addr(id: u64, reg: MmioOffset) -> *mut u8 {
+pub const fn virtio_reg_addr(id: u64, reg: MmioOffset) -> *mut u8 {
     let addr = VIRTIO_MMIO_BASE + 0x1000 * id + reg as u64;
     addr as *mut u8
 }
