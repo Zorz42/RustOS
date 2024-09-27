@@ -143,7 +143,7 @@ impl Writer {
             addr.write_volatile(c);
         }
 
-        /*if c == b'\n' {
+        if c == b'\n' {
             self.new_line();
             return;
         }
@@ -157,7 +157,7 @@ impl Writer {
         self.x += 1;
         if self.x >= width_chars {
             self.new_line();
-        }*/
+        }
     }
 
     fn move_cursor_back(&mut self) {
@@ -181,7 +181,7 @@ pub fn _print(args: fmt::Arguments) {
     unsafe {
         WRITER.write_fmt(args).unwrap();
     }
-    //refresh_screen();
+    refresh_screen();
     PRINT_LOCK.unlock();
 }
 

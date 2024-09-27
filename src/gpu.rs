@@ -107,7 +107,7 @@ struct Gpu {
 }
 
 fn get_gpu_at(id: u64) -> Option<Gpu> {
-    let device = VirtioDevice::get_device_at(id, 2, 2, 0x554d4551, !0);
+    let device = VirtioDevice::get_device_at(id, 2, 16, 0x554d4551, !0);
 
     if let Some(device) = device {
         Some(Gpu {
@@ -224,11 +224,6 @@ impl Gpu {
 
         let rect = &resp.pmodes[0].r;
         self.pixels_size = (rect.width, rect.height);
-
-        println!("Resolution: {}x{}", self.pixels_size.0, self.pixels_size.1);
-
-        println!("looping...");
-        loop {}
 
         /*self.vgpu_lock.spinlock();
 
