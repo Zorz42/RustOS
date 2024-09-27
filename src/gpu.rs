@@ -764,8 +764,8 @@ impl Gpu {
     }
 
     fn refresh_screen(&mut self) {
-        //self.virtio_transfer_to_host();
-        //self.virtio_flush_resource();
+        self.virtio_transfer_to_host();
+        self.virtio_flush_resource();
     }
 }
 
