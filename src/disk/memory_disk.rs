@@ -1,4 +1,4 @@
-use core::ptr::copy_nonoverlapping;
+use core::ptr::{copy_nonoverlapping, read_volatile, write_volatile};
 use std::{deserialize, serialize, Serial, Vec, Box};
 
 use crate::disk::disk::Disk;
@@ -142,7 +142,7 @@ impl MemoryDisk {
         self.declare_read(DISK_OFFSET + 4, DISK_OFFSET + 4 + size as u64);
         let ptr = (DISK_OFFSET + 4) as *mut u8;
         for i in 0..size {
-            data.push(unsafe { *ptr.add(i) });
+            data.push(unsafe { read_volatile(ptr.add(i)) });
         }
 
         data
@@ -152,13 +152,13 @@ impl MemoryDisk {
         self.declare_write(DISK_OFFSET, DISK_OFFSET + 4 + data.size() as u64);
 
         unsafe {
-            *(DISK_OFFSET as *mut i32) = data.size() as i32;
+            write_volatile(DISK_OFFSET as *mut i32, data.size() as i32);
         }
 
         let mut ptr = (DISK_OFFSET + 4) as *mut u8;
         for i in data {
             unsafe {
-                *ptr = *i;
+                write_volatile(ptr, *i);
                 ptr = ptr.add(1);
             }
         }
@@ -218,20 +218,6 @@ pub fn get_mounted_disk() -> &'static mut MemoryDisk {
             panic!("No disk is mounted.");
         }
     }
-}
-
-pub fn declare_disk_read(addr: u64) {
-    debug_assert!(addr >= DISK_OFFSET);
-    debug_assert!(addr < DISK_OFFSET + PAGE_SIZE * get_mounted_disk().get_num_pages() as u64);
-
-
-}
-
-pub fn declare_disk_write(addr: u64) {
-    debug_assert!(addr >= DISK_OFFSET);
-    debug_assert!(addr < DISK_OFFSET + PAGE_SIZE * get_mounted_disk().get_num_pages() as u64);
-
-
 }
 
 pub struct DiskBox<T: Serial> {
