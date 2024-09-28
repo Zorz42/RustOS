@@ -9,6 +9,10 @@ pub fn init_print(print: &'static dyn Fn(fmt::Arguments)) {
 }
 
 pub fn print_raw(args: fmt::Arguments) {
+    if unsafe { PRINT.is_none() } {
+        return;
+    }
+
     let f = unsafe { PRINT.as_ref().unwrap() };
     f(args);
 }

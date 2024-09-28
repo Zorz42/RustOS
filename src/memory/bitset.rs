@@ -212,7 +212,7 @@ impl BitSet {
     pub fn new(size: usize) -> Self {
         let data = Vec::new_with_size(bitset_size_bytes(size));
         Self {
-            bitset: BitSetRaw::new_from(size, &data[0] as *const u8 as *mut u64),
+            bitset: BitSetRaw::new_from(size, data.as_ptr() as *mut u64),
             data,
         }
     }

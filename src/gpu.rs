@@ -262,6 +262,9 @@ pub fn init_gpu() {
             break;
         }
     }
+    unsafe {
+        assert!(GPU.is_some());
+    }
 }
 
 pub fn get_framebuffer() -> *mut u32 {

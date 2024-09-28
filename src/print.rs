@@ -64,7 +64,7 @@ pub fn scroll() {
     }
 }
 
-pub fn clear_screen() {
+fn clear_screen() {
     for y in 0..get_screen_size().1 as usize {
         unsafe {
             let dest = get_framebuffer().add(y * get_screen_size().0 as usize);
@@ -82,7 +82,7 @@ fn get_pixel_mut(x: usize, y: usize) -> *mut u32 {
     }
 }
 
-pub fn set_pixel(x: usize, y: usize, color: (u8, u8, u8)) {
+fn set_pixel(x: usize, y: usize, color: (u8, u8, u8)) {
     unsafe {
         let pixel_pointer = get_pixel_mut(x, y);
         *pixel_pointer = ((color.0 as u32) << 16) | ((color.1 as u32) << 8) | color.2 as u32;

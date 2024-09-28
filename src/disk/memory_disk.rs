@@ -1,4 +1,7 @@
+use core::cmp::Ordering;
 use core::ptr::{copy_nonoverlapping, read_volatile, write_volatile};
+use core::sync::atomic::fence;
+use core::sync::atomic::Ordering::{Acquire, Relaxed};
 use std::{deserialize, serialize, Serial, Vec, Box};
 
 use crate::disk::disk::Disk;
@@ -7,9 +10,9 @@ use crate::memory::{map_page_auto, VirtAddr, DISK_OFFSET, PAGE_SIZE, unmap_page,
 pub struct MemoryDisk {
     disk: Disk,
     mapped_pages: Vec<i32>,
-    is_taken: Option<BitSet>, // which page is taken
+    is_taken: BitSet, // which page is taken
     is_mapped: BitSet, // which page is mapped
-    in_vec: BitSet, // which page is in vector
+    in_vec: BitSet, // which page is in vector mapped_pages
 }
 
 const fn id_to_addr(page: i32) -> *mut u8 {
@@ -22,26 +25,18 @@ impl MemoryDisk {
         Self {
             disk: disk.clone(),
             mapped_pages: Vec::new(),
-            is_taken: None,
+            is_taken: BitSet::new(0),
             is_mapped: BitSet::new(size / 8),
             in_vec: BitSet::new(size / 8),
         }
     }
 
     pub fn init(&mut self) {
-        self.is_taken = Some(BitSet::new(self.disk.size() / 8));
+        self.is_taken = BitSet::new(self.disk.size() / 8);
         self.declare_read(id_to_addr(1) as u64, id_to_addr(1) as u64 + self.get_bitset_num_pages() as u64 * PAGE_SIZE);
         unsafe {
-            self.is_taken.as_mut().unwrap().load_from(id_to_addr(1) as *mut u64);
+            self.is_taken.load_from(id_to_addr(1) as *mut u64);
         }
-    }
-
-    fn get_is_taken(&self) -> &BitSet {
-        self.is_taken.as_ref().unwrap()
-    }
-
-    fn get_is_taken_mut(&mut self) -> &mut BitSet {
-        self.is_taken.as_mut().unwrap()
     }
 
     pub const fn get_num_pages(&self) -> usize {
@@ -49,7 +44,7 @@ impl MemoryDisk {
     }
 
     pub fn get_num_free_pages(&self) -> usize {
-        self.get_is_taken().get_count0()
+        self.is_taken.get_count0()
     }
 
     pub const fn get_size(&self) -> usize {
@@ -121,13 +116,13 @@ impl MemoryDisk {
 
     // bitset size in pages
     fn get_bitset_num_pages(&self) -> usize {
-        (self.get_is_taken().get_size_bytes() + PAGE_SIZE as usize - 1) / PAGE_SIZE as usize
+        (self.is_taken.get_size_bytes() + PAGE_SIZE as usize - 1) / PAGE_SIZE as usize
     }
 
     pub fn erase(&mut self) {
-        self.get_is_taken_mut().clear();
+        self.is_taken.clear();
         for i in 0..=self.get_bitset_num_pages() {
-            self.get_is_taken_mut().set(i, true);
+            self.is_taken.set(i, true);
         }
 
         self.set_head(&Vec::new());
@@ -165,9 +160,9 @@ impl MemoryDisk {
     }
 
     pub fn alloc_page(&mut self) -> i32 {
-        let res = self.get_is_taken_mut().get_zero_element();
+        let res = self.is_taken.get_zero_element();
         if let Some(res) = res {
-            self.get_is_taken_mut().set(res, true);
+            self.is_taken.set(res, true);
             res as i32
         } else {
             panic!("Out of disk space");
@@ -175,8 +170,8 @@ impl MemoryDisk {
     }
 
     pub fn free_page(&mut self, page: i32) {
-        debug_assert!(self.get_is_taken().get(page as usize));
-        self.get_is_taken_mut().set(page as usize, false);
+        debug_assert!(self.is_taken.get(page as usize));
+        self.is_taken.set(page as usize, false);
     }
 }
 
@@ -187,7 +182,7 @@ pub fn unmount_disk() {
         let temp = mounted_disk.get_bitset_num_pages();
         mounted_disk.declare_write(id_to_addr(1) as u64, id_to_addr(1) as u64 + temp as u64 * PAGE_SIZE);
         unsafe {
-            mounted_disk.is_taken.as_mut().unwrap().store_to(id_to_addr(1) as *mut u64);
+            mounted_disk.is_taken.store_to(id_to_addr(1) as *mut u64);
         }
 
         for page in mounted_disk.mapped_pages.clone() {
@@ -289,8 +284,9 @@ impl<T: Serial> DiskBox<T> {
         if self.obj.is_none() {
             let mut data = Vec::new();
             get_mounted_disk().declare_read(self.translate(0) as u64, self.translate(self.size as usize - 1) as u64 + 1);
+            
             for i in 0..self.size {
-                data.push(unsafe { *self.translate(i as usize) });
+                data.push(unsafe { read_volatile(self.translate(i as usize)) });
             }
 
             let obj = deserialize(&data);

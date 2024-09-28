@@ -3,16 +3,17 @@
 
 use crate::boot::infinite_loop;
 use crate::disk::disk::{Disk, scan_for_disks};
-use crate::memory::{get_num_free_pages, init_paging, init_paging_hart, NUM_PAGES};
+use crate::memory::{get_num_free_pages, init_paging, init_paging_hart, KERNEL_OFFSET, NUM_PAGES};
 use crate::print::{init_print, reset_print_color, set_print_color, TextColor};
 use crate::riscv::{enable_fpu, get_core_id, interrupts_enable};
 use crate::trap::init_trap;
 use core::panic::PanicInfo;
 use core::sync::atomic::{fence, Ordering};
-use std::{println, Vec};
+use std::{print, println, Vec};
 use crate::disk::filesystem::{close_fs, init_fs};
 use crate::disk::memory_disk::mount_disk;
 use crate::gpu::init_gpu;
+use crate::keyboard::init_keyboard;
 use crate::plic::{plicinit, plicinithart};
 
 mod boot;
@@ -29,6 +30,7 @@ mod virtio;
 mod plic;
 mod gpu;
 mod font;
+mod keyboard;
 
 pub const ROOT_MAGIC: u32 = 0x63726591;
 
@@ -65,6 +67,9 @@ pub fn main() {
         let mut disks = scan_for_disks();
 
         println!("Initializing kernel with core 0");
+
+        init_keyboard();
+
         #[cfg(debug_assertions)]
         {
             set_print_color(TextColor::LightGreen, TextColor::Black);
