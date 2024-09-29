@@ -14,12 +14,9 @@ pub enum MmioOffset {
     DeviceFeaturesSel = 0x014,
     DriverFeatures = 0x020,
     DriverFeaturesSel = 0x024,
-    DriverPageSize = 0x028,
     QueueSel = 0x030,
     QueueNumMax = 0x034,
     QueueNum = 0x038,
-    QueueAlign = 0x03c,
-    QueuePfn = 0x040,
     QueueReady = 0x044,
     QueueNotify = 0x050,
     InterruptStatus = 0x060,
@@ -31,6 +28,7 @@ pub enum MmioOffset {
     DriverDescHigh = 0x094,
     DeviceDescLow = 0x0a0,
     DeviceDescHigh = 0x0a4,
+    ConfigGeneration = 0x0fc,
     Config = 0x100,
 }
 
