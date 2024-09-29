@@ -58,6 +58,8 @@ pub const VIRTIO_F_ANY_LAYOUT: u32 = 27;
 pub const VIRTIO_RING_F_INDIRECT_DESC: u32 = 28;
 pub const VIRTIO_RING_F_EVENT_IDX: u32 = 29;
 
+pub const VIRTIO_RING_SIZE: usize = 128;
+
 // this many virtio descriptors.
 // must be a power of two.
 pub const NUM: usize = 8;

@@ -373,5 +373,7 @@ pub fn virtio_irq(irq: u32) {
         }
 
         device.lock.unlock();
+    } else {
+        println!("virtio_irq: invalid id {}", id);
     }
 }
