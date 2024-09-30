@@ -1,9 +1,12 @@
+use core::intrinsics::write_bytes;
 use std::{malloc, println};
-use crate::memory::PAGE_SIZE;
+use crate::memory::{alloc_page, virt_to_phys, PhysAddr, VirtAddr, PAGE_SIZE};
+use crate::spinlock::Lock;
 use crate::timer::get_ticks;
-use crate::virtio::definitions::{virtio_reg_read, virtio_reg_write, MmioOffset, MAX_VIRTIO_ID, VIRTIO_CONFIG_S_ACKNOWLEDGE, VIRTIO_CONFIG_S_DRIVER, VIRTIO_CONFIG_S_DRIVER_OK, VIRTIO_CONFIG_S_FEATURES_OK, VIRTIO_MAGIC, VIRTIO_RING_F_EVENT_IDX, VIRTIO_RING_SIZE, VRING_DESC_F_WRITE};
+use crate::virtio::definitions::{virtio_reg_read, virtio_reg_write, MmioOffset, VirtqAvail, VirtqDesc, VirtqUsed, MAX_VIRTIO_ID, NUM, VIRTIO_CONFIG_S_ACKNOWLEDGE, VIRTIO_CONFIG_S_DRIVER, VIRTIO_CONFIG_S_DRIVER_OK, VIRTIO_CONFIG_S_FEATURES_OK, VIRTIO_F_ANY_LAYOUT, VIRTIO_MAGIC, VIRTIO_RING_F_EVENT_IDX, VIRTIO_RING_F_INDIRECT_DESC, VRING_DESC_F_WRITE};
 
-const EVENT_BUFFER_ELEMENTS: usize = 64;
+const EVENT_BUFFER_ELEMENTS: usize = 8;
+pub const VIRTIO_RING_SIZE: usize = 8;
 
 #[repr(C)]
 pub struct Descriptor {
@@ -72,12 +75,21 @@ pub struct Event {
 }
 
 struct Keyboard {
-    event_queue:  *mut Queue,
-    status_queue: *mut Queue,
-    event_idx:          u16,
-    event_ack_used_idx: u16,
+    // three virtqueues
+    desc: *mut VirtqDesc,
+    avail: *mut VirtqAvail,
+    used: *mut VirtqUsed,
+
+    // our own book-keeping.
+    free: [bool; NUM],
+    used_idx: u16,
+    info: [bool; NUM],
+    lock: Lock,
+    virtio_id: u64,
+    irq_waiting: bool,
+
     event_buffer: *mut Event,
-    status_ack_used_idx: u16,
+    event_idx: u16,
 }
 
 impl Keyboard {
@@ -90,78 +102,110 @@ impl Keyboard {
             return None;
         }
 
-        let status = 0;
-        virtio_reg_write(id, MmioOffset::Status, status);
-
-        let status = status | VIRTIO_CONFIG_S_ACKNOWLEDGE;
-        virtio_reg_write(id, MmioOffset::Status, status);
-
-        let status = status | VIRTIO_CONFIG_S_DRIVER;
-        virtio_reg_write(id, MmioOffset::Status, status);
-
-        let host_features = virtio_reg_read(id, MmioOffset::DriverFeatures);
-        let host_features = host_features & !(1 << VIRTIO_RING_F_EVENT_IDX);
-        virtio_reg_write(id, MmioOffset::DriverFeaturesSel, host_features);
-
-        let status = status | VIRTIO_CONFIG_S_FEATURES_OK;
-        virtio_reg_write(id, MmioOffset::Status, status);
-
-        let read_status = virtio_reg_read(id, MmioOffset::Status);
-        assert_eq!(read_status, status);
-
-        let qnmax = virtio_reg_read(id, MmioOffset::QueueNumMax);
-        assert!(VIRTIO_RING_SIZE as u32 <= qnmax);
-
-        let mut keyboard = Keyboard {
-            event_queue: 0 as *mut Queue,
-            status_queue: 0 as *mut Queue,
-            event_idx: 0,
-            event_ack_used_idx: 0,
+        let mut device = Self {
+            desc: 0 as *mut VirtqDesc,
+            avail: 0 as *mut VirtqAvail,
+            used: 0 as *mut VirtqUsed,
+            free: [true; NUM],
+            used_idx: 0,
+            info: [false; NUM],
+            lock: Lock::new(),
+            virtio_id: id,
+            irq_waiting: false,
             event_buffer: malloc(EVENT_BUFFER_ELEMENTS * size_of::<Event>()) as *mut Event,
-            status_ack_used_idx: 0,
+            event_idx: 0,
         };
 
-        virtio_reg_write(id, MmioOffset::QueueSel, 0);
-        keyboard.event_queue = malloc(size_of::<Queue>()) as *mut Queue;
-        virtio_reg_write(id, MmioOffset::QueueDescLow, keyboard.event_queue as u32);
-        virtio_reg_write(id, MmioOffset::QueueDescHigh, (keyboard.event_queue as u64 >> 32) as u32);
-        virtio_reg_write(id, MmioOffset::QueueNum, VIRTIO_RING_SIZE as u32);
+        let mut status = 0;
 
-        virtio_reg_write(id, MmioOffset::QueueSel, 1);
-        keyboard.status_queue = malloc(size_of::<Queue>()) as *mut Queue;
-        virtio_reg_write(id, MmioOffset::QueueDescLow, keyboard.status_queue as u32);
-        virtio_reg_write(id, MmioOffset::QueueDescHigh, (keyboard.status_queue as u64 >> 32) as u32);
-        virtio_reg_write(id, MmioOffset::QueueNum, VIRTIO_RING_SIZE as u32);
+        status |= VIRTIO_CONFIG_S_ACKNOWLEDGE;
 
-        let status = status | VIRTIO_CONFIG_S_DRIVER_OK;
         virtio_reg_write(id, MmioOffset::Status, status);
 
+        status |= VIRTIO_CONFIG_S_DRIVER;
+        virtio_reg_write(id, MmioOffset::Status, status);
+
+        // negotiate features
+        let mut featuresr = virtio_reg_read(id, MmioOffset::DeviceFeatures);
+        featuresr &= !(1 << VIRTIO_F_ANY_LAYOUT);
+        featuresr &= !(1 << VIRTIO_RING_F_EVENT_IDX);
+        featuresr &= !(1 << VIRTIO_RING_F_INDIRECT_DESC);
+        virtio_reg_write(id, MmioOffset::DriverFeatures, featuresr);
+
+        status |= VIRTIO_CONFIG_S_FEATURES_OK;
+        virtio_reg_write(id, MmioOffset::Status, status);
+
+        // reread and check
+        status = virtio_reg_read(id, MmioOffset::Status);
+        assert_eq!(status & VIRTIO_CONFIG_S_FEATURES_OK, VIRTIO_CONFIG_S_FEATURES_OK);
+
+        virtio_reg_write(id, MmioOffset::QueueSel, 0);
+
+        assert_eq!(virtio_reg_read(id, MmioOffset::QueueReady), 0);
+
+        assert!(virtio_reg_read(id, MmioOffset::QueueNumMax) >= NUM as u32);
+
+        device.desc = alloc_page() as *mut VirtqDesc;
+        device.avail = alloc_page() as *mut VirtqAvail;
+        device.used = alloc_page() as *mut VirtqUsed;
+
+        unsafe {
+            write_bytes(device.desc as *mut u8, 0, PAGE_SIZE as usize);
+            write_bytes(device.avail as *mut u8, 0, PAGE_SIZE as usize);
+            write_bytes(device.used as *mut u8, 0, PAGE_SIZE as usize);
+        }
+
+        virtio_reg_write(id, MmioOffset::QueueNum, NUM as u32);
+
+        virtio_reg_write(id, MmioOffset::QueueDescLow, (device.desc as u64 & 0xFFFFFFFF) as u32);
+        virtio_reg_write(id, MmioOffset::QueueDescHigh, ((device.desc as u64 >> 32) & 0xFFFFFFFF) as u32);
+        virtio_reg_write(id, MmioOffset::DriverDescLow, (device.avail as u64 & 0xFFFFFFFF) as u32);
+        virtio_reg_write(id, MmioOffset::DriverDescHigh, ((device.avail as u64 >> 32) & 0xFFFFFFFF) as u32);
+        virtio_reg_write(id, MmioOffset::DeviceDescLow, (device.used as u64 & 0xFFFFFFFF) as u32);
+        virtio_reg_write(id, MmioOffset::DeviceDescHigh, ((device.used as u64 >> 32) & 0xFFFFFFFF) as u32);
+
+        // queue is ready
+        virtio_reg_write(id, MmioOffset::QueueReady, 1);
+
+        // we are completely ready
+        status |= VIRTIO_CONFIG_S_DRIVER_OK;
+        virtio_reg_write(id, MmioOffset::Status, status);
+        assert_eq!(virtio_reg_read(id, MmioOffset::Status), status);
+
         for i in 0..EVENT_BUFFER_ELEMENTS {
-            keyboard.repopulate_event(i);
+            device.repopulate_event(i);
         }
 
         loop {
             if get_ticks() % 1000 == 0 {
-                println!("Checking... {}", self.);
+                println!("Checking...");
+                for i in 0..EVENT_BUFFER_ELEMENTS {
+                    unsafe {
+                        let obj = device.event_buffer.add(i).read_volatile();
+                        if obj.code != 0 || obj.value != 0 {
+                            println!("Event: {} {}", obj.code, obj.value);
+                        }
+                    }
+                }
             }
         }
 
-        Some(keyboard)
+        Some(device)
     }
 
     fn repopulate_event(&mut self, buffer: usize) {
         unsafe {
-            let desc = Descriptor {
-                addr: self.event_buffer.add(buffer) as u64,
+            let desc = VirtqDesc {
+                addr: virt_to_phys(self.event_buffer.add(buffer) as u64 as VirtAddr).unwrap(),
                 len: size_of::<Event>() as u32,
                 flags: VRING_DESC_F_WRITE,
                 next: 0
             };
             let head = self.event_idx;
-            (*self.event_queue).desc[self.event_idx as usize] = desc;
+            self.desc.add(self.event_idx as usize).write_volatile(desc);
             self.event_idx = (self.event_idx + 1) % VIRTIO_RING_SIZE as u16;
-            (*self.event_queue).avail.ring[(*self.event_queue).avail.idx as usize % VIRTIO_RING_SIZE] = head;
-            (*self.event_queue).avail.idx = (*self.event_queue).avail.idx.wrapping_add(1);
+            (*self.avail).ring[(*self.avail).idx as usize % VIRTIO_RING_SIZE] = head;
+            (*self.avail).idx = (*self.avail).idx.wrapping_add(1);
         }
     }
 }
