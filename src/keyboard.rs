@@ -1,6 +1,9 @@
 use core::intrinsics::write_bytes;
+use core::ptr::write_volatile;
+use core::sync::atomic::{fence, Ordering};
 use std::{malloc, println};
 use crate::memory::{alloc_page, virt_to_phys, PhysAddr, VirtAddr, PAGE_SIZE};
+use crate::riscv::get_core_id;
 use crate::spinlock::Lock;
 use crate::timer::get_ticks;
 use crate::virtio::definitions::{virtio_reg_read, virtio_reg_write, MmioOffset, VirtqAvail, VirtqDesc, VirtqUsed, MAX_VIRTIO_ID, NUM, VIRTIO_CONFIG_S_ACKNOWLEDGE, VIRTIO_CONFIG_S_DRIVER, VIRTIO_CONFIG_S_DRIVER_OK, VIRTIO_CONFIG_S_FEATURES_OK, VIRTIO_F_ANY_LAYOUT, VIRTIO_MAGIC, VIRTIO_RING_F_EVENT_IDX, VIRTIO_RING_F_INDIRECT_DESC, VRING_DESC_F_WRITE};
@@ -176,19 +179,19 @@ impl Keyboard {
             device.repopulate_event(i);
         }
 
-        loop {
+        /*loop {
             if get_ticks() % 1000 == 0 {
                 println!("Checking...");
-                for i in 0..EVENT_BUFFER_ELEMENTS {
+                /*for i in 0..EVENT_BUFFER_ELEMENTS {
                     unsafe {
                         let obj = device.event_buffer.add(i).read_volatile();
                         if obj.code != 0 || obj.value != 0 {
                             println!("Event: {} {}", obj.code, obj.value);
                         }
                     }
-                }
+                }*/
             }
-        }
+        }*/
 
         Some(device)
     }
@@ -211,12 +214,14 @@ impl Keyboard {
 }
 
 static mut KEYBOARD: Option<Keyboard> = None;
+static mut KEYBOARD_ID: u64 = 0;
 
 pub fn init_keyboard() {
     for id in 0..MAX_VIRTIO_ID {
         if let Some(keyboard) = Keyboard::get_keyboard_at(id) {
             unsafe {
                 assert!(KEYBOARD.is_none());
+                KEYBOARD_ID = id;
                 KEYBOARD = Some(keyboard);
             }
             break;
@@ -224,5 +229,44 @@ pub fn init_keyboard() {
     }
     unsafe {
         assert!(KEYBOARD.is_some());
+    }
+}
+
+pub fn keyboard_irq(irq: u32) {
+    if irq == 0 || irq > MAX_VIRTIO_ID as u32 {
+        return;
+    }
+    let id = irq as u64 - 1;
+
+    if id == unsafe { KEYBOARD_ID } {
+        let device = unsafe { KEYBOARD.as_mut().unwrap() };
+
+        if device.lock.locked_by() == get_core_id() as i32 {
+            device.irq_waiting = true;
+            return;
+        }
+
+        device.lock.spinlock();
+
+        virtio_reg_write(id, MmioOffset::InterruptAck, virtio_reg_read(id, MmioOffset::InterruptStatus) & 0x3);
+
+        fence(Ordering::Release);
+
+        let used = unsafe { &mut *device.used };
+
+        while device.used_idx != used.idx {
+            fence(Ordering::Release);
+            let id = used.ring[device.used_idx as usize % NUM].id;
+
+            unsafe {
+                write_volatile(&mut device.info[id as usize], false);
+            }
+
+            device.used_idx += 1;
+        }
+
+        device.lock.unlock();
+    } else {
+        //println!("virtio_irq: invalid id {}", id);
     }
 }

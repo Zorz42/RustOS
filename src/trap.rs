@@ -1,6 +1,7 @@
 use crate::riscv::{get_core_id, get_scause, get_sepc, get_sip, get_sstatus, get_stval, interrupts_get, set_sip, set_stvec, SSTATUS_SPP};
 use crate::timer::tick;
 use std::println;
+use crate::keyboard::keyboard_irq;
 use crate::plic::{plic_complete, plic_irq};
 use crate::virtio::device::virtio_irq;
 
@@ -38,6 +39,7 @@ fn get_interrupt_type() -> InterruptType {
         let irq = plic_irq();
 
         virtio_irq(irq);
+        keyboard_irq(irq);
 
         plic_complete(irq);
 
