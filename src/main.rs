@@ -111,7 +111,7 @@ pub fn main() {
 
         loop {
             if let Some(val) = receive_keyboard_input() {
-                println!("Received keyboard input: {}", val);
+                println!("Received keyboard input: {:?}", val);
             }
 
             if get_ticks() % 1000 == 0 {

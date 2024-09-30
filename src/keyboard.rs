@@ -1,16 +1,14 @@
 use core::cmp::PartialEq;
 use core::intrinsics::write_bytes;
-use core::ptr::write_volatile;
 use core::sync::atomic::{fence, Ordering};
-use std::{malloc, println, Vec};
-use crate::memory::{alloc_page, virt_to_phys, PhysAddr, VirtAddr, PAGE_SIZE};
+use std::{Vec};
+use crate::memory::{alloc_page, virt_to_phys, VirtAddr, PAGE_SIZE};
 use crate::riscv::get_core_id;
 use crate::spinlock::Lock;
-use crate::timer::get_ticks;
 use crate::virtio::definitions::{virtio_reg_read, virtio_reg_write, MmioOffset, VirtqAvail, VirtqDesc, VirtqUsed, MAX_VIRTIO_ID, NUM, VIRTIO_CONFIG_S_ACKNOWLEDGE, VIRTIO_CONFIG_S_DRIVER, VIRTIO_CONFIG_S_DRIVER_OK, VIRTIO_CONFIG_S_FEATURES_OK, VIRTIO_F_ANY_LAYOUT, VIRTIO_MAGIC, VIRTIO_RING_F_EVENT_IDX, VIRTIO_RING_F_INDIRECT_DESC, VRING_DESC_F_WRITE};
 
-const EVENT_BUFFER_ELEMENTS: usize = 8;
-const VIRTIO_RING_SIZE: usize = 8;
+const EVENT_BUFFER_ELEMENTS: usize = 128;
+const VIRTIO_RING_SIZE: usize = 128;
 
 #[repr(C)]
 pub struct Descriptor {
@@ -71,8 +69,8 @@ pub enum EventType {
 }
 
 #[repr(C)]
-#[derive(Copy, Clone)]
-pub struct Event {
+#[derive(Copy, Clone, Debug)]
+pub struct KeyboardEvent {
     pub event_type: EventType,
     pub code: u16,
     pub value: u32,
@@ -90,10 +88,10 @@ struct Keyboard {
     virtio_id: u64,
     irq_waiting: bool,
 
-    event_buffer: *mut Event,
+    event_buffer: [*mut KeyboardEvent; EVENT_BUFFER_ELEMENTS],
     event_idx: u16,
 
-    events: Vec<u16>,
+    events: Vec<KeyboardEvent>,
 }
 
 impl Keyboard {
@@ -114,10 +112,14 @@ impl Keyboard {
             lock: Lock::new(),
             virtio_id: id,
             irq_waiting: false,
-            event_buffer: malloc(EVENT_BUFFER_ELEMENTS * size_of::<Event>()) as *mut Event,
+            event_buffer: [0 as *mut KeyboardEvent; EVENT_BUFFER_ELEMENTS],
             event_idx: 0,
             events: Vec::new(),
         };
+
+        for i in 0..EVENT_BUFFER_ELEMENTS {
+            device.event_buffer[i] = alloc_page() as *mut KeyboardEvent;
+        }
 
         let mut status = 0;
 
@@ -188,8 +190,8 @@ impl Keyboard {
     fn repopulate_event(&mut self, buffer: usize) {
         unsafe {
             let desc = VirtqDesc {
-                addr: virt_to_phys(self.event_buffer.add(buffer) as VirtAddr).unwrap(),
-                len: size_of::<Event>() as u32,
+                addr: virt_to_phys(self.event_buffer[buffer] as VirtAddr).unwrap(),
+                len: size_of::<KeyboardEvent>() as u32,
                 flags: VRING_DESC_F_WRITE,
                 next: 0,
             };
@@ -208,7 +210,7 @@ impl Keyboard {
         }
     }
 
-    fn receive_input(&mut self) -> Option<u16> {
+    fn receive_input(&mut self) -> Option<KeyboardEvent> {
         /*self.lock.spinlock();
         let val = if self.used_idx != unsafe { &*self.used }.idx {
             let id = unsafe { &*self.used }.ring[self.used_idx as usize % NUM].id;
@@ -261,7 +263,7 @@ pub fn init_keyboard() {
     }
 }
 
-pub fn receive_keyboard_input() -> Option<u16> {
+pub fn receive_keyboard_input() -> Option<KeyboardEvent> {
     unsafe { KEYBOARD.as_mut().unwrap().receive_input() }
 }
 
@@ -292,10 +294,10 @@ pub fn keyboard_irq(irq: u32) {
             let id = used.ring[device.used_idx as usize % NUM].id;
 
             let desc = unsafe { device.desc.add(id as usize).read_volatile() };
-            let event_ptr = desc.addr as *const Event;
+            let event_ptr = desc.addr as *const KeyboardEvent;
             let event = unsafe { event_ptr.read_volatile() };
 
-            device.events.push(event.code);
+            device.events.push(event);
 
             device.repopulate_event(id as usize);
 
