@@ -89,7 +89,7 @@ struct Keyboard {
     info: [bool; NUM],
     lock: Lock,
     virtio_id: u64,
-    irq_waiting: bool,
+    irqs_waiting: u32,
 
     event_buffer: *mut Event,
     event_idx: u16,
@@ -114,7 +114,7 @@ impl Keyboard {
             info: [false; NUM],
             lock: Lock::new(),
             virtio_id: id,
-            irq_waiting: false,
+            irqs_waiting: 0,
             event_buffer: malloc(EVENT_BUFFER_ELEMENTS * size_of::<Event>()) as *mut Event,
             event_idx: 0,
         };
@@ -175,23 +175,12 @@ impl Keyboard {
         virtio_reg_write(id, MmioOffset::Status, status);
         assert_eq!(virtio_reg_read(id, MmioOffset::Status), status);
 
+        device.lock.spinlock();
         for i in 0..EVENT_BUFFER_ELEMENTS {
             device.repopulate_event(i);
         }
-
-        /*loop {
-            if get_ticks() % 1000 == 0 {
-                println!("Checking...");
-                /*for i in 0..EVENT_BUFFER_ELEMENTS {
-                    unsafe {
-                        let obj = device.event_buffer.add(i).read_volatile();
-                        if obj.code != 0 || obj.value != 0 {
-                            println!("Event: {} {}", obj.code, obj.value);
-                        }
-                    }
-                }*/
-            }
-        }*/
+        device.lock.unlock();
+        device.catch_up();
 
         Some(device)
     }
@@ -210,6 +199,29 @@ impl Keyboard {
             (*self.avail).ring[(*self.avail).idx as usize % VIRTIO_RING_SIZE] = head;
             (*self.avail).idx = (*self.avail).idx.wrapping_add(1);
         }
+    }
+
+    fn catch_up(&mut self) {
+        while self.irqs_waiting > 0 {
+            keyboard_irq(self.virtio_id as u32);
+            self.irqs_waiting -= 1;
+        }
+    }
+
+    fn receive_input(&mut self) -> Option<u8> {
+        self.lock.spinlock();
+        let val = if self.used_idx != unsafe { &*self.used }.idx {
+            let id = unsafe { &*self.used }.ring[self.used_idx as usize % NUM].id;
+            let value = unsafe { &*self.used }.ring[self.used_idx as usize % NUM].len;
+            self.used_idx += 1;
+            Some(value as u8)
+        } else {
+            None
+        };
+
+        self.lock.unlock();
+        self.catch_up();
+        val
     }
 }
 
@@ -232,6 +244,10 @@ pub fn init_keyboard() {
     }
 }
 
+pub fn receive_keyboard_input() -> Option<u8> {
+    unsafe { KEYBOARD.as_mut().unwrap().receive_input() }
+}
+
 pub fn keyboard_irq(irq: u32) {
     if irq == 0 || irq > MAX_VIRTIO_ID as u32 {
         return;
@@ -242,7 +258,7 @@ pub fn keyboard_irq(irq: u32) {
         let device = unsafe { KEYBOARD.as_mut().unwrap() };
 
         if device.lock.locked_by() == get_core_id() as i32 {
-            device.irq_waiting = true;
+            device.irqs_waiting += 1;
             return;
         }
 

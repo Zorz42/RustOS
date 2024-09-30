@@ -13,7 +13,7 @@ use std::{print, println, Vec};
 use crate::disk::filesystem::{close_fs, init_fs};
 use crate::disk::memory_disk::mount_disk;
 use crate::gpu::init_gpu;
-use crate::keyboard::init_keyboard;
+use crate::keyboard::{init_keyboard, receive_keyboard_input};
 use crate::plic::{plicinit, plicinithart};
 
 mod boot;
@@ -107,6 +107,12 @@ pub fn main() {
         let used_memory = ((NUM_PAGES - get_num_free_pages()) * 4) as f32 / 1000.0;
         let portion = used_memory / all_memory * 100.0;
         println!("{used_memory} MB / {all_memory} MB of RAM used ({portion:.1}%)");
+
+        loop {
+            if let Some(val) = receive_keyboard_input() {
+                println!("Received keyboard input: {}", val);
+            }
+        }
     } else {
         while unsafe { !INITIALIZED } {}
 
