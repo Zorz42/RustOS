@@ -74,7 +74,7 @@ pub enum EventType {
 pub struct InputEvent {
     pub event_type: EventType,
     pub code: u16,
-    pub value: u32,
+    pub value: i32,
 }
 
 const EVENT_QUEUE_SIZE: usize = 128;
