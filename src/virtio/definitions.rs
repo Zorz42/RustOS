@@ -60,7 +60,7 @@ pub const VIRTIO_RING_F_EVENT_IDX: u32 = 29;
 
 // this many virtio descriptors.
 // must be a power of two.
-pub const NUM: usize = 8;
+pub const NUM: usize = 128;
 
 // a single descriptor, from the spec.
 #[repr(C)]

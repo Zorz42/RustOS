@@ -15,6 +15,7 @@ use crate::disk::memory_disk::mount_disk;
 use crate::gpu::init_gpu;
 use crate::keyboard::{init_keyboard, receive_keyboard_input};
 use crate::plic::{plicinit, plicinithart};
+use crate::timer::get_ticks;
 
 mod boot;
 mod disk;
@@ -111,6 +112,10 @@ pub fn main() {
         loop {
             if let Some(val) = receive_keyboard_input() {
                 println!("Received keyboard input: {}", val);
+            }
+
+            if get_ticks() % 1000 == 0 {
+                println!("still alive");
             }
         }
     } else {

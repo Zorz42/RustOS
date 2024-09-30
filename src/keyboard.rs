@@ -1,7 +1,8 @@
+use core::cmp::PartialEq;
 use core::intrinsics::write_bytes;
 use core::ptr::write_volatile;
 use core::sync::atomic::{fence, Ordering};
-use std::{malloc, println};
+use std::{malloc, println, Vec};
 use crate::memory::{alloc_page, virt_to_phys, PhysAddr, VirtAddr, PAGE_SIZE};
 use crate::riscv::get_core_id;
 use crate::spinlock::Lock;
@@ -9,7 +10,7 @@ use crate::timer::get_ticks;
 use crate::virtio::definitions::{virtio_reg_read, virtio_reg_write, MmioOffset, VirtqAvail, VirtqDesc, VirtqUsed, MAX_VIRTIO_ID, NUM, VIRTIO_CONFIG_S_ACKNOWLEDGE, VIRTIO_CONFIG_S_DRIVER, VIRTIO_CONFIG_S_DRIVER_OK, VIRTIO_CONFIG_S_FEATURES_OK, VIRTIO_F_ANY_LAYOUT, VIRTIO_MAGIC, VIRTIO_RING_F_EVENT_IDX, VIRTIO_RING_F_INDIRECT_DESC, VRING_DESC_F_WRITE};
 
 const EVENT_BUFFER_ELEMENTS: usize = 8;
-pub const VIRTIO_RING_SIZE: usize = 8;
+const VIRTIO_RING_SIZE: usize = 8;
 
 #[repr(C)]
 pub struct Descriptor {
@@ -52,7 +53,7 @@ pub struct Queue {
 }
 
 #[repr(u16)]
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub enum EventType {
     Syn = 0x00,
     Key = 0x01,
@@ -84,15 +85,15 @@ struct Keyboard {
     used: *mut VirtqUsed,
 
     // our own book-keeping.
-    free: [bool; NUM],
     used_idx: u16,
-    info: [bool; NUM],
     lock: Lock,
     virtio_id: u64,
-    irqs_waiting: u32,
+    irq_waiting: bool,
 
     event_buffer: *mut Event,
     event_idx: u16,
+
+    events: Vec<u16>,
 }
 
 impl Keyboard {
@@ -109,14 +110,13 @@ impl Keyboard {
             desc: 0 as *mut VirtqDesc,
             avail: 0 as *mut VirtqAvail,
             used: 0 as *mut VirtqUsed,
-            free: [true; NUM],
             used_idx: 0,
-            info: [false; NUM],
             lock: Lock::new(),
             virtio_id: id,
-            irqs_waiting: 0,
+            irq_waiting: false,
             event_buffer: malloc(EVENT_BUFFER_ELEMENTS * size_of::<Event>()) as *mut Event,
             event_idx: 0,
+            events: Vec::new(),
         };
 
         let mut status = 0;
@@ -188,10 +188,10 @@ impl Keyboard {
     fn repopulate_event(&mut self, buffer: usize) {
         unsafe {
             let desc = VirtqDesc {
-                addr: virt_to_phys(self.event_buffer.add(buffer) as u64 as VirtAddr).unwrap(),
+                addr: virt_to_phys(self.event_buffer.add(buffer) as VirtAddr).unwrap(),
                 len: size_of::<Event>() as u32,
                 flags: VRING_DESC_F_WRITE,
-                next: 0
+                next: 0,
             };
             let head = self.event_idx;
             self.desc.add(self.event_idx as usize).write_volatile(desc);
@@ -202,26 +202,43 @@ impl Keyboard {
     }
 
     fn catch_up(&mut self) {
-        while self.irqs_waiting > 0 {
+        if self.irq_waiting {
             keyboard_irq(self.virtio_id as u32);
-            self.irqs_waiting -= 1;
+            self.irq_waiting = false;
         }
     }
 
-    fn receive_input(&mut self) -> Option<u8> {
-        self.lock.spinlock();
+    fn receive_input(&mut self) -> Option<u16> {
+        /*self.lock.spinlock();
         let val = if self.used_idx != unsafe { &*self.used }.idx {
             let id = unsafe { &*self.used }.ring[self.used_idx as usize % NUM].id;
-            let value = unsafe { &*self.used }.ring[self.used_idx as usize % NUM].len;
-            self.used_idx += 1;
-            Some(value as u8)
+            println!("got event with id {}", id);
+
+            for i in 0..EVENT_BUFFER_ELEMENTS {
+                let event = unsafe { self.event_buffer.add(i).read_volatile() };
+                if event.code != 0 || event.event_type != EventType::Syn || event.value != 0 {
+                    println!("event type: {:?}, code: {}, value: {}", event.event_type, event.code, event.value);
+                }
+            }
+            //self.repopulate_event(id as usize);
+            /*for i in 0..EVENT_BUFFER_ELEMENTS {
+                self.repopulate_event(i);
+            }*/
+            self.used_idx = self.used_idx.wrapping_add(1);
+            Some(0)
         } else {
             None
         };
 
         self.lock.unlock();
         self.catch_up();
-        val
+        val*/
+
+        self.lock.spinlock();
+        let res = self.events.pop();
+        self.lock.unlock();
+        self.catch_up();
+        res
     }
 }
 
@@ -244,7 +261,7 @@ pub fn init_keyboard() {
     }
 }
 
-pub fn receive_keyboard_input() -> Option<u8> {
+pub fn receive_keyboard_input() -> Option<u16> {
     unsafe { KEYBOARD.as_mut().unwrap().receive_input() }
 }
 
@@ -258,7 +275,7 @@ pub fn keyboard_irq(irq: u32) {
         let device = unsafe { KEYBOARD.as_mut().unwrap() };
 
         if device.lock.locked_by() == get_core_id() as i32 {
-            device.irqs_waiting += 1;
+            device.irq_waiting = true;
             return;
         }
 
@@ -274,9 +291,13 @@ pub fn keyboard_irq(irq: u32) {
             fence(Ordering::Release);
             let id = used.ring[device.used_idx as usize % NUM].id;
 
-            unsafe {
-                write_volatile(&mut device.info[id as usize], false);
-            }
+            let desc = unsafe { device.desc.add(id as usize).read_volatile() };
+            let event_ptr = desc.addr as *const Event;
+            let event = unsafe { event_ptr.read_volatile() };
+
+            device.events.push(event.code);
+
+            device.repopulate_event(id as usize);
 
             device.used_idx += 1;
         }
