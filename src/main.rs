@@ -13,7 +13,7 @@ use std::{print, println, Vec};
 use crate::disk::filesystem::{close_fs, init_fs};
 use crate::disk::memory_disk::mount_disk;
 use crate::gpu::init_gpu;
-use crate::keyboard::{init_keyboard, receive_keyboard_input};
+use crate::input::{init_input_devices, check_for_virtio_input_event};
 use crate::plic::{plicinit, plicinithart};
 use crate::timer::get_ticks;
 
@@ -31,7 +31,7 @@ mod virtio;
 mod plic;
 mod gpu;
 mod font;
-mod keyboard;
+mod input;
 
 pub const ROOT_MAGIC: u32 = 0x63726591;
 
@@ -69,7 +69,7 @@ pub fn main() {
 
         println!("Initializing kernel with core 0");
 
-        init_keyboard();
+        init_input_devices();
 
         #[cfg(debug_assertions)]
         {
@@ -110,7 +110,7 @@ pub fn main() {
         println!("{used_memory} MB / {all_memory} MB of RAM used ({portion:.1}%)");
 
         loop {
-            if let Some(val) = receive_keyboard_input() {
+            if let Some(val) = check_for_virtio_input_event() {
                 println!("Received keyboard input: {:?}", val);
             }
 

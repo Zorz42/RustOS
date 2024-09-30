@@ -1,11 +1,12 @@
 use core::cmp::PartialEq;
 use core::intrinsics::write_bytes;
 use core::sync::atomic::{fence, Ordering};
-use std::{Vec};
+use std::{println, Vec};
 use crate::memory::{alloc_page, virt_to_phys, VirtAddr, PAGE_SIZE};
 use crate::riscv::get_core_id;
 use crate::spinlock::Lock;
 use crate::virtio::definitions::{virtio_reg_read, virtio_reg_write, MmioOffset, VirtqAvail, VirtqDesc, VirtqUsed, MAX_VIRTIO_ID, NUM, VIRTIO_CONFIG_S_ACKNOWLEDGE, VIRTIO_CONFIG_S_DRIVER, VIRTIO_CONFIG_S_DRIVER_OK, VIRTIO_CONFIG_S_FEATURES_OK, VIRTIO_F_ANY_LAYOUT, VIRTIO_MAGIC, VIRTIO_RING_F_EVENT_IDX, VIRTIO_RING_F_INDIRECT_DESC, VRING_DESC_F_WRITE};
+use crate::virtio::device::VirtioDevice;
 
 const EVENT_BUFFER_ELEMENTS: usize = 128;
 const VIRTIO_RING_SIZE: usize = 128;
@@ -70,13 +71,15 @@ pub enum EventType {
 
 #[repr(C)]
 #[derive(Copy, Clone, Debug)]
-pub struct KeyboardEvent {
+pub struct InputEvent {
     pub event_type: EventType,
     pub code: u16,
     pub value: u32,
 }
 
-struct Keyboard {
+const EVENT_QUEUE_SIZE: usize = 128;
+
+struct VirtioInputDevice {
     // three virtqueues
     desc: *mut VirtqDesc,
     avail: *mut VirtqAvail,
@@ -88,14 +91,16 @@ struct Keyboard {
     virtio_id: u64,
     irq_waiting: bool,
 
-    event_buffer: [*mut KeyboardEvent; EVENT_BUFFER_ELEMENTS],
+    event_buffer: [*mut InputEvent; EVENT_BUFFER_ELEMENTS],
     event_idx: u16,
 
-    events: Vec<KeyboardEvent>,
+    events_queue: [InputEvent; EVENT_QUEUE_SIZE],
+    events_queue_l: usize,
+    events_queue_r: usize,
 }
 
-impl Keyboard {
-    fn get_keyboard_at(id: u64) -> Option<Keyboard> {
+impl VirtioInputDevice {
+    fn get_device_at(id: u64) -> Option<VirtioInputDevice> {
         if virtio_reg_read(id, MmioOffset::MagicValue) != VIRTIO_MAGIC
             || virtio_reg_read(id, MmioOffset::Version) != 2
             || virtio_reg_read(id, MmioOffset::DeviceId) != 18
@@ -112,13 +117,19 @@ impl Keyboard {
             lock: Lock::new(),
             virtio_id: id,
             irq_waiting: false,
-            event_buffer: [0 as *mut KeyboardEvent; EVENT_BUFFER_ELEMENTS],
+            event_buffer: [0 as *mut InputEvent; EVENT_BUFFER_ELEMENTS],
             event_idx: 0,
-            events: Vec::new(),
+            events_queue: [InputEvent {
+                event_type: EventType::Syn,
+                code: 0,
+                value: 0,
+            }; 128],
+            events_queue_l: 0,
+            events_queue_r: 0,
         };
 
         for i in 0..EVENT_BUFFER_ELEMENTS {
-            device.event_buffer[i] = alloc_page() as *mut KeyboardEvent;
+            device.event_buffer[i] = alloc_page() as *mut InputEvent;
         }
 
         let mut status = 0;
@@ -191,7 +202,7 @@ impl Keyboard {
         unsafe {
             let desc = VirtqDesc {
                 addr: virt_to_phys(self.event_buffer[buffer] as VirtAddr).unwrap(),
-                len: size_of::<KeyboardEvent>() as u32,
+                len: size_of::<InputEvent>() as u32,
                 flags: VRING_DESC_F_WRITE,
                 next: 0,
             };
@@ -205,77 +216,67 @@ impl Keyboard {
 
     fn catch_up(&mut self) {
         if self.irq_waiting {
-            keyboard_irq(self.virtio_id as u32);
+            virtio_input_irq(self.virtio_id as u32);
             self.irq_waiting = false;
         }
     }
 
-    fn receive_input(&mut self) -> Option<KeyboardEvent> {
-        /*self.lock.spinlock();
-        let val = if self.used_idx != unsafe { &*self.used }.idx {
-            let id = unsafe { &*self.used }.ring[self.used_idx as usize % NUM].id;
-            println!("got event with id {}", id);
-
-            for i in 0..EVENT_BUFFER_ELEMENTS {
-                let event = unsafe { self.event_buffer.add(i).read_volatile() };
-                if event.code != 0 || event.event_type != EventType::Syn || event.value != 0 {
-                    println!("event type: {:?}, code: {}, value: {}", event.event_type, event.code, event.value);
-                }
-            }
-            //self.repopulate_event(id as usize);
-            /*for i in 0..EVENT_BUFFER_ELEMENTS {
-                self.repopulate_event(i);
-            }*/
-            self.used_idx = self.used_idx.wrapping_add(1);
-            Some(0)
+    fn get_from_queue(&mut self) -> Option<InputEvent> {
+        if self.events_queue_l != self.events_queue_r {
+            let res = self.events_queue[self.events_queue_l];
+            self.events_queue_l = (self.events_queue_l + 1) % EVENT_QUEUE_SIZE;
+            Some(res)
         } else {
             None
-        };
-
-        self.lock.unlock();
-        self.catch_up();
-        val*/
-
-        self.lock.spinlock();
-        let res = self.events.pop();
-        self.lock.unlock();
-        self.catch_up();
-        res
-    }
-}
-
-static mut KEYBOARD: Option<Keyboard> = None;
-static mut KEYBOARD_ID: u64 = 0;
-
-pub fn init_keyboard() {
-    for id in 0..MAX_VIRTIO_ID {
-        if let Some(keyboard) = Keyboard::get_keyboard_at(id) {
-            unsafe {
-                assert!(KEYBOARD.is_none());
-                KEYBOARD_ID = id;
-                KEYBOARD = Some(keyboard);
-            }
-            break;
         }
     }
-    unsafe {
-        assert!(KEYBOARD.is_some());
+
+    fn receive_input(&mut self) -> Option<InputEvent> {
+        self.lock.spinlock();
+        while let Some(event) = self.get_from_queue() {
+            if event.event_type != EventType::Syn {
+                self.lock.unlock();
+                self.catch_up();
+                return Some(event);
+            }
+        };
+        self.lock.unlock();
+        self.catch_up();
+        None
     }
 }
 
-pub fn receive_keyboard_input() -> Option<KeyboardEvent> {
-    unsafe { KEYBOARD.as_mut().unwrap().receive_input() }
+const ARRAY_REPEAT_VALUE: Option<VirtioInputDevice> = None;
+static mut DEVICES: [Option<VirtioInputDevice>; MAX_VIRTIO_ID as usize] = [ARRAY_REPEAT_VALUE; MAX_VIRTIO_ID as usize];
+
+pub fn init_input_devices() {
+    for id in 0..MAX_VIRTIO_ID {
+        if let Some(input_device) = VirtioInputDevice::get_device_at(id) {
+            unsafe {
+                DEVICES[id as usize] = Some(input_device);
+            }
+        }
+    }
 }
 
-pub fn keyboard_irq(irq: u32) {
+pub fn check_for_virtio_input_event() -> Option<InputEvent> {
+    for id in 0..MAX_VIRTIO_ID {
+        if let Some(device) = unsafe { &mut DEVICES[id as usize] } {
+            if let Some(event) = device.receive_input() {
+                return Some(event);
+            }
+        }
+    }
+    None
+}
+
+pub fn virtio_input_irq(irq: u32) {
     if irq == 0 || irq > MAX_VIRTIO_ID as u32 {
         return;
     }
     let id = irq as u64 - 1;
 
-    if id == unsafe { KEYBOARD_ID } {
-        let device = unsafe { KEYBOARD.as_mut().unwrap() };
-
+    if let Some(device) = unsafe { &mut DEVICES[id as usize] } {
         if device.lock.locked_by() == get_core_id() as i32 {
             device.irq_waiting = true;
             return;
@@ -294,10 +295,11 @@ pub fn keyboard_irq(irq: u32) {
             let id = used.ring[device.used_idx as usize % NUM].id;
 
             let desc = unsafe { device.desc.add(id as usize).read_volatile() };
-            let event_ptr = desc.addr as *const KeyboardEvent;
+            let event_ptr = desc.addr as *const InputEvent;
             let event = unsafe { event_ptr.read_volatile() };
 
-            device.events.push(event);
+            device.events_queue[device.events_queue_r] = event;
+            device.events_queue_r = (device.events_queue_r + 1) % EVENT_QUEUE_SIZE;
 
             device.repopulate_event(id as usize);
 
