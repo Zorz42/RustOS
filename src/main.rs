@@ -10,6 +10,7 @@ use crate::trap::init_trap;
 use core::panic::PanicInfo;
 use core::sync::atomic::{fence, Ordering};
 use std::{print, println, Vec};
+use crate::console::run_console;
 use crate::disk::filesystem::{close_fs, init_fs};
 use crate::disk::memory_disk::mount_disk;
 use crate::gpu::init_gpu;
@@ -32,6 +33,7 @@ mod plic;
 mod gpu;
 mod font;
 mod input;
+mod console;
 
 pub const ROOT_MAGIC: u32 = 0x63726591;
 
@@ -109,15 +111,7 @@ pub fn main() {
         let portion = used_memory / all_memory * 100.0;
         println!("{used_memory} MB / {all_memory} MB of RAM used ({portion:.1}%)");
 
-        loop {
-            if let Some(val) = check_for_virtio_input_event() {
-                println!("Received keyboard input: {:?}", val);
-            }
-
-            if get_ticks() % 1000 == 0 {
-                println!("still alive");
-            }
-        }
+        run_console();
     } else {
         while unsafe { !INITIALIZED } {}
 

@@ -4,6 +4,7 @@ use crate::font::{CHAR_HEIGHT, CHAR_WIDTH, DEFAULT_FONT};
 use crate::gpu::{get_framebuffer, get_screen_size, refresh_screen};
 use crate::spinlock::Lock;
 use core::fmt::Write;
+use crate::timer::get_ticks;
 
 #[allow(dead_code)]
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -143,16 +144,20 @@ impl Writer {
             addr.write_volatile(c);
         }
 
+        let width_chars = (get_screen_size().0 as usize - 2 * BORDER_PADDING) / CHAR_HEIGHT;
+        let height_chars = (get_screen_size().1 as usize - 2 * BORDER_PADDING) / CHAR_HEIGHT;
+
         if c == b'\n' {
             self.new_line();
             return;
         }
         if c == b'\r' {
             self.x = 0;
+            for x in 0..width_chars {
+                set_char(x, height_chars - 1, b' ', self.text_color, self.background_color);
+            }
             return;
         }
-        let width_chars = (get_screen_size().0 as usize - 2 * BORDER_PADDING) / CHAR_HEIGHT;
-        let height_chars = (get_screen_size().1 as usize - 2 * BORDER_PADDING) / CHAR_HEIGHT;
         set_char(self.x, height_chars - 1, c, self.text_color, self.background_color);
         self.x += 1;
         if self.x >= width_chars {
@@ -174,6 +179,7 @@ pub fn init_print() {
 }
 
 static PRINT_LOCK: Lock = Lock::new();
+static mut LAST_REFRESH: u64 = 0;
 
 #[doc(hidden)]
 pub fn _print(args: fmt::Arguments) {
@@ -181,7 +187,20 @@ pub fn _print(args: fmt::Arguments) {
     unsafe {
         WRITER.write_fmt(args).unwrap();
     }
-    refresh_screen();
+    PRINT_LOCK.unlock();
+    check_screen_refresh_for_print();
+}
+
+const PRINT_REFRESH_INTERVAL: u64 = 50;
+
+pub fn check_screen_refresh_for_print() {
+    PRINT_LOCK.spinlock();
+    if get_ticks() - unsafe { LAST_REFRESH } > PRINT_REFRESH_INTERVAL {
+        refresh_screen();
+        unsafe {
+            LAST_REFRESH = get_ticks();
+        }
+    }
     PRINT_LOCK.unlock();
 }
 
