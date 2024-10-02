@@ -3,20 +3,20 @@
 
 use crate::boot::infinite_loop;
 use crate::disk::disk::{Disk, scan_for_disks};
-use crate::memory::{get_num_free_pages, init_paging, init_paging_hart, KERNEL_OFFSET, NUM_PAGES};
+use crate::memory::{get_num_free_pages, init_paging, init_paging_hart, NUM_PAGES};
 use crate::print::{init_print, reset_print_color, set_print_color, TextColor};
 use crate::riscv::{enable_fpu, get_core_id, interrupts_enable};
 use crate::trap::init_trap;
 use core::panic::PanicInfo;
 use core::sync::atomic::{fence, Ordering};
-use std::{print, println, Vec};
+use std::{println, String, Vec};
 use crate::console::run_console;
-use crate::disk::filesystem::{close_fs, init_fs};
+use crate::disk::filesystem::{close_fs, get_fs, init_fs};
 use crate::disk::memory_disk::mount_disk;
 use crate::gpu::init_gpu;
-use crate::input::{init_input_devices, check_for_virtio_input_event};
+use crate::input::{init_input_devices};
 use crate::plic::{plicinit, plicinithart};
-use crate::timer::get_ticks;
+use crate::program_runner::run_program;
 
 mod boot;
 mod disk;
@@ -34,6 +34,7 @@ mod gpu;
 mod font;
 mod input;
 mod console;
+mod program_runner;
 
 pub const ROOT_MAGIC: u32 = 0x63726591;
 
@@ -110,6 +111,13 @@ pub fn main() {
         let used_memory = ((NUM_PAGES - get_num_free_pages()) * 4) as f32 / 1000.0;
         let portion = used_memory / all_memory * 100.0;
         println!("{used_memory} MB / {all_memory} MB of RAM used ({portion:.1}%)");
+
+        // write to file "test_program" with contents from the test program
+        let test_program = include_bytes!("../../programs/test_program/target/riscv64gc-unknown-none-elf/debug/test_program");
+        let test_program_vec = Vec::new_from_slice(test_program);
+        get_fs().create_file(&String::from("test_program")).write(&test_program_vec);
+
+        run_program(&String::from("test_program"));
 
         run_console();
     } else {
