@@ -58,7 +58,7 @@ pub fn free_page(addr: PhysAddr) {
 }
 
 fn page_allocator(page: VirtAddr, ignore_if_exists: bool) {
-    map_page_auto(page, ignore_if_exists, true, false);
+    map_page_auto(page, ignore_if_exists, true, false, false);
 }
 
 fn page_deallocator(page: VirtAddr) {
@@ -193,7 +193,7 @@ fn get_address_page_table_entry(virtual_addr: VirtAddr) -> Option<&'static mut P
     Some(get_sub_page_table_entry(curr_table, index as usize))
 }
 
-pub fn map_page(virtual_addr: VirtAddr, physical_addr: PhysAddr, ignore_if_exists: bool, writable: bool, user: bool) {
+pub fn map_page(virtual_addr: VirtAddr, physical_addr: PhysAddr, ignore_if_exists: bool, writable: bool, user: bool, executable: bool) {
     let curr_entry = get_address_page_table_entry(virtual_addr).unwrap();
     if ignore_if_exists && (*curr_entry & PTE_PRESENT) != 0 {
         return;
@@ -206,11 +206,14 @@ pub fn map_page(virtual_addr: VirtAddr, physical_addr: PhysAddr, ignore_if_exist
     if user {
         *curr_entry |= PTE_USER;
     }
+    if executable {
+        *curr_entry |= PTE_EXECUTE;
+    }
     refresh_paging();
 }
 
-pub fn map_page_auto(virtual_addr: VirtAddr, ignore_if_exists: bool, writable: bool, user: bool) {
-    map_page(virtual_addr, alloc_page(), ignore_if_exists, writable, user);
+pub fn map_page_auto(virtual_addr: VirtAddr, ignore_if_exists: bool, writable: bool, user: bool, executable: bool) {
+    map_page(virtual_addr, alloc_page(), ignore_if_exists, writable, user, executable);
 }
 
 pub fn virt_to_phys(addr: VirtAddr) -> Option<PhysAddr> {

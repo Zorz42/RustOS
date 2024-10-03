@@ -1,9 +1,10 @@
 use std::{println, String, Vec};
 use crate::disk::filesystem::get_fs;
+use crate::memory::{map_page_auto, VirtAddr, KERNEL_VIRTUAL_TOP, PAGE_SIZE};
 
 #[derive(Debug)]
 #[repr(C)]
-pub struct ElfHeader {
+struct ElfHeader {
     pub magic: [u8; 4],
     pub bits: u8,
     pub endianness: u8,
@@ -28,7 +29,7 @@ pub struct ElfHeader {
 
 #[derive(Debug)]
 #[repr(C)]
-pub struct ElfProgramHeader {
+struct ElfProgramHeader {
     pub p_type: u32,
     pub flags: u32,
     pub offset: u64,
@@ -41,9 +42,9 @@ pub struct ElfProgramHeader {
 
 #[derive(Debug)]
 #[repr(C)]
-pub struct ElfSectionHeader {
+struct ElfSectionHeader {
     pub name: u32,
-    pub s_type: u32,
+    pub sh_type: u32,
     pub flags: u64,
     pub addr: u64,
     pub offset: u64,
@@ -119,6 +120,8 @@ pub fn run_program(path: &String) {
         section_headers.push(section_header);
     }
 
+    println!("phoff = 0x{:x}", elf_header.ph_offset);
+
     println!("Elf header: {:?}", elf_header);
     println!("Program headers: ");
     for header in &program_headers {
@@ -128,4 +131,25 @@ pub fn run_program(path: &String) {
     for header in &section_headers {
         println!("{:?}", header);
     }
+
+    // map program headers to memory
+    for header in &program_headers {
+        if header.p_type == 1 {
+            assert!(header.vaddr >= KERNEL_VIRTUAL_TOP);
+
+            let low_page = header.vaddr / PAGE_SIZE;
+            let high_page = (header.vaddr + header.memory_size + PAGE_SIZE - 1) / PAGE_SIZE;
+            for page in low_page..high_page {
+                map_page_auto((page * PAGE_SIZE) as VirtAddr, true, true, false, true);
+            }
+            unsafe {
+                core::ptr::copy(program.as_ptr().add(header.offset as usize), header.vaddr as *mut u8, header.file_size as usize);
+            }
+        }
+    }
+
+    // run the program
+    let code: fn() -> i32 = unsafe { core::mem::transmute(elf_header.entry) };
+    let result = code();
+    println!("Program returned: {}", result);
 }

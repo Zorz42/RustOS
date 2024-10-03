@@ -63,7 +63,7 @@ impl MemoryDisk {
         self.in_vec.set(idx as usize, true);
 
         let addr = addr / PAGE_SIZE * PAGE_SIZE;
-        map_page_auto(addr as VirtAddr, false, true, false);
+        map_page_auto(addr as VirtAddr, false, true, false, false);
         if load {
             let first_sector = (addr - DISK_OFFSET) / PAGE_SIZE * 8;
             for sector in first_sector..first_sector + 8 {

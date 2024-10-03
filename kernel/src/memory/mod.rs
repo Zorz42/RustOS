@@ -14,9 +14,8 @@ pub const HEAP_BASE_ADDR: u64 = ID_MAP_END;
 pub const HEAP_TREE_ADDR: u64 = ID_MAP_END + FRAME_SIZE;
 #[allow(dead_code)]
 pub const TESTING_OFFSET: u64 = ID_MAP_END + 2 * FRAME_SIZE;
-pub const FRAMEBUFFER_OFFSET: u64 = ID_MAP_END + 3 * FRAME_SIZE;
-pub const DISK_OFFSET: u64 = ID_MAP_END + 4 * FRAME_SIZE;
-pub const KERNEL_VIRTUAL_TOP: u64 = ID_MAP_END + 5 * FRAME_SIZE;
+pub const DISK_OFFSET: u64 = ID_MAP_END + 3 * FRAME_SIZE;
+pub const KERNEL_VIRTUAL_TOP: u64 = ID_MAP_END + 4 * FRAME_SIZE;
 
 pub use bitset::{bitset_size_bytes, BitSetRaw, BitSet};
 pub use paging::{alloc_page, alloc_continuous_pages, free_page, get_num_free_pages, init_paging, init_paging_hart, map_page, map_page_auto, unmap_page, virt_to_phys, PhysAddr, VirtAddr};
