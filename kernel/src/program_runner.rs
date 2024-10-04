@@ -100,10 +100,10 @@ pub fn run_program(path: &String) {
     }
 
     //println!("Elf header: {:?}", elf_header);
-    /*println!("Program headers: ");
+    println!("Program headers: ");
     for header in &program_headers {
         println!("{:?}", header);
-    }*/
+    }
 
     // map program headers to memory
     for header in &program_headers {
@@ -113,7 +113,7 @@ pub fn run_program(path: &String) {
             let low_page = header.vaddr / PAGE_SIZE;
             let high_page = (header.vaddr + header.memory_size + PAGE_SIZE - 1) / PAGE_SIZE;
             for page in low_page..high_page {
-                map_page_auto((page * PAGE_SIZE) as VirtAddr, true, header.flags & 4 != 0, header.flags & 2 != 0, false, header.flags & 1 != 0);
+                map_page_auto((page * PAGE_SIZE) as VirtAddr, true, true, false, true);
             }
 
             let ptr_low = header.vaddr as *mut u8;

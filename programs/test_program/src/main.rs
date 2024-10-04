@@ -26,6 +26,6 @@ pub fn main() -> i32 {
 }
 
 #[panic_handler]
-fn panic(_info: &PanicInfo) -> ! {
+fn panic(info: &PanicInfo) -> ! {
     loop {}
 }
