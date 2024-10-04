@@ -40,21 +40,6 @@ struct ElfProgramHeader {
     pub align: u64,
 }
 
-#[derive(Debug)]
-#[repr(C)]
-struct ElfSectionHeader {
-    pub name: u32,
-    pub sh_type: u32,
-    pub flags: u64,
-    pub addr: u64,
-    pub offset: u64,
-    pub size: u64,
-    pub link: u32,
-    pub info: u32,
-    pub addr_align: u64,
-    pub entry_size: u64,
-}
-
 fn verify_elf_header(header: &ElfHeader) -> bool {
     if header.magic != [0x7f, 0x45, 0x4c, 0x46] {
         return false;
@@ -99,6 +84,7 @@ pub fn run_program(path: &String) {
     println!("Running program: {}", path);
 
     let program = get_fs().get_file(path).unwrap().read();
+    println!("Program size {}", program.size());
     let elf_header = unsafe { (program.as_ptr() as *const ElfHeader).read() };
 
     if !verify_elf_header(&elf_header) {
@@ -113,26 +99,15 @@ pub fn run_program(path: &String) {
         program_headers.push(program_header);
     }
 
-    // get section headers
-    let mut section_headers = Vec::new();
-    for i in 0..elf_header.sh_entry_count {
-        let section_header = unsafe { (program.as_ptr().add(elf_header.sh_offset as usize) as *const ElfSectionHeader).add(i as usize).read() };
-        section_headers.push(section_header);
-    }
-
     //println!("Elf header: {:?}", elf_header);
-    /*println!("Program headers: ");
+    println!("Program headers: ");
     for header in &program_headers {
         println!("{:?}", header);
     }
-    println!("Section headers: ");
-    for header in &section_headers {
-        println!("{:?}", header);
-    }*/
 
     // map program headers to memory
     for header in &program_headers {
-        if header.p_type == 1 {
+        if header.p_type == 1 && header.memory_size != 0 {
             assert!(header.vaddr >= KERNEL_VIRTUAL_TOP);
 
             let low_page = header.vaddr / PAGE_SIZE;
@@ -140,24 +115,14 @@ pub fn run_program(path: &String) {
             for page in low_page..high_page {
                 map_page_auto((page * PAGE_SIZE) as VirtAddr, true, true, false, true);
             }
+
+            let ptr_low = header.vaddr as *mut u8;
+            let ptr_mid = (header.vaddr + header.file_size) as *mut u8;
+            let ptr_high = (header.vaddr + header.memory_size) as *mut u8;
             unsafe {
-                core::ptr::copy(program.as_ptr().add(header.offset as usize), header.vaddr as *mut u8, header.file_size as usize);
-            }
-        }
-    }
-
-    for header in &section_headers {
-        if header.flags & 2 != 0 && header.size != 0 { // occupy memory
-            let low_page = header.addr / PAGE_SIZE;
-            let high_page = (header.addr + header.size + PAGE_SIZE - 1) / PAGE_SIZE;
-
-            for page in low_page..high_page {
-                map_page_auto((page * PAGE_SIZE) as VirtAddr, true, header.flags & 1 != 0, false, header.flags ^ 4 != 0);
-            }
-
-            if header.offset != 0 {
-                unsafe {
-                    core::ptr::copy(program.as_ptr().add(header.offset as usize), header.addr as *mut u8, header.size as usize);
+                core::ptr::copy(program.as_ptr().add(header.offset as usize), ptr_low, header.file_size as usize);
+                if ptr_mid != ptr_high {
+                    core::ptr::write_bytes(ptr_mid, 0, (header.memory_size - header.file_size) as usize);
                 }
             }
         }

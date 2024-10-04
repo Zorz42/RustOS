@@ -11,16 +11,18 @@ fn rust_entry() -> i32 {
     main()
 }
 
+const ARRAY_SIZE: usize = 1000000;
+static mut array: [u32; ARRAY_SIZE] = [0; ARRAY_SIZE];
+
 pub fn main() -> i32 {
-    let mut a = 0u32;
-    let mut b = 1u32;
-    // iterate fibonacci 100 times
-    for _ in 0..100 {
-        let c = a.wrapping_add(b);
-        a = b;
-        b = c;
+    unsafe {
+        array[0] = 0;
+        array[1] = 1;
+        for i in 2..ARRAY_SIZE {
+            array[i] = array[i - 1].wrapping_add(array[i - 2]);
+        }
+        array[ARRAY_SIZE - 1] as i32
     }
-    a as i32
 }
 
 #[panic_handler]
