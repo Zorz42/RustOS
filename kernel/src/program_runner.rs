@@ -116,14 +116,12 @@ pub fn run_program(path: &String) {
                 map_page_auto((page * PAGE_SIZE) as VirtAddr, true, true, false, true);
             }
 
+            assert!(header.memory_size >= header.file_size);
             let ptr_low = header.vaddr as *mut u8;
             let ptr_mid = (header.vaddr + header.file_size) as *mut u8;
-            let ptr_high = (header.vaddr + header.memory_size) as *mut u8;
             unsafe {
                 core::ptr::copy(program.as_ptr().add(header.offset as usize), ptr_low, header.file_size as usize);
-                if ptr_mid != ptr_high {
-                    core::ptr::write_bytes(ptr_mid, 0, (header.memory_size - header.file_size) as usize);
-                }
+                core::ptr::write_bytes(ptr_mid, 0, (header.memory_size - header.file_size) as usize);
             }
         }
     }
