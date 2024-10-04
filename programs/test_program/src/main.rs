@@ -8,19 +8,19 @@ global_asm!(include_str!("asm/entry.S"));
 
 #[no_mangle]
 fn rust_entry() -> i32 {
-    return 42;
+    main()
 }
 
 pub fn main() -> i32 {
-    let mut a = 0;
-    let mut b = 1;
+    let mut a = 0u32;
+    let mut b = 1u32;
     // iterate fibonacci 100 times
     for _ in 0..100 {
-        let c = a + b;
+        let c = a.wrapping_add(b);
         a = b;
         b = c;
     }
-    a
+    a as i32
 }
 
 #[panic_handler]

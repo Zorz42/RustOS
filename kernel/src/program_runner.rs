@@ -120,17 +120,15 @@ pub fn run_program(path: &String) {
         section_headers.push(section_header);
     }
 
-    println!("phoff = 0x{:x}", elf_header.ph_offset);
-
-    println!("Elf header: {:?}", elf_header);
-    println!("Program headers: ");
+    //println!("Elf header: {:?}", elf_header);
+    /*println!("Program headers: ");
     for header in &program_headers {
         println!("{:?}", header);
     }
     println!("Section headers: ");
     for header in &section_headers {
         println!("{:?}", header);
-    }
+    }*/
 
     // map program headers to memory
     for header in &program_headers {
@@ -144,6 +142,23 @@ pub fn run_program(path: &String) {
             }
             unsafe {
                 core::ptr::copy(program.as_ptr().add(header.offset as usize), header.vaddr as *mut u8, header.file_size as usize);
+            }
+        }
+    }
+
+    for header in &section_headers {
+        if header.flags & 2 != 0 && header.size != 0 { // occupy memory
+            let low_page = header.addr / PAGE_SIZE;
+            let high_page = (header.addr + header.size + PAGE_SIZE - 1) / PAGE_SIZE;
+
+            for page in low_page..high_page {
+                map_page_auto((page * PAGE_SIZE) as VirtAddr, true, header.flags & 1 != 0, false, header.flags ^ 4 != 0);
+            }
+
+            if header.offset != 0 {
+                unsafe {
+                    core::ptr::copy(program.as_ptr().add(header.offset as usize), header.addr as *mut u8, header.size as usize);
+                }
             }
         }
     }
