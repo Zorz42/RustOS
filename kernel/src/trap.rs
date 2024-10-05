@@ -11,7 +11,7 @@ extern "C" {
 
 #[no_mangle]
 extern "C" fn kerneltrap() {
-    assert_ne!(get_sstatus() & SSTATUS_SPP, 0);
+    //assert_ne!(get_sstatus() & SSTATUS_SPP, 0);
     assert!(!interrupts_get());
 
     let ty = get_interrupt_type();

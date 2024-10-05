@@ -50,6 +50,18 @@ static mut TICKS: u64 = 0;
 pub fn tick() {
     unsafe {
         TICKS += 1;
+        if TICKS % 1000 == 0 {
+            let addr = 0x10000000 as *mut u8;
+            unsafe {
+                while addr.add(5).read_volatile() & (1 << 5) == 0 {}
+                addr.write_volatile('T' as u8);
+            }
+            let addr = 0x10000000 as *mut u8;
+            unsafe {
+                while addr.add(5).read_volatile() & (1 << 5) == 0 {}
+                addr.write_volatile('\n' as u8);
+            }
+        }
     }
 }
 

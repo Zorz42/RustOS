@@ -1,6 +1,8 @@
+use core::arch::asm;
 use std::{println, String, Vec};
 use crate::disk::filesystem::get_fs;
-use crate::memory::{map_page_auto, VirtAddr, KERNEL_VIRTUAL_TOP, PAGE_SIZE};
+use crate::memory::{map_page_auto, VirtAddr, KERNEL_VIRTUAL_TOP, PAGE_SIZE, USER_STACK};
+use crate::riscv::{get_sstatus, set_sepc, set_sstatus, SSTATUS_SPP, SSTATUS_UIE};
 
 #[derive(Debug)]
 #[repr(C)]
@@ -113,7 +115,7 @@ pub fn run_program(path: &String) {
             let low_page = header.vaddr / PAGE_SIZE;
             let high_page = (header.vaddr + header.memory_size + PAGE_SIZE - 1) / PAGE_SIZE;
             for page in low_page..high_page {
-                map_page_auto((page * PAGE_SIZE) as VirtAddr, true, true, false, true);
+                map_page_auto((page * PAGE_SIZE) as VirtAddr, true, true, true, true);
             }
 
             assert!(header.memory_size >= header.file_size);
@@ -126,8 +128,30 @@ pub fn run_program(path: &String) {
         }
     }
 
-    // run the program
-    let code: fn() -> i32 = unsafe { core::mem::transmute(elf_header.entry) };
-    let result = code();
-    println!("Program returned: {}", result);
+    let stack_size = 128 * 1024;
+    let stack_pages = stack_size / PAGE_SIZE;
+    let stack_top = USER_STACK + stack_size;
+    for i in 0..stack_pages {
+        map_page_auto((USER_STACK + i * PAGE_SIZE) as VirtAddr, true, true, true, false);
+    }
+
+    // clear bit in sstatus
+    set_sstatus(get_sstatus() & !SSTATUS_SPP);
+
+    // set user interrupt enable
+    set_sstatus(get_sstatus() | SSTATUS_UIE);
+
+    // set sepc to the entry point
+    set_sepc(elf_header.entry);
+
+    unsafe {
+        // jump to the entry point
+        asm!(r#"
+        // set the stack pointer
+        mv sp, {0}
+        // jump to the entry point
+        sret
+        "#, in(reg) stack_top);
+    }
+    println!("Program returned");
 }

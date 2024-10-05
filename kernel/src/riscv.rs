@@ -50,6 +50,7 @@ pub const MSTATUS_MMI: u64 = 1 << 3;
 csr_get_set!(mstatus);
 
 // supervisor mode interrupts
+pub const SSTATUS_SUM: u64 = 1 << 18; // Supervisor can access user memory
 pub const SSTATUS_SPP: u64 = 1 << 8; // Previous mode, 1=Supervisor, 0=User
 pub const SSTATUS_SPIE: u64 = 1 << 5; // Supervisor Previous Interrupt Enable
 pub const SSTATUS_UPIE: u64 = 1 << 4; // User Previous Interrupt Enable

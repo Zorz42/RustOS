@@ -1,7 +1,4 @@
-use crate::riscv::{
-    get_mhartid, get_mstatus, get_sie, set_medeleg, set_mepc, set_mideleg, set_mstatus, set_pmpaddr0, set_pmpcfg0, set_satp, set_sie, set_tp, MSTATUS_MACHINE, MSTATUS_SUPERVISOR, SIE_EXTERNAL,
-    SIE_SOFTWARE, SIE_TIMER,
-};
+use crate::riscv::{get_mhartid, get_mstatus, get_sie, get_sstatus, set_medeleg, set_mepc, set_mideleg, set_mstatus, set_pmpaddr0, set_pmpcfg0, set_satp, set_sie, set_sstatus, set_tp, MSTATUS_MACHINE, MSTATUS_SUPERVISOR, SIE_EXTERNAL, SIE_SOFTWARE, SIE_TIMER, SSTATUS_SUM};
 use core::arch::asm;
 
 use crate::main;
@@ -54,6 +51,8 @@ extern "C" fn rust_entry() -> ! {
     // give kernel whole memory
     set_pmpaddr0(0x3fffffffffffff);
     set_pmpcfg0(0xF);
+
+    set_sstatus(get_sstatus() | SSTATUS_SUM);
 
     machine_mode_timer_init();
 
