@@ -16,16 +16,36 @@ extern "C" fn kerneltrap() {
 
     let ty = get_interrupt_type();
 
-    if ty == InterruptType::Unknown {
-        println!("Interrupt occurred");
-        println!("Scause: {}", get_scause());
-        println!("Sepc: 0x{:x}", get_sepc());
-        println!("Stval: 0x{:x}", get_stval());
-        panic!("kerneltrap");
+    match ty {
+        InterruptType::Timer => {
+            if get_core_id() == 0 {
+                tick();
+            }
+
+            // acknowledge the software interrupt by clearing
+            // the SSIP bit in sip.
+            let mut sip = get_sip();
+            sip &= !2;
+            set_sip(sip);
+        }
+        InterruptType::OtherDevice => {
+            let irq = plic_irq();
+
+            virtio_irq(irq);
+            virtio_input_irq(irq);
+
+            plic_complete(irq);
+        }
+        InterruptType::Unknown => {
+            println!("Interrupt occurred");
+            println!("Scause: {}", get_scause());
+            println!("Sepc: 0x{:x}", get_sepc());
+            println!("Stval: 0x{:x}", get_stval());
+            panic!("kerneltrap");
+        }
     }
 }
 
-#[derive(PartialEq)]
 enum InterruptType {
     Unknown,
     Timer,
@@ -36,26 +56,8 @@ fn get_interrupt_type() -> InterruptType {
     let scause = get_scause();
 
     if (scause & 0x8000000000000000) != 0 && (scause & 0xff) == 9 {
-        let irq = plic_irq();
-
-        virtio_irq(irq);
-        virtio_input_irq(irq);
-
-        plic_complete(irq);
-
         InterruptType::OtherDevice
-
     } else if scause == 0x8000000000000001 {
-        if get_core_id() == 0 {
-            tick();
-        }
-
-        // acknowledge the software interrupt by clearing
-        // the SSIP bit in sip.
-        let mut sip = get_sip();
-        sip &= !2;
-        set_sip(sip);
-
         InterruptType::Timer
     } else {
         InterruptType::Unknown

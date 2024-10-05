@@ -108,7 +108,7 @@ pub fn init_paging_hart() {
 pub type PageTableEntry = u64;
 pub type PageTable = *mut PageTableEntry;
 
-pub const PTE_PRESENT: u64 = 1;
+pub const PTE_PRESENT: u64 = 1 << 0;
 pub const PTE_READ: u64 = 1 << 1;
 pub const PTE_WRITE: u64 = 1 << 2;
 pub const PTE_EXECUTE: u64 = 1 << 3;

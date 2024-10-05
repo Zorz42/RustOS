@@ -8,10 +8,11 @@ global_asm!(include_str!("asm/entry.S"));
 
 #[no_mangle]
 fn rust_entry() -> i32 {
-    main()
+    //main()
+    loop {}
 }
 
-const ARRAY_SIZE: usize = 1000000;
+const ARRAY_SIZE: usize = 100000;
 static mut array: [u32; ARRAY_SIZE] = [0; ARRAY_SIZE];
 
 pub fn main() -> i32 {
@@ -26,6 +27,6 @@ pub fn main() -> i32 {
 }
 
 #[panic_handler]
-fn panic(info: &PanicInfo) -> ! {
+fn panic(_info: &PanicInfo) -> ! {
     loop {}
 }

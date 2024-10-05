@@ -100,10 +100,10 @@ pub fn run_program(path: &String) {
     }
 
     //println!("Elf header: {:?}", elf_header);
-    println!("Program headers: ");
+    /*println!("Program headers: ");
     for header in &program_headers {
         println!("{:?}", header);
-    }
+    }*/
 
     // map program headers to memory
     for header in &program_headers {
