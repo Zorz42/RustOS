@@ -4,6 +4,7 @@ use crate::font::{CHAR_HEIGHT, CHAR_WIDTH, DEFAULT_FONT};
 use crate::gpu::{get_framebuffer, get_screen_size, refresh_screen};
 use crate::spinlock::Lock;
 use core::fmt::Write;
+use crate::riscv::interrupts_get;
 use crate::timer::get_ticks;
 
 #[allow(dead_code)]
@@ -195,7 +196,7 @@ const PRINT_REFRESH_INTERVAL: u64 = 50;
 
 pub fn check_screen_refresh_for_print() {
     PRINT_LOCK.spinlock();
-    if get_ticks() - unsafe { LAST_REFRESH } > PRINT_REFRESH_INTERVAL {
+    if get_ticks() - unsafe { LAST_REFRESH } > PRINT_REFRESH_INTERVAL && interrupts_get() {
         refresh_screen();
         unsafe {
             LAST_REFRESH = get_ticks();

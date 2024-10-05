@@ -1,7 +1,7 @@
 #![no_std]
 #![no_main]
 
-use core::arch::global_asm;
+use core::arch::{asm, global_asm};
 use core::panic::PanicInfo;
 
 global_asm!(include_str!("asm/entry.S"));
@@ -9,7 +9,16 @@ global_asm!(include_str!("asm/entry.S"));
 #[no_mangle]
 fn rust_entry() -> i32 {
     //main()
-    loop {}
+    unsafe {
+        asm!(r#"
+        li a7, 42
+        ecall
+        "#);
+    }
+
+    loop {
+
+    }
 }
 
 const ARRAY_SIZE: usize = 100000;

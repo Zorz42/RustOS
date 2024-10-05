@@ -3,6 +3,7 @@ use std::{println, String, Vec};
 use crate::disk::filesystem::get_fs;
 use crate::memory::{map_page_auto, VirtAddr, KERNEL_VIRTUAL_TOP, PAGE_SIZE, USER_STACK};
 use crate::riscv::{get_sstatus, set_sepc, set_sstatus, SSTATUS_SPP, SSTATUS_UIE};
+use crate::trap::init_user_trap;
 
 #[derive(Debug)]
 #[repr(C)]
@@ -143,6 +144,8 @@ pub fn run_program(path: &String) {
 
     // set sepc to the entry point
     set_sepc(elf_header.entry);
+
+    init_user_trap();
 
     unsafe {
         // jump to the entry point

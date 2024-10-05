@@ -3,7 +3,6 @@ use crate::riscv::{get_mhartid, get_mie, get_mstatus, set_mie, set_mscratch, set
 use crate::spinlock::Lock;
 use core::arch::global_asm;
 use core::ptr::{addr_of, write_volatile};
-global_asm!(include_str!("asm/kernelvec.S"));
 
 extern "C" {
     fn timervec();
