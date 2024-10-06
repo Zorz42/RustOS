@@ -87,9 +87,9 @@ extern "C" fn usertrap() -> ! {
     //assert_eq!(get_sstatus() & SSTATUS_SPP, 0);
     assert!(!interrupts_get());
 
-    println!("usertrap");
-    println!("pc is 0x{:x}", get_context().pc);
-    println!("Whole context is {:?}", *get_context());
+    //println!("usertrap");
+    //println!("pc is 0x{:x}", get_context().pc);
+    //println!("Whole context is {:?}", *get_context());
 
     let ty = get_interrupt_type();
 
@@ -146,8 +146,9 @@ extern "C" fn usertrap() -> ! {
 
 fn loop_inf() -> ! {
     loop {
-        if get_ticks() % 1000 == 0 {
-            println!("Ticks: {}", get_ticks());
-        }
+        //if get_ticks() % 1000 == 0 {
+            //println!("Ticks: {}", get_ticks());
+            jump_to_program();
+        //}
     }
 }
