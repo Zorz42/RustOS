@@ -1,5 +1,5 @@
 use core::arch::{asm, global_asm};
-use crate::riscv::{get_core_id, get_scause, get_sepc, get_sip, get_sstatus, get_stval, interrupts_get, set_sepc, set_sip, set_sstatus, set_stvec, SSTATUS_SPP};
+use crate::riscv::{get_core_id, get_scause, get_sepc, get_sip, get_sstatus, get_stval, interrupts_enable, interrupts_get, set_sepc, set_sip, set_sstatus, set_stvec, SSTATUS_SPP};
 use crate::timer::{get_ticks, tick};
 use std::{print, println};
 use crate::boot::infinite_loop;
@@ -85,7 +85,7 @@ pub fn switch_to_user_trap() {
 
 #[no_mangle]
 extern "C" fn usertrap() -> ! {
-    //assert_eq!(get_sstatus() & SSTATUS_SPP, 0);
+    assert_eq!(get_sstatus() & SSTATUS_SPP, 0);
     assert!(!interrupts_get());
 
     //println!("usertrap");
@@ -129,25 +129,22 @@ extern "C" fn usertrap() -> ! {
         }
     }
 
-    // return to kernel now
-    set_sstatus(get_sstatus() | SSTATUS_SPP);
-    // set sepc to loop_inf
-    set_sepc(loop_inf as *const () as u64);
     switch_to_kernel_trap();
 
     let stack_pointer = 128 * 1024 * 1024 + 0x80000000 - 64 * 1024 * get_core_id();
 
+    interrupts_enable(true);
+
     unsafe {
         asm!(r#"
         mv sp, {0}
-        sret
         "#, in(reg) stack_pointer);
     }
 
-    infinite_loop()
+    sched_resume()
 }
 
-fn loop_inf() -> ! {
+fn sched_resume() -> ! {
     if get_cpu_data().was_last_interrupt_external {
         let int_code = get_context().a2;
         match int_code {

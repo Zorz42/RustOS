@@ -16,7 +16,7 @@ use crate::disk::memory_disk::mount_disk;
 use crate::gpu::init_gpu;
 use crate::input::{init_input_devices};
 use crate::plic::{plicinit, plicinithart};
-use crate::scheduler::run_program;
+use crate::scheduler::{jump_to_program, run_program};
 
 mod boot;
 mod disk;
@@ -105,8 +105,6 @@ pub fn main() {
         }
         fence(Ordering::Release);
 
-        println!("Kernel initialized!");
-
         let all_memory = (NUM_PAGES * 4) as f32 / 1000.0;
         let used_memory = ((NUM_PAGES - get_num_free_pages()) * 4) as f32 / 1000.0;
         let portion = used_memory / all_memory * 100.0;
@@ -119,7 +117,9 @@ pub fn main() {
 
         run_program(&String::from("test_program"));
 
-        run_console();
+        jump_to_program();
+
+        //run_console();
     } else {
         while unsafe { !INITIALIZED } {}
 

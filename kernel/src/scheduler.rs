@@ -203,8 +203,6 @@ pub fn run_program(path: &String) {
     get_context().sp = stack_top;
 
     println!("entry is at {:#x}", elf_header.entry);
-
-    jump_to_program();
 }
 
 extern "C" {
