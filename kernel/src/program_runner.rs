@@ -1,7 +1,8 @@
 use core::arch::asm;
+use core::ptr::{copy, write_bytes, write_volatile};
 use std::{println, String, Vec};
 use crate::disk::filesystem::get_fs;
-use crate::memory::{map_page_auto, VirtAddr, KERNEL_VIRTUAL_TOP, PAGE_SIZE, USER_STACK};
+use crate::memory::{map_page_auto, VirtAddr, KERNEL_VIRTUAL_TOP, PAGE_SIZE, USER_CONTEXT, USER_STACK};
 use crate::riscv::{get_sstatus, interrupts_enable, set_sepc, set_sstatus, SSTATUS_SPP, SSTATUS_UIE};
 use crate::trap::switch_to_user_trap;
 
@@ -41,6 +42,49 @@ struct ElfProgramHeader {
     pub file_size: u64,
     pub memory_size: u64,
     pub align: u64,
+}
+
+#[derive(Debug)]
+#[repr(C)]
+pub struct Context {
+    pub ra: u64,
+    pub sp: u64,
+    pub gp: u64,
+    pub tp: u64,
+    pub t0: u64,
+    pub t1: u64,
+    pub t2: u64,
+    pub s0: u64,
+    pub s1: u64,
+    pub a0: u64,
+    pub a1: u64,
+    pub a2: u64,
+    pub a3: u64,
+    pub a4: u64,
+    pub a5: u64,
+    pub a6: u64,
+    pub a7: u64,
+    pub s2: u64,
+    pub s3: u64,
+    pub s4: u64,
+    pub s5: u64,
+    pub s6: u64,
+    pub s7: u64,
+    pub s8: u64,
+    pub s9: u64,
+    pub s10: u64,
+    pub s11: u64,
+    pub t3: u64,
+    pub t4: u64,
+    pub t5: u64,
+    pub t6: u64,
+    pub pc: u64,
+}
+
+pub fn get_context() -> &'static mut Context {
+    unsafe {
+        &mut *(USER_CONTEXT as *mut Context)
+    }
 }
 
 fn verify_elf_header(header: &ElfHeader) -> bool {
@@ -123,8 +167,8 @@ pub fn run_program(path: &String) {
             let ptr_low = header.vaddr as *mut u8;
             let ptr_mid = (header.vaddr + header.file_size) as *mut u8;
             unsafe {
-                core::ptr::copy(program.as_ptr().add(header.offset as usize), ptr_low, header.file_size as usize);
-                core::ptr::write_bytes(ptr_mid, 0, (header.memory_size - header.file_size) as usize);
+                copy(program.as_ptr().add(header.offset as usize), ptr_low, header.file_size as usize);
+                write_bytes(ptr_mid, 0, (header.memory_size - header.file_size) as usize);
             }
         }
     }
@@ -136,27 +180,35 @@ pub fn run_program(path: &String) {
         map_page_auto((USER_STACK + i * PAGE_SIZE) as VirtAddr, true, true, true, false);
     }
 
+    map_page_auto(USER_CONTEXT as VirtAddr, true, true, true, false);
+    unsafe {
+        write_bytes(USER_CONTEXT as *mut u8, 0, size_of::<Context>());
+    }
+
+    get_context().pc = elf_header.entry;
+    get_context().sp = stack_top;
+
+    println!("entry is at {:#x}", elf_header.entry);
+
+    jump_to_program();
+}
+
+extern "C" {
+    fn jump_to_user() -> !;
+}
+
+pub fn jump_to_program() -> ! {
+    interrupts_enable(false);
     // clear bit in sstatus
     set_sstatus(get_sstatus() & !SSTATUS_SPP);
 
     // set user interrupt enable
     set_sstatus(get_sstatus() | SSTATUS_UIE);
 
-    // set sepc to the entry point
-    set_sepc(elf_header.entry);
-
-    interrupts_enable(false);
     switch_to_user_trap();
     interrupts_enable(true);
 
     unsafe {
-        // jump to the entry point
-        asm!(r#"
-        // set the stack pointer
-        mv sp, {0}
-        // jump to the entry point
-        sret
-        "#, in(reg) stack_top);
+        jump_to_user()
     }
-    println!("Program returned");
 }
