@@ -41,7 +41,7 @@ extern "C" fn kerneltrap() {
 
             plic_complete(irq);
         }
-        InterruptType::Unknown => {
+        InterruptType::Unknown | InterruptType::User => {
             println!("Interrupt occurred");
             println!("Scause: {}", get_scause());
             println!("Sepc: 0x{:x}", get_sepc());
@@ -54,6 +54,7 @@ extern "C" fn kerneltrap() {
 enum InterruptType {
     Unknown,
     Timer,
+    User,
     OtherDevice,
 }
 
@@ -64,16 +65,18 @@ fn get_interrupt_type() -> InterruptType {
         InterruptType::OtherDevice
     } else if scause == 0x8000000000000001 {
         InterruptType::Timer
+    } else if scause == 8 {
+        InterruptType::User
     } else {
         InterruptType::Unknown
     }
 }
 
-pub fn init_kernel_trap() {
+pub fn switch_to_kernel_trap() {
     set_stvec(kernelvec as u64);
 }
 
-pub fn init_user_trap() {
+pub fn switch_to_user_trap() {
     set_stvec(uservec as u64);
 }
 
@@ -103,6 +106,9 @@ extern "C" fn usertrap() {
             virtio_input_irq(irq);
 
             plic_complete(irq);
+        }
+        InterruptType::User => {
+            println!("User interrupt occurred");
         }
         InterruptType::Unknown => {
             println!("Interrupt occurred");

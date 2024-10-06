@@ -6,7 +6,7 @@ use crate::disk::disk::{Disk, scan_for_disks};
 use crate::memory::{get_num_free_pages, init_paging, init_paging_hart, NUM_PAGES};
 use crate::print::{init_print, reset_print_color, set_print_color, TextColor};
 use crate::riscv::{enable_fpu, get_core_id, interrupts_enable};
-use crate::trap::init_kernel_trap;
+use crate::trap::switch_to_kernel_trap;
 use core::panic::PanicInfo;
 use core::sync::atomic::{fence, Ordering};
 use std::{println, String, Vec};
@@ -59,7 +59,7 @@ pub fn main() {
     static mut INITIALIZED: bool = false;
 
     if get_core_id() == 0 {
-        init_kernel_trap();
+        switch_to_kernel_trap();
         interrupts_enable(true);
         enable_fpu();
         init_paging();
@@ -123,7 +123,7 @@ pub fn main() {
     } else {
         while unsafe { !INITIALIZED } {}
 
-        init_kernel_trap();
+        switch_to_kernel_trap();
         interrupts_enable(true);
         enable_fpu();
         init_paging_hart();

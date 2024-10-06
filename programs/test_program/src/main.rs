@@ -9,12 +9,12 @@ global_asm!(include_str!("asm/entry.S"));
 #[no_mangle]
 fn rust_entry() -> i32 {
     //main()
-    /*unsafe {
+    unsafe {
         asm!(r#"
         li a7, 42
         ecall
         "#);
-    }*/
+    }
 
     loop {
 

@@ -10,13 +10,20 @@ pub const NUM_PAGES: u64 = MEMORY_SIZE / PAGE_SIZE;
 
 pub const ID_MAP_END: u64 = 3u64 << (12 + 2 * 9); // the end of identity mapping of physical memory
 const FRAME_SIZE: u64 = 1u64 << 30;
+// where the heap starts
 pub const HEAP_BASE_ADDR: u64 = ID_MAP_END;
+// where the heap tree starts (describes the heap)
 pub const HEAP_TREE_ADDR: u64 = ID_MAP_END + FRAME_SIZE;
+// for testing purposes
 #[allow(dead_code)]
 pub const TESTING_OFFSET: u64 = ID_MAP_END + 2 * FRAME_SIZE;
+// where the disk is mapped
 pub const DISK_OFFSET: u64 = ID_MAP_END + 3 * FRAME_SIZE;
+// where users program stack lives
 pub const USER_STACK: u64 = ID_MAP_END + 4 * FRAME_SIZE;
-pub const KERNEL_VIRTUAL_TOP: u64 = ID_MAP_END + 5 * FRAME_SIZE;
+// where the user context is stored (registers have to be saved when user program is interrupted)
+pub const USER_CONTEXT: u64 = ID_MAP_END + 5 * FRAME_SIZE;
+pub const KERNEL_VIRTUAL_TOP: u64 = ID_MAP_END + 6 * FRAME_SIZE;
 
 pub use bitset::{bitset_size_bytes, BitSetRaw, BitSet};
 pub use paging::{alloc_page, alloc_continuous_pages, free_page, get_num_free_pages, init_paging, init_paging_hart, map_page, map_page_auto, unmap_page, virt_to_phys, PhysAddr, VirtAddr};
