@@ -1,5 +1,5 @@
 use core::arch::global_asm;
-use crate::riscv::{get_core_id, get_scause, get_sepc, get_sip, get_sstatus, get_stval, interrupts_get, set_sip, set_stvec, SSTATUS_SPP};
+use crate::riscv::{get_core_id, get_scause, get_sepc, get_sip, get_sstatus, get_stval, interrupts_get, set_sepc, set_sip, set_stvec, SSTATUS_SPP};
 use crate::timer::tick;
 use std::println;
 use crate::input::virtio_input_irq;
@@ -108,6 +108,7 @@ extern "C" fn usertrap() {
             plic_complete(irq);
         }
         InterruptType::User => {
+            set_sepc(get_sepc() + 4);
             println!("User interrupt occurred");
         }
         InterruptType::Unknown => {
