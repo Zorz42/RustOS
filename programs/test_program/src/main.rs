@@ -6,17 +6,23 @@ use core::panic::PanicInfo;
 
 global_asm!(include_str!("asm/entry.S"));
 
-#[no_mangle]
-fn rust_entry() -> i32 {
-    //main()
+fn print_char(c: u8) {
+    unsafe {
+        asm!(r#"
+        li a2, 1
+        mv a3, {0}
+        ecall
+        "#, in(reg) c as u64);
+    }
+}
 
-    for i in 10..20 {
-        unsafe {
-            asm!(r#"
-            mv a7, {0}
-            ecall
-            "#, in(reg) i);
-        }
+#[no_mangle]
+fn rust_entry() -> ! {
+    main();
+
+    let string = "Hello, world!\n";
+    for &c in string.as_bytes() {
+        print_char(c);
     }
 
     loop {

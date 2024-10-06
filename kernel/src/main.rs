@@ -16,7 +16,7 @@ use crate::disk::memory_disk::mount_disk;
 use crate::gpu::init_gpu;
 use crate::input::{init_input_devices};
 use crate::plic::{plicinit, plicinithart};
-use crate::program_runner::run_program;
+use crate::scheduler::run_program;
 
 mod boot;
 mod disk;
@@ -34,7 +34,7 @@ mod gpu;
 mod font;
 mod input;
 mod console;
-mod program_runner;
+mod scheduler;
 
 pub const ROOT_MAGIC: u32 = 0x63726591;
 

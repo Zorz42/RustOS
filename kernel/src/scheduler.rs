@@ -3,7 +3,7 @@ use core::ptr::{copy, write_bytes, write_volatile};
 use std::{println, String, Vec};
 use crate::disk::filesystem::get_fs;
 use crate::memory::{map_page_auto, VirtAddr, KERNEL_VIRTUAL_TOP, PAGE_SIZE, USER_CONTEXT, USER_STACK};
-use crate::riscv::{get_sstatus, interrupts_enable, set_sepc, set_sstatus, SSTATUS_SPP, SSTATUS_UIE};
+use crate::riscv::{get_core_id, get_sstatus, interrupts_enable, set_sepc, set_sstatus, SSTATUS_SPP, SSTATUS_UIE};
 use crate::trap::switch_to_user_trap;
 
 #[derive(Debug)]
@@ -79,6 +79,20 @@ pub struct Context {
     pub t5: u64,
     pub t6: u64,
     pub pc: u64,
+    pub was_last_interrupt_external: bool,
+}
+
+#[derive(Clone, Copy)]
+pub struct CpuData {
+    pub was_last_interrupt_external: bool,
+}
+
+static mut CPU_DATA: [CpuData; 4] = [CpuData { was_last_interrupt_external: false }; 4];
+
+pub fn get_cpu_data() -> &'static mut CpuData {
+    unsafe {
+        &mut CPU_DATA[get_core_id() as usize]
+    }
 }
 
 pub fn get_context() -> &'static mut Context {

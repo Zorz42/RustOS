@@ -1,11 +1,12 @@
 use core::arch::{asm, global_asm};
 use crate::riscv::{get_core_id, get_scause, get_sepc, get_sip, get_sstatus, get_stval, interrupts_get, set_sepc, set_sip, set_sstatus, set_stvec, SSTATUS_SPP};
 use crate::timer::{get_ticks, tick};
-use std::println;
+use std::{print, println};
 use crate::boot::infinite_loop;
 use crate::input::virtio_input_irq;
 use crate::plic::{plic_complete, plic_irq};
-use crate::program_runner::{get_context, jump_to_program};
+use crate::print::check_screen_refresh_for_print;
+use crate::scheduler::{get_context, get_cpu_data, jump_to_program};
 use crate::virtio::device::virtio_irq;
 
 global_asm!(include_str!("asm/kernelvec.S"));
@@ -92,6 +93,7 @@ extern "C" fn usertrap() -> ! {
     //println!("Whole context is {:?}", *get_context());
 
     let ty = get_interrupt_type();
+    get_cpu_data().was_last_interrupt_external = false;
 
     match ty {
         InterruptType::Timer => {
@@ -115,7 +117,8 @@ extern "C" fn usertrap() -> ! {
         }
         InterruptType::User => {
             get_context().pc += 4;
-            println!("User interrupt occurred with code {}", get_context().a7);
+            get_cpu_data().was_last_interrupt_external = true;
+            //println!("User interrupt occurred with code {}", get_context().a0);
         }
         InterruptType::Unknown => {
             println!("Interrupt occurred");
@@ -145,10 +148,18 @@ extern "C" fn usertrap() -> ! {
 }
 
 fn loop_inf() -> ! {
-    loop {
-        //if get_ticks() % 1000 == 0 {
-            //println!("Ticks: {}", get_ticks());
-            jump_to_program();
-        //}
+    if get_cpu_data().was_last_interrupt_external {
+        let int_code = get_context().a2;
+        match int_code {
+            1 => {
+                let arg1 = get_context().a3 as u8 as char;
+                print!("{}", arg1);
+            }
+            _ => {
+                println!("Unknown user interrupt occurred with code {}", int_code);
+            }
+        }
     }
+    check_screen_refresh_for_print();
+    jump_to_program()
 }
