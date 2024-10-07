@@ -10,6 +10,7 @@ uservec:
     sd ra, 0(a0)
     sd sp, 8(a0)
     sd gp, 16(a0)
+    sd tp, 24(a0)
     sd t0, 32(a0)
     sd t1, 40(a0)
     sd t2, 48(a0)
@@ -42,6 +43,9 @@ uservec:
     csrr t0, sepc
     sd t0, 248(a0)
 
+    // load the kernel hartid
+    ld tp, 256(a0)
+
     csrr t0, sscratch
     sd t0, 72(a0)
 
@@ -56,10 +60,13 @@ jump_to_user:
     ld t0, 248(a0)
     csrw sepc, t0
 
+    sd tp, 256(a0) // store to kernel_hartid
+
     // load all registers from 0(a0) to 240(a0)
     ld ra, 0(a0)
     ld sp, 8(a0)
     ld gp, 16(a0)
+    ld tp, 24(a0)
     ld t0, 32(a0)
     ld t1, 40(a0)
     ld t2, 48(a0)

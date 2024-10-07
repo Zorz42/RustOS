@@ -79,7 +79,7 @@ pub struct Context {
     pub t5: u64,
     pub t6: u64,
     pub pc: u64,
-    pub was_last_interrupt_external: bool,
+    pub kernel_hartid: u64,
 }
 
 #[derive(Clone, Copy)]
