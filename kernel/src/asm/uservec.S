@@ -49,6 +49,11 @@ uservec:
     csrr t0, sscratch
     sd t0, 72(a0)
 
+    li sp, 128 * 1024 * 1024 + 0x80000000
+    li a0, 1024 * 64
+    mul a0, a0, a1
+    sub sp, sp, a0
+
     # will not return
     call usertrap
 

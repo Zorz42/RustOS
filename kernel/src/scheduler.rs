@@ -210,6 +210,8 @@ extern "C" {
 }
 
 pub fn jump_to_program() -> ! {
+    println!("Jumping to program...");
+
     interrupts_enable(false);
     // clear bit in sstatus
     set_sstatus(get_sstatus() & !SSTATUS_SPP);
