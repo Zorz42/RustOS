@@ -9,14 +9,32 @@ use std::{init_print, print, println};
 
 global_asm!(include_str!("asm/entry.S"));
 
-fn print_char(c: u8) {
+fn syscall0(code: u64) {
     unsafe {
-        asm!(r#"
-        li a2, 1
-        mv a3, {0}
-        ecall
-        "#, in(reg) c as u64);
+        asm!("ecall", in("a7") code);
     }
+}
+
+fn syscall1(code: u64, arg1: u64) {
+    unsafe {
+        asm!("ecall", in("a7") code, in("a3") arg1);
+    }
+}
+
+fn syscall0r(code: u64) -> u64 {
+    let ret: u64;
+    unsafe {
+        asm!("ecall", in("a7") code, out("a2") ret);
+    }
+    ret
+}
+
+fn print_char(c: u8) {
+    syscall1(1, c as u64);
+}
+
+fn get_ticks() -> u64 {
+    syscall0r(2)
 }
 
 struct Writer;
@@ -53,14 +71,18 @@ static mut ARRAY: [u32; ARRAY_SIZE] = [0; ARRAY_SIZE];
 pub fn main() -> i32 {
     println!("Hello, world!");
 
+    let mut curr_ticks = get_ticks() / 1000;
     loop {
-
+        if get_ticks() / 1000 != curr_ticks {
+            curr_ticks = get_ticks() / 1000;
+            println!("Ticks: {}", get_ticks());
+        }
     }
 }
 
 #[panic_handler]
 fn panic(info: &PanicInfo) -> ! {
-    println!("panic!");
+    println!("panic: {}", info);
     loop {
 
     }

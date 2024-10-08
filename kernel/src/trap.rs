@@ -139,11 +139,16 @@ extern "C" fn usertrap() -> ! {
 
 fn sched_resume() -> ! {
     if get_cpu_data().was_last_interrupt_external {
-        let int_code = get_context().a2;
+        let int_code = get_context().a7;
         match int_code {
             1 => {
+                // print char
                 let arg1 = get_context().a3 as u8 as char;
                 print!("{}", arg1);
+            }
+            2 => {
+                // get ticks
+                get_context().a2 = get_ticks();
             }
             _ => {
                 println!("Unknown user interrupt occurred with code {}", int_code);
