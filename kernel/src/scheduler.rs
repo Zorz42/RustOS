@@ -189,13 +189,14 @@ pub fn run_program(path: &String) {
     }
 
     let stack_size = 128 * 1024;
+    assert_eq!(stack_size % PAGE_SIZE, 0);
     let stack_pages = stack_size / PAGE_SIZE;
     let stack_top = USER_STACK + stack_size;
     for i in 0..stack_pages {
         map_page_auto((USER_STACK + i * PAGE_SIZE) as VirtAddr, true, true, true, false);
     }
 
-    map_page_auto(USER_CONTEXT as VirtAddr, true, true, true, false);
+    map_page_auto(USER_CONTEXT as VirtAddr, true, true, false, false);
     unsafe {
         write_bytes(USER_CONTEXT as *mut u8, 0, size_of::<Context>());
     }
@@ -211,7 +212,9 @@ extern "C" {
 }
 
 pub fn jump_to_program() -> ! {
+
     interrupts_enable(false);
+
     // clear bit in sstatus
     set_sstatus(get_sstatus() & !SSTATUS_SPP);
 

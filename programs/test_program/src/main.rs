@@ -3,8 +3,9 @@
 
 use core::arch::{asm, global_asm};
 use core::fmt;
+use core::fmt::Write;
 use core::panic::PanicInfo;
-use std::{init_print, println};
+use std::{init_print, print, println};
 
 global_asm!(include_str!("asm/entry.S"));
 
@@ -18,11 +19,21 @@ fn print_char(c: u8) {
     }
 }
 
+struct Writer;
+
+impl Write for Writer {
+    fn write_str(&mut self, s: &str) -> fmt::Result {
+        for c in s.bytes() {
+            print_char(c);
+        }
+        Ok(())
+    }
+}
+
 #[doc(hidden)]
 pub fn _print(args: fmt::Arguments) {
-    for c in args.as_str().unwrap_or("").bytes() {
-        print_char(c);
-    }
+    let mut writer = Writer;
+    writer.write_fmt(args).unwrap();
 }
 
 #[no_mangle]
@@ -36,27 +47,21 @@ fn rust_entry() -> ! {
     }
 }
 
-//const ARRAY_SIZE: usize = 100000;
-//static mut ARRAY: [u32; ARRAY_SIZE] = [0; ARRAY_SIZE];
+const ARRAY_SIZE: usize = 100000;
+static mut ARRAY: [u32; ARRAY_SIZE] = [0; ARRAY_SIZE];
 
 pub fn main() -> i32 {
-    //let mut i = 0;
-    loop {
-        println!("Hello, World!");
-        //i += 1;
-    }
+    println!("Hello, world!");
 
-    /*unsafe {
-        ARRAY[0] = 0;
-        ARRAY[1] = 1;
-        for i in 2..ARRAY_SIZE {
-            ARRAY[i] = ARRAY[i - 1].wrapping_add(ARRAY[i - 2]);
-        }
-        ARRAY[ARRAY_SIZE - 1] as i32
-    }*/
+    loop {
+
+    }
 }
 
 #[panic_handler]
-fn panic(_info: &PanicInfo) -> ! {
-    loop {}
+fn panic(info: &PanicInfo) -> ! {
+    println!("panic!");
+    loop {
+
+    }
 }

@@ -4,6 +4,8 @@ use core::arch::asm;
 use crate::main;
 use crate::timer::machine_mode_timer_init;
 use core::arch::global_asm;
+use std::println;
+
 global_asm!(include_str!("asm/entry.S"));
 
 pub const STACK_SIZE: usize = 64 * 1024; // 64kB
