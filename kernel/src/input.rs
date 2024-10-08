@@ -312,7 +312,7 @@ pub fn virtio_input_irq(irq: u32) {
     }
 }
 
-pub fn keycode_to_char(keycode: u16) -> Option<char> {
+pub const fn keycode_to_char(keycode: u16) -> Option<char> {
     match keycode {
         0x02 => Some('1'),
         0x03 => Some('2'),

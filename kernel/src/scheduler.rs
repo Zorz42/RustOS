@@ -173,7 +173,7 @@ pub fn run_program(path: &String) {
             assert!(header.vaddr >= KERNEL_VIRTUAL_TOP);
 
             let low_page = header.vaddr / PAGE_SIZE;
-            let high_page = (header.vaddr + header.memory_size + PAGE_SIZE - 1) / PAGE_SIZE;
+            let high_page = (header.vaddr + header.memory_size).div_ceil(PAGE_SIZE);
             for page in low_page..high_page {
                 map_page_auto((page * PAGE_SIZE) as VirtAddr, true, true, true, true);
             }
