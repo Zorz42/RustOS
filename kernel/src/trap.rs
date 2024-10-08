@@ -85,7 +85,6 @@ pub fn switch_to_user_trap() {
 
 #[no_mangle]
 extern "C" fn usertrap() -> ! {
-    println!("C2");
     assert_eq!(get_sstatus() & SSTATUS_SPP, 0);
     assert!(!interrupts_get());
 
@@ -132,27 +131,18 @@ extern "C" fn usertrap() -> ! {
 
     switch_to_kernel_trap();
 
-    let stack_pointer = 128 * 1024 * 1024 + 0x80000000 - 64 * 1024 * get_core_id();
-
     // set bit in sstatus
     set_sstatus(get_sstatus() | SSTATUS_SPP);
 
     // clear user interrupt enable
     set_sstatus(get_sstatus() & !SSTATUS_UIE);
 
-    /*unsafe {
-        asm!(r#"
-        mv sp, {0}
-        "#, in(reg) stack_pointer);
-    }*/
-
-    interrupts_enable(true);
+    //interrupts_enable(true);
 
     sched_resume()
 }
 
 fn sched_resume() -> ! {
-    println!("C1");
     if get_cpu_data().was_last_interrupt_external {
         let int_code = get_context().a2;
         match int_code {

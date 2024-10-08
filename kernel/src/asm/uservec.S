@@ -51,7 +51,7 @@ uservec:
 
     li sp, 128 * 1024 * 1024 + 0x80000000
     li a0, 1024 * 64
-    mul a0, a0, a1
+    mul a0, a0, tp
     sub sp, sp, a0
 
     # will not return

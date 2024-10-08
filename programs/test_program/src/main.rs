@@ -40,8 +40,10 @@ fn rust_entry() -> ! {
 //static mut ARRAY: [u32; ARRAY_SIZE] = [0; ARRAY_SIZE];
 
 pub fn main() -> i32 {
+    //let mut i = 0;
     loop {
         println!("Hello, World!");
+        //i += 1;
     }
 
     /*unsafe {
