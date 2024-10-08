@@ -1,5 +1,6 @@
 use core::arch::asm;
 use core::ptr::{copy, write_bytes, write_volatile};
+use core::sync::atomic::{fence, Ordering};
 use std::{println, String, Vec};
 use crate::disk::filesystem::get_fs;
 use crate::memory::{map_page_auto, VirtAddr, KERNEL_VIRTUAL_TOP, PAGE_SIZE, USER_CONTEXT, USER_STACK};
@@ -210,7 +211,7 @@ extern "C" {
 }
 
 pub fn jump_to_program() -> ! {
-    //interrupts_enable(false);
+    interrupts_enable(false);
     // clear bit in sstatus
     set_sstatus(get_sstatus() & !SSTATUS_SPP);
 
@@ -218,7 +219,6 @@ pub fn jump_to_program() -> ! {
     set_sstatus(get_sstatus() | SSTATUS_UIE);
 
     switch_to_user_trap();
-    //interrupts_enable(true);
 
     unsafe {
         jump_to_user()

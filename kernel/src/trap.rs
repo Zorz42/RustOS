@@ -88,10 +88,6 @@ extern "C" fn usertrap() -> ! {
     assert_eq!(get_sstatus() & SSTATUS_SPP, 0);
     assert!(!interrupts_get());
 
-    //println!("usertrap");
-    //println!("pc is 0x{:x}", get_context().pc);
-    //println!("Whole context is {:?}", *get_context());
-
     let ty = get_interrupt_type();
     get_cpu_data().was_last_interrupt_external = false;
 
@@ -118,7 +114,6 @@ extern "C" fn usertrap() -> ! {
         InterruptType::User => {
             get_context().pc += 4;
             get_cpu_data().was_last_interrupt_external = true;
-            //println!("User interrupt occurred with code {}", get_context().a0);
         }
         InterruptType::Unknown => {
             println!("Interrupt occurred");
@@ -137,7 +132,7 @@ extern "C" fn usertrap() -> ! {
     // clear user interrupt enable
     set_sstatus(get_sstatus() & !SSTATUS_UIE);
 
-    //interrupts_enable(true);
+    interrupts_enable(true);
 
     sched_resume()
 }
