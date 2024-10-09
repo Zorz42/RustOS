@@ -250,7 +250,9 @@ impl<T: Serial> DiskBox<T> {
             get_mounted_disk().get_mut(&t).as_mut().unwrap().free_page(*page);
         }
         self.pages = Vec::new();
+        get_mounted_disk().release(t);
         let data = serialize(self.obj.as_mut().unwrap());
+        let t = get_mounted_disk().borrow();
         self.size = data.size() as i32;
 
         let mut idx = 0;

@@ -2,7 +2,7 @@ use crate::disk::filesystem::{close_fs, get_fs, init_fs};
 use crate::disk::memory_disk::{get_mounted_disk, mount_disk, unmount_disk};
 use crate::tests::{get_test_disk, KernelPerf};
 use kernel_test::{kernel_perf, kernel_test, kernel_test_mod};
-use std::{Rng, String, Vec};
+use std::{println, Rng, String, Vec};
 
 kernel_test_mod!(crate::tests::B0_filesystem);
 
@@ -117,6 +117,7 @@ fn test_fs_create_dir() {
         }
 
         let path = join(&dirs, '/');
+
         get_fs().create_directory(&path);
 
         close_fs();
