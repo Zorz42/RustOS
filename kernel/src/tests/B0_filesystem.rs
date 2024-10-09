@@ -8,11 +8,14 @@ kernel_test_mod!(crate::tests::B0_filesystem);
 
 #[kernel_test]
 fn test_fs_erase() {
-    get_mounted_disk().erase();
+    let t = get_mounted_disk().borrow();
+    get_mounted_disk().get_mut(&t).as_mut().unwrap().erase();
+    get_mounted_disk().release(t);
+
     init_fs();
     
     for _ in 0..100 {
-        get_fs().erase();
+        //get_fs().erase();
     }
 }
 

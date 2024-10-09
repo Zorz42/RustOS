@@ -58,46 +58,52 @@ impl File {
     }
 
     pub fn read(&self) -> Vec<u8> {
+        let t = get_mounted_disk().borrow();
         let mut res = Vec::new();
 
         for i in 0..self.size {
             let page = self.pages[(i / (PAGE_SIZE as i32)) as usize];
             if i as u64 % PAGE_SIZE == 0 {
-                get_mounted_disk().declare_read(DISK_OFFSET + page as u64 * PAGE_SIZE, DISK_OFFSET + page as u64 * PAGE_SIZE + PAGE_SIZE);
+                get_mounted_disk().get_mut(&t).as_mut().unwrap().declare_read(DISK_OFFSET + page as u64 * PAGE_SIZE, DISK_OFFSET + page as u64 * PAGE_SIZE + PAGE_SIZE);
             }
             let addr = (DISK_OFFSET + page as u64 * PAGE_SIZE + (i as u64) % PAGE_SIZE) as *const u8;
             unsafe {
                 res.push(*addr);
             }
         }
+        get_mounted_disk().release(t);
         res
     }
 
     pub fn write(&mut self, data: &Vec<u8>) {
         self.clear();
+        let t = get_mounted_disk().borrow();
         self.size = data.size() as i32;
         let num_pages = (self.size as u64 + PAGE_SIZE - 1) / PAGE_SIZE;
         for _ in 0..num_pages {
-            self.pages.push(get_mounted_disk().alloc_page());
+            self.pages.push(get_mounted_disk().get_mut(&t).as_mut().unwrap().alloc_page());
         }
         for i in 0..self.size {
             let page = self.pages[(i / (PAGE_SIZE as i32)) as usize];
             if i as u64 % PAGE_SIZE == 0 {
-                get_mounted_disk().declare_write(DISK_OFFSET + page as u64 * PAGE_SIZE, DISK_OFFSET + page as u64 * PAGE_SIZE + PAGE_SIZE);
+                get_mounted_disk().get_mut(&t).as_mut().unwrap().declare_write(DISK_OFFSET + page as u64 * PAGE_SIZE, DISK_OFFSET + page as u64 * PAGE_SIZE + PAGE_SIZE);
             }
             let addr = (DISK_OFFSET + page as u64 * PAGE_SIZE + (i as u64) % PAGE_SIZE) as *mut u8;
             unsafe {
                 *addr = data[i as usize];
             }
         }
+        get_mounted_disk().release(t);
     }
 
     fn clear(&mut self) {
+        let t = get_mounted_disk().borrow();
         self.size = 0;
         for page in &self.pages {
-            get_mounted_disk().free_page(*page);
+            get_mounted_disk().get_mut(&t).as_mut().unwrap().free_page(*page);
         }
         self.pages = Vec::new();
+        get_mounted_disk().release(t);
     }
 }
 
@@ -223,17 +229,29 @@ pub struct FileSystem {
 
 impl FileSystem {
     fn new() -> Self {
-        if get_mounted_disk().get_head().size() == 0 {
-            get_mounted_disk().set_head(&serialize(&mut DiskBox::new(Directory::new(String::new()))));
+        let t = get_mounted_disk().borrow();
+        let size = get_mounted_disk().get_mut(&t).as_mut().unwrap().get_head().size();
+        get_mounted_disk().release(t);
+        if size == 0 {
+            let vec = serialize(&mut DiskBox::new(Directory::new(String::new())));
+            let t = get_mounted_disk().borrow();
+            get_mounted_disk().get_mut(&t).as_mut().unwrap().set_head(&vec);
+            get_mounted_disk().release(t);
         }
-        Self {
-            root: Some(deserialize(&get_mounted_disk().get_head())),
-        }
+
+        let t = get_mounted_disk().borrow();
+        let result = Self {
+            root: Some(deserialize(&get_mounted_disk().get_mut(&t).as_mut().unwrap().get_head())),
+        };
+        get_mounted_disk().release(t);
+        result
     }
 
     pub fn erase(&mut self) {
         self.root = None;
-        get_mounted_disk().erase();
+        let t = get_mounted_disk().borrow();
+        get_mounted_disk().get_mut(&t).as_mut().unwrap().erase();
+        get_mounted_disk().release(t);
         self.root = Some(DiskBox::new(Directory::new(String::new())));
     }
 
@@ -299,7 +317,9 @@ impl FileSystem {
 
 impl Drop for FileSystem {
     fn drop(&mut self) {
-        get_mounted_disk().set_head(&serialize(self.root.as_mut().unwrap()));
+        let t = get_mounted_disk().borrow();
+        get_mounted_disk().get_mut(&t).as_mut().unwrap().set_head(&serialize(self.root.as_mut().unwrap()));
+        get_mounted_disk().release(t);
     }
 }
 

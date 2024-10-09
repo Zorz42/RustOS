@@ -2,7 +2,7 @@ use core::cmp::Ordering;
 use core::ptr::{copy_nonoverlapping, read_volatile, write_volatile};
 use core::sync::atomic::fence;
 use core::sync::atomic::Ordering::{Acquire, Relaxed};
-use std::{deserialize, serialize, Serial, Vec, Box};
+use std::{deserialize, serialize, Serial, Vec, Box, Mutable};
 
 use crate::disk::disk::Disk;
 use crate::memory::{map_page_auto, VirtAddr, DISK_OFFSET, PAGE_SIZE, unmap_page, BitSet};
@@ -175,10 +175,11 @@ impl MemoryDisk {
     }
 }
 
-static mut MOUNTED_DISK: Option<Box<MemoryDisk>> = None;
+static MOUNTED_DISK: Mutable<Option<MemoryDisk>> = Mutable::new(None);
 
 pub fn unmount_disk() {
-    if let Some(mounted_disk) = unsafe { MOUNTED_DISK.as_mut() } {
+    let t = MOUNTED_DISK.borrow();
+    if let Some(mounted_disk) = MOUNTED_DISK.get_mut(&t) {
         let temp = mounted_disk.get_bitset_num_pages();
         mounted_disk.declare_write(id_to_addr(1) as u64, id_to_addr(1) as u64 + temp as u64 * PAGE_SIZE);
         unsafe {
@@ -188,31 +189,24 @@ pub fn unmount_disk() {
         for page in mounted_disk.mapped_pages.clone() {
             mounted_disk.unmap_page(page);
         }
-
-        unsafe {
-            MOUNTED_DISK = None;
-        }
     }
+
+    *MOUNTED_DISK.get_mut(&t) = None;
+    MOUNTED_DISK.release(t);
 }
 
 pub fn mount_disk(disk: &Disk) {
     unmount_disk();
 
-    let mounted_disk = Box::new(MemoryDisk::new(disk));
-    unsafe {
-        MOUNTED_DISK = Some(mounted_disk);
-        MOUNTED_DISK.as_mut().unwrap().init();
-    }
+    let t = MOUNTED_DISK.borrow();
+    let mounted_disk = MemoryDisk::new(disk);
+    *MOUNTED_DISK.get_mut(&t) = Some(mounted_disk);
+    MOUNTED_DISK.get_mut(&t).as_mut().unwrap().init();
+    MOUNTED_DISK.release(t);
 }
 
-pub fn get_mounted_disk() -> &'static mut MemoryDisk {
-    unsafe {
-        if let Some(mounted_disk) = MOUNTED_DISK.as_mut() {
-            mounted_disk
-        } else {
-            panic!("No disk is mounted.");
-        }
-    }
+pub fn get_mounted_disk() -> &'static Mutable<Option<MemoryDisk>> {
+    &MOUNTED_DISK
 }
 
 pub struct DiskBox<T: Serial> {
@@ -251,8 +245,9 @@ impl<T: Serial> DiskBox<T> {
     }
 
     fn save(&mut self) {
+        let t = get_mounted_disk().borrow();
         for page in &self.pages {
-            get_mounted_disk().free_page(*page);
+            get_mounted_disk().get_mut(&t).as_mut().unwrap().free_page(*page);
         }
         self.pages = Vec::new();
         let data = serialize(self.obj.as_mut().unwrap());
@@ -261,14 +256,15 @@ impl<T: Serial> DiskBox<T> {
         let mut idx = 0;
         while idx != data.size() {
             let curr_size = usize::min(PAGE_SIZE as usize, data.size() - idx);
-            let page = get_mounted_disk().alloc_page();
+            let page = get_mounted_disk().get_mut(&t).as_mut().unwrap().alloc_page();
             self.pages.push(page);
-            get_mounted_disk().declare_write(id_to_addr(page) as u64, id_to_addr(page) as u64 + curr_size as u64);
+            get_mounted_disk().get_mut(&t).as_mut().unwrap().declare_write(id_to_addr(page) as u64, id_to_addr(page) as u64 + curr_size as u64);
             unsafe {
                 copy_nonoverlapping(data.get_unchecked(idx), id_to_addr(page), curr_size);
             }
             idx += curr_size;
         }
+        get_mounted_disk().release(t);
     }
 
     // translate idx-th byte to its ram location
@@ -281,9 +277,10 @@ impl<T: Serial> DiskBox<T> {
     }
 
     pub fn get(&mut self) -> &mut T {
+        let t = get_mounted_disk().borrow();
         if self.obj.is_none() {
             let mut data = Vec::new();
-            get_mounted_disk().declare_read(self.translate(0) as u64, self.translate(self.size as usize - 1) as u64 + 1);
+            get_mounted_disk().get_mut(&t).as_mut().unwrap().declare_read(self.translate(0) as u64, self.translate(self.size as usize - 1) as u64 + 1);
             
             for i in 0..self.size {
                 data.push(unsafe { read_volatile(self.translate(i as usize)) });
@@ -292,6 +289,7 @@ impl<T: Serial> DiskBox<T> {
             let obj = deserialize(&data);
             self.obj = Some(obj);
         }
+        get_mounted_disk().release(t);
         self.obj.as_mut().unwrap()
     }
 
@@ -301,11 +299,13 @@ impl<T: Serial> DiskBox<T> {
     }
 
     pub fn delete(mut self) {
+        let t = get_mounted_disk().borrow();
         for page in &self.pages {
-            get_mounted_disk().free_page(*page);
+            get_mounted_disk().get_mut(&t).as_mut().unwrap().free_page(*page);
         }
         self.pages = Vec::new();
         self.obj = None;
+        get_mounted_disk().release(t);
     }
 }
 

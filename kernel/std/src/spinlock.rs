@@ -1,4 +1,5 @@
 use core::arch::asm;
+use core::sync::atomic::{fence, Ordering};
 
 pub struct Lock {
     acquired: i32,
@@ -16,7 +17,10 @@ impl Lock {
     }
 
     pub fn try_lock(&self) -> bool {
-        unsafe { amoswap(&self.acquired as *const i32 as *mut i32, 1) == 0 }
+        fence(Ordering::Release);
+        let res = unsafe { amoswap(&self.acquired as *const i32 as *mut i32, 1) == 0 };
+        fence(Ordering::Release);
+        res
     }
 
     pub fn spinlock(&self) {
@@ -24,6 +28,8 @@ impl Lock {
     }
 
     pub fn unlock(&self) {
+        fence(Ordering::Release);
         assert_eq!(unsafe { amoswap(&self.acquired as *const i32 as *mut i32, 0) }, 1);
+        fence(Ordering::Release);
     }
 }

@@ -1,4 +1,5 @@
 use core::ptr::addr_of;
+use core::sync::atomic::{fence, Ordering};
 use crate::riscv::{amoswap, get_core_id};
 
 pub struct KernelLock {
@@ -12,7 +13,9 @@ impl KernelLock {
     }
 
     pub fn try_lock(&self) -> bool {
+        fence(Ordering::Release);
         let res = unsafe { amoswap(&self.acquired as *const i32 as *mut i32, 1) == 0 };
+        fence(Ordering::Release);
         if res {
             unsafe {
                 let addr = addr_of!(self.locked_by) as *mut i32;
@@ -27,7 +30,9 @@ impl KernelLock {
     }
 
     pub fn unlock(&self) {
+        fence(Ordering::Release);
         assert_eq!(unsafe { amoswap(&self.acquired as *const i32 as *mut i32, 0) }, 1);
+        fence(Ordering::Release);
     }
 
     pub const fn locked_by(&self) -> i32 {
