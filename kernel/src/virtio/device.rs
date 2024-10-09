@@ -3,8 +3,6 @@ use core::hint::black_box;
 use core::mem::MaybeUninit;
 use core::ptr::{addr_of, read_volatile, write_bytes, write_volatile};
 use core::sync::atomic::{fence, Ordering};
-use std::{print, println, Box};
-use crate::gpu::refresh_screen;
 use crate::memory::{alloc_page, virt_to_phys, VirtAddr, PAGE_SIZE};
 use crate::riscv::get_core_id;
 use crate::spinlock::KernelLock;

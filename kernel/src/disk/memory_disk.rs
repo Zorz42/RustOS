@@ -1,8 +1,5 @@
-use core::cmp::Ordering;
 use core::ptr::{copy_nonoverlapping, read_volatile, write_volatile};
-use core::sync::atomic::fence;
-use core::sync::atomic::Ordering::{Acquire, Relaxed};
-use std::{deserialize, serialize, Serial, Vec, Box, Mutable};
+use std::{deserialize, serialize, Serial, Vec, Mutable};
 
 use crate::disk::disk::Disk;
 use crate::memory::{map_page_auto, VirtAddr, DISK_OFFSET, PAGE_SIZE, unmap_page, BitSet};

@@ -1,8 +1,7 @@
-use core::arch::{asm, global_asm};
-use crate::riscv::{get_core_id, get_scause, get_sepc, get_sip, get_sstatus, get_stval, interrupts_enable, interrupts_get, set_sepc, set_sip, set_sstatus, set_stvec, SSTATUS_SPP, SSTATUS_UIE};
+use core::arch::global_asm;
+use crate::riscv::{get_core_id, get_scause, get_sepc, get_sip, get_sstatus, get_stval, interrupts_enable, interrupts_get, set_sip, set_sstatus, set_stvec, SSTATUS_SPP, SSTATUS_UIE};
 use crate::timer::{get_ticks, tick};
 use std::{print, println};
-use crate::boot::infinite_loop;
 use crate::input::virtio_input_irq;
 use crate::plic::{plic_complete, plic_irq};
 use crate::print::check_screen_refresh_for_print;

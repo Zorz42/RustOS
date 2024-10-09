@@ -1,20 +1,24 @@
 use core::fmt;
+use crate::Mutable;
 
-static mut PRINT: Option<&dyn Fn(fmt::Arguments)> = None;
+static PRINT: Mutable<Option<&dyn Fn(fmt::Arguments)>> = Mutable::new(None);
 
 pub fn init_print(print: &'static dyn Fn(fmt::Arguments)) {
-    unsafe {
-        PRINT = Some(print);
-    }
+    let t = PRINT.borrow();
+    *PRINT.get_mut(&t) = Some(print);
+    PRINT.release(t);
 }
 
 pub fn print_raw(args: fmt::Arguments) {
-    if unsafe { PRINT.is_none() } {
+    let t = PRINT.borrow();
+    if PRINT.get(&t).is_none() {
+        PRINT.release(t);
         return;
     }
 
-    let f = unsafe { PRINT.as_ref().unwrap() };
+    let f = PRINT.get(&t).unwrap();
     f(args);
+    PRINT.release(t);
 }
 
 #[macro_export]

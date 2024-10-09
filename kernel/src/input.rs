@@ -1,12 +1,10 @@
 use core::cmp::PartialEq;
 use core::intrinsics::write_bytes;
 use core::sync::atomic::{fence, Ordering};
-use std::{println, Vec};
 use crate::memory::{alloc_page, virt_to_phys, VirtAddr, PAGE_SIZE};
 use crate::riscv::get_core_id;
 use crate::spinlock::KernelLock;
 use crate::virtio::definitions::{virtio_reg_read, virtio_reg_write, MmioOffset, VirtqAvail, VirtqDesc, VirtqUsed, MAX_VIRTIO_ID, NUM, VIRTIO_CONFIG_S_ACKNOWLEDGE, VIRTIO_CONFIG_S_DRIVER, VIRTIO_CONFIG_S_DRIVER_OK, VIRTIO_CONFIG_S_FEATURES_OK, VIRTIO_F_ANY_LAYOUT, VIRTIO_MAGIC, VIRTIO_RING_F_EVENT_IDX, VIRTIO_RING_F_INDIRECT_DESC, VRING_DESC_F_WRITE};
-use crate::virtio::device::VirtioDevice;
 
 const EVENT_BUFFER_ELEMENTS: usize = 128;
 const VIRTIO_RING_SIZE: usize = 128;

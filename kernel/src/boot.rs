@@ -4,7 +4,6 @@ use core::arch::asm;
 use crate::main;
 use crate::timer::machine_mode_timer_init;
 use core::arch::global_asm;
-use std::println;
 
 global_asm!(include_str!("asm/entry.S"));
 
