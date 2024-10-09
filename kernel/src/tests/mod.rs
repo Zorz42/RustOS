@@ -32,10 +32,13 @@ pub trait KernelPerf {
 
 const TESTDISK_MAGIC_CODE: u32 = 0x61732581;
 
-static mut FREE_SPACE: [u8; bitset_size_bytes(1024 * 8) + 8] = [0; bitset_size_bytes(1024 * 8) + 8];
+static FREE_SPACE: Mutable<[u8; bitset_size_bytes(1024 * 8) + 8]> = Mutable::new([0; bitset_size_bytes(1024 * 8) + 8]);
 
 pub(super) fn get_free_space_addr() -> *mut u8 {
-    unsafe { ((FREE_SPACE.as_mut_ptr() as u64 + 7) / 8 * 8) as *mut u8 }
+    let t = FREE_SPACE.borrow();
+    let res = ((FREE_SPACE.get_mut(&t).as_mut_ptr() as u64 + 7) / 8 * 8) as *mut u8;
+    FREE_SPACE.release(t);
+    res
 }
 
 static TEST_DISK: Mutable<Option<Disk>> = Mutable::new(None);
