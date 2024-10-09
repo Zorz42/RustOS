@@ -13,7 +13,7 @@ pub fn kernel_test(_args: TokenStream, input: TokenStream) -> TokenStream {
 
     let input_fn = syn::parse_macro_input!(input as ItemFn);
     let test_fn = input_fn.sig.ident;
-    let function_full_name = unsafe { format!("{CURR_MOD}::{test_fn}") };
+    let function_full_name =  unsafe { format!("{CURR_MOD}::{test_fn}") };
 
     let code = format!(
         r#"

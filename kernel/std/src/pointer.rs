@@ -21,6 +21,7 @@ impl<T> Ptr<T> {
     }
 }
 
+#[allow(dead_code)]
 impl<T: Default> Ptr<T> {
     pub fn new_default(size: usize) -> Self {
         let res = Self::new(size);
