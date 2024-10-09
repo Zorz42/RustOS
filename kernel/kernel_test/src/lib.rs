@@ -49,11 +49,9 @@ pub fn kernel_perf(_args: TokenStream, input: TokenStream) -> TokenStream {
 pub fn all_tests(_item: TokenStream) -> TokenStream {
     let mut code = "[".to_owned();
 
-    unsafe {
-        for test in TESTS.lock().unwrap().iter() {
-            let function_name = test.split(':').last().unwrap();
-            code = code.add(&format!("({test} as fn(), \"{function_name}\"),"));
-        }
+    for test in TESTS.lock().unwrap().iter() {
+        let function_name = test.split(':').last().unwrap();
+        code = code.add(&format!("({test} as fn(), \"{function_name}\"),"));
     }
 
     code.push(']');

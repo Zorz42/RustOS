@@ -1,10 +1,8 @@
-use core::arch::asm;
-use core::ptr::{copy, write_bytes, write_volatile};
-use core::sync::atomic::{fence, Ordering};
+use core::ptr::{copy, write_bytes};
 use std::{println, String, Vec};
 use crate::disk::filesystem::get_fs;
 use crate::memory::{map_page_auto, VirtAddr, KERNEL_VIRTUAL_TOP, PAGE_SIZE, USER_CONTEXT, USER_STACK};
-use crate::riscv::{get_core_id, get_sstatus, interrupts_enable, set_sepc, set_sstatus, SSTATUS_SPP, SSTATUS_UIE};
+use crate::riscv::{get_core_id, get_sstatus, interrupts_enable, set_sstatus, SSTATUS_SPP, SSTATUS_UIE};
 use crate::trap::switch_to_user_trap;
 
 #[derive(Debug)]

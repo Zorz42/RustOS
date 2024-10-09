@@ -81,7 +81,7 @@ impl MemoryDisk {
         debug_assert!(high_addr <= DISK_OFFSET + PAGE_SIZE * self.get_num_pages() as u64);
 
         let low_page = low_addr / PAGE_SIZE;
-        let high_page = (high_addr + PAGE_SIZE - 1) / PAGE_SIZE;
+        let high_page = high_addr.div_ceil(PAGE_SIZE);
 
         for page in low_page..high_page {
             let page_addr = page * PAGE_SIZE;

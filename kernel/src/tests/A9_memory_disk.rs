@@ -12,14 +12,22 @@ kernel_test_mod!(crate::tests::A9_memory_disk);
 
 #[kernel_test]
 fn test_disk_mount_erase() {
-    mount_disk(get_test_disk());
+    let t2 = get_test_disk().borrow();
+    let test_disk = get_test_disk().get_mut(&t2).as_mut().unwrap();
+
+    mount_disk(test_disk);
     let t = get_mounted_disk().borrow();
     get_mounted_disk().get_mut(&t).as_mut().unwrap().erase();
     get_mounted_disk().release(t);
+
+    get_test_disk().release(t2);
 }
 
 #[kernel_test]
 fn test_disk_persists() {
+    let t2 = get_test_disk().borrow();
+    let test_disk = get_test_disk().get_mut(&t2).as_mut().unwrap();
+
     let mut rng = Rng::new(56437285922);
     for _ in 0..20 {
         let t = get_mounted_disk().borrow();
@@ -36,7 +44,7 @@ fn test_disk_persists() {
         get_mounted_disk().release(t);
 
         unmount_disk();
-        mount_disk(get_test_disk());
+        mount_disk(test_disk);
 
         let t = get_mounted_disk().borrow();
         get_mounted_disk().get_mut(&t).as_mut().unwrap().declare_read(addr as u64, addr as u64 + PAGE_SIZE);
@@ -48,10 +56,15 @@ fn test_disk_persists() {
         get_mounted_disk().get_mut(&t).as_mut().unwrap().free_page(page);
         get_mounted_disk().release(t);
     }
+
+    get_test_disk().release(t2);
 }
 
 #[kernel_test]
 fn test_disk_head_persists() {
+    let t2 = get_test_disk().borrow();
+    let test_disk = get_test_disk().get_mut(&t2).as_mut().unwrap();
+
     let mut rng = Rng::new(7865436873);
 
     for _ in 0..20 {
@@ -67,7 +80,7 @@ fn test_disk_head_persists() {
         get_mounted_disk().release(t);
 
         unmount_disk();
-        mount_disk(get_test_disk());
+        mount_disk(test_disk);
 
         let t = get_mounted_disk().borrow();
         let vec1 = get_mounted_disk().get_mut(&t).as_mut().unwrap().get_head();
@@ -75,6 +88,8 @@ fn test_disk_head_persists() {
         
         assert!(vec == vec1);
     }
+
+    get_test_disk().release(t2);
 }
 
 #[kernel_test]
@@ -110,6 +125,9 @@ fn test_diskbox() {
 // TODO: fix this test (for some reason it doesn't work on release mode)
 //#[kernel_test]
 fn test_diskbox_persists() {
+    let t2 = get_test_disk().borrow();
+    let test_disk = get_test_disk().get_mut(&t2).as_mut().unwrap();
+
     let mut rng = Rng::new(5643728235352);
 
     for _ in 0..20 {
@@ -128,7 +146,7 @@ fn test_diskbox_persists() {
         vec1 = deserialize(&data);
 
         unmount_disk();
-        mount_disk(get_test_disk());
+        mount_disk(test_disk);
 
         for i in 0..len {
             assert_eq!(*vec1[i].get(), vec[i]);
@@ -138,4 +156,6 @@ fn test_diskbox_persists() {
             DiskBox::delete(i);
         }
     }
+
+    get_test_disk().release(t2);
 }

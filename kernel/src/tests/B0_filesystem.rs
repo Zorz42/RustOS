@@ -60,6 +60,9 @@ fn test_fs_create_delete_exists_file() {
 
 #[kernel_test]
 fn test_fs_persists() {
+    let t2 = get_test_disk().borrow();
+    let test_disk = get_test_disk().get_mut(&t2).as_mut().unwrap();
+
     get_fs().erase();
 
     let mut existing_files = Vec::new();
@@ -80,7 +83,7 @@ fn test_fs_persists() {
 
         close_fs();
         unmount_disk();
-        mount_disk(get_test_disk());
+        mount_disk(test_disk);
         init_fs();
 
         for _ in 0..10 {
@@ -91,6 +94,8 @@ fn test_fs_persists() {
             assert!(get_fs().get_file(file_name).is_some());
         }
     }
+
+    get_test_disk().release(t2);
 }
 
 fn join(vec: &Vec<String>, c: char) -> String {
@@ -107,6 +112,9 @@ fn join(vec: &Vec<String>, c: char) -> String {
 
 #[kernel_test]
 fn test_fs_create_dir() {
+    let t2 = get_test_disk().borrow();
+    let test_disk = get_test_disk().get_mut(&t2).as_mut().unwrap();
+
     let mut rng = Rng::new(54738524637825);
 
     for _ in 0..10 {
@@ -122,7 +130,7 @@ fn test_fs_create_dir() {
 
         close_fs();
         unmount_disk();
-        mount_disk(get_test_disk());
+        mount_disk(test_disk);
         init_fs();
 
         let mut curr_dirs = Vec::new();
@@ -139,6 +147,8 @@ fn test_fs_create_dir() {
             assert!(get_fs().get_directory(&join(&curr_dirs, '/')).is_none());
         }
     }
+
+    get_test_disk().release(t2);
 }
 
 #[kernel_test]

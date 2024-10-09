@@ -2,7 +2,7 @@ use core::arch::asm;
 use core::ops::{Deref, DerefMut};
 use core::ptr::addr_of;
 use kernel_test::all_perf_tests;
-use std::{deserialize, print, println, serialize, String, Vec};
+use std::{deserialize, print, println, serialize, Mutable, String, Vec};
 
 use crate::disk::disk::Disk;
 use crate::memory::bitset_size_bytes;
@@ -38,10 +38,10 @@ pub(super) fn get_free_space_addr() -> *mut u8 {
     unsafe { ((FREE_SPACE.as_mut_ptr() as u64 + 7) / 8 * 8) as *mut u8 }
 }
 
-static mut TEST_DISK: Option<Disk> = None;
+static TEST_DISK: Mutable<Option<Disk>> = Mutable::new(None);
 
-pub fn get_test_disk() -> &'static mut Disk {
-    unsafe { TEST_DISK.as_mut().unwrap() }
+pub fn get_test_disk() -> &'static Mutable<Option<Disk>> {
+    &TEST_DISK
 }
 
 pub fn test_runner(disks: &mut Vec<Disk>) {
@@ -60,10 +60,9 @@ pub fn test_runner(disks: &mut Vec<Disk>) {
         panic!("Test disk not found");
     }
 
-    unsafe {
-        TEST_DISK = test_disk;
-    }
-
+    let t = TEST_DISK.borrow();
+    *TEST_DISK.get_mut(&t) = test_disk;
+    TEST_DISK.release(t);
 
     let tests = all_tests!();
 
