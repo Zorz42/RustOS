@@ -52,7 +52,7 @@ pub struct Queue {
 }
 
 #[repr(u16)]
-#[derive(Copy, Clone, Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum EventType {
     Syn = 0x00,
     Key = 0x01,
@@ -100,7 +100,7 @@ struct VirtioInputDevice {
 }
 
 impl VirtioInputDevice {
-    fn get_device_at(id: u64) -> Option<VirtioInputDevice> {
+    fn get_device_at(id: u64) -> Option<Self> {
         if virtio_reg_read(id, MmioOffset::MagicValue) != VIRTIO_MAGIC
             || virtio_reg_read(id, MmioOffset::Version) != 2
             || virtio_reg_read(id, MmioOffset::DeviceId) != 18
@@ -222,12 +222,12 @@ impl VirtioInputDevice {
     }
 
     fn get_from_queue(&mut self) -> Option<InputEvent> {
-        if self.events_queue_l != self.events_queue_r {
+        if self.events_queue_l == self.events_queue_r {
+            None
+        } else {
             let res = self.events_queue[self.events_queue_l];
             self.events_queue_l = (self.events_queue_l + 1) % EVENT_QUEUE_SIZE;
             Some(res)
-        } else {
-            None
         }
     }
 

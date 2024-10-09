@@ -158,7 +158,7 @@ impl Gpu {
         };
 
         let framebuffer_size = (self.pixels_size.0 * self.pixels_size.1 * 4) as u64;
-        let num_pages = (framebuffer_size + PAGE_SIZE - 1) / PAGE_SIZE;
+        let num_pages = framebuffer_size.div_ceil(PAGE_SIZE);
 
         self.framebuffer = alloc_continuous_pages(num_pages) as *mut u32;
 

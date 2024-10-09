@@ -198,7 +198,7 @@ impl BitSetRaw {
         self.setup_stack();
     }
 
-    pub unsafe fn store_to(&self, ptr: *mut u64) {
+    pub const unsafe fn store_to(&self, ptr: *mut u64) {
         copy_nonoverlapping(self.data as *mut u8, ptr as *mut u8, self.get_num_u64() * 8);
     }
 }
@@ -210,9 +210,9 @@ pub struct BitSet {
 
 impl BitSet {
     pub fn new(size: usize) -> Self {
-        let data = Vec::new_with_size(bitset_size_bytes(size));
+        let mut data = Vec::new_with_size(bitset_size_bytes(size));
         Self {
-            bitset: BitSetRaw::new_from(size, data.as_ptr() as *mut u64),
+            bitset: BitSetRaw::new_from(size, data.as_mut_ptr() as *mut u64),
             data,
         }
     }

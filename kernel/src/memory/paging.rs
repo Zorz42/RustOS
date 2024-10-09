@@ -75,7 +75,7 @@ pub fn init_paging() {
     // for now just add 20 pages because apparently kernel writes after the end for some reason
     let kernel_end = (get_kernel_top_address() - 1) / PAGE_SIZE * PAGE_SIZE;
     let bitset_size_bytes = bitset_size_bytes(NUM_PAGES as usize);
-    let bitset_size_pages = (bitset_size_bytes as u64 + PAGE_SIZE - 1) / PAGE_SIZE;
+    let bitset_size_pages = (bitset_size_bytes as u64).div_ceil(PAGE_SIZE);
     let kernel_size_pages = (kernel_end - KERNEL_OFFSET) / PAGE_SIZE;
 
     let t = SEGMENTS_BITSET.borrow();
@@ -88,7 +88,7 @@ pub fn init_paging() {
     }
 
     let stack_size = NUM_CORES * STACK_SIZE;
-    let stack_size_pages = (stack_size as u64 + PAGE_SIZE - 1) / PAGE_SIZE;
+    let stack_size_pages = (stack_size as u64).div_ceil(PAGE_SIZE);
 
     // mark stack pages as taken
     for i in 0..stack_size_pages {
@@ -196,6 +196,7 @@ fn get_address_page_table_entry(virtual_addr: VirtAddr) -> Option<&'static mut P
     Some(get_sub_page_table_entry(curr_table, index as usize))
 }
 
+#[allow(clippy::fn_params_excessive_bools)]
 pub fn map_page(virtual_addr: VirtAddr, physical_addr: PhysAddr, ignore_if_exists: bool, writable: bool, user: bool, executable: bool) {
     let curr_entry = get_address_page_table_entry(virtual_addr).unwrap();
     if ignore_if_exists && (*curr_entry & PTE_PRESENT) != 0 {
@@ -215,6 +216,7 @@ pub fn map_page(virtual_addr: VirtAddr, physical_addr: PhysAddr, ignore_if_exist
     refresh_paging();
 }
 
+#[allow(clippy::fn_params_excessive_bools)]
 pub fn map_page_auto(virtual_addr: VirtAddr, ignore_if_exists: bool, writable: bool, user: bool, executable: bool) {
     map_page(virtual_addr, alloc_page(), ignore_if_exists, writable, user, executable);
 }

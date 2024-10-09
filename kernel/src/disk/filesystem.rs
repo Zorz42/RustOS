@@ -79,7 +79,7 @@ impl File {
         self.clear();
         let t = get_mounted_disk().borrow();
         self.size = data.size() as i32;
-        let num_pages = (self.size as u64 + PAGE_SIZE - 1) / PAGE_SIZE;
+        let num_pages = (self.size as u64).div_ceil(PAGE_SIZE);
         for _ in 0..num_pages {
             self.pages.push(get_mounted_disk().get_mut(&t).as_mut().unwrap().alloc_page());
         }

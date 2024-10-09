@@ -128,6 +128,10 @@ impl<T> Vec<T> {
     pub fn as_ptr(&self) -> *const T {
         self.arr.get()
     }
+
+    pub fn as_mut_ptr(&mut self) -> *mut T {
+        self.arr.get_mut()
+    }
     
     pub fn sort(&mut self, f: &dyn Fn(&T, &T) -> bool) {
         for t in 0..self.size {

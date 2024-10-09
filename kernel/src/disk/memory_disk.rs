@@ -116,7 +116,7 @@ impl MemoryDisk {
 
     // bitset size in pages
     fn get_bitset_num_pages(&self) -> usize {
-        (self.is_taken.get_size_bytes() + PAGE_SIZE as usize - 1) / PAGE_SIZE as usize
+        self.is_taken.get_size_bytes().div_ceil(PAGE_SIZE as usize)
     }
 
     pub fn erase(&mut self) {
