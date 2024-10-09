@@ -3,7 +3,7 @@
 use core::mem::swap;
 use crate::memory::{DISK_OFFSET, PAGE_SIZE};
 use crate::disk::memory_disk::{get_mounted_disk, DiskBox};
-use std::{deserialize, serialize, String, Vec, Box};
+use std::{deserialize, serialize, String, Vec, Box, Mutable};
 
 pub struct Path {
     dirs: Vec<String>,
@@ -303,20 +303,23 @@ impl Drop for FileSystem {
     }
 }
 
-static mut FILESYSTEM: Option<Box<FileSystem>> = None;
+static FILESYSTEM: Mutable<Option<Box<FileSystem>>> = Mutable::new(None);
 
 pub fn init_fs() {
-    unsafe {
-        FILESYSTEM = Some(Box::new(FileSystem::new()));
-    }
+    let t = FILESYSTEM.borrow();
+    *FILESYSTEM.get_mut(&t) = Some(Box::new(FileSystem::new()));
+    FILESYSTEM.release(t);
 }
 
 pub fn close_fs() {
-    unsafe {
-        FILESYSTEM = None;
-    }
+    let t = FILESYSTEM.borrow();
+    *FILESYSTEM.get_mut(&t) = None;
+    FILESYSTEM.release(t);
 }
 
 pub fn get_fs() -> &'static mut FileSystem {
-    unsafe { FILESYSTEM.as_mut().unwrap() }
+    let t = FILESYSTEM.borrow();
+    let res = FILESYSTEM.get_mut(&t).as_mut().unwrap();
+    FILESYSTEM.release(t);
+    res
 }
