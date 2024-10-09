@@ -46,6 +46,7 @@ pub fn alloc_continuous_pages(num: u64) -> PhysAddr {
             for k in 0..num {
                 SEGMENTS_BITSET.get_mut(&t).set(i as usize + k as usize, true);
             }
+            SEGMENTS_BITSET.release(t);
             return i * PAGE_SIZE + KERNEL_OFFSET;
         }
     }
