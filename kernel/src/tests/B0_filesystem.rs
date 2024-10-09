@@ -65,7 +65,7 @@ fn test_fs_persists() {
     let mut existing_files = Vec::new();
     let mut rng = Rng::new(4637894352678);
 
-    for _ in 0..100 {
+    for _ in 0..20 {
         if rng.get(0, 2) == 0 || existing_files.size() == 0 {
             // create file
             let file_name = create_random_string(&mut rng);

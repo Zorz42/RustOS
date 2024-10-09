@@ -317,8 +317,9 @@ impl FileSystem {
 
 impl Drop for FileSystem {
     fn drop(&mut self) {
+        let vec = serialize(self.root.as_mut().unwrap());
         let t = get_mounted_disk().borrow();
-        get_mounted_disk().get_mut(&t).as_mut().unwrap().set_head(&serialize(self.root.as_mut().unwrap()));
+        get_mounted_disk().get_mut(&t).as_mut().unwrap().set_head(&vec);
         get_mounted_disk().release(t);
     }
 }
