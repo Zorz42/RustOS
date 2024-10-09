@@ -1,12 +1,12 @@
 use core::ptr::addr_of;
 use crate::riscv::{amoswap, get_core_id};
 
-pub struct Lock {
+pub struct KernelLock {
     acquired: i32,
     locked_by: i32, // which core locked it?
 }
 
-impl Lock {
+impl KernelLock {
     pub const fn new() -> Self {
         Self { acquired: 0, locked_by: 0 }
     }

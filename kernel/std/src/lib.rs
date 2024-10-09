@@ -9,6 +9,8 @@ mod serial;
 mod string;
 mod vector;
 mod print;
+mod spinlock;
+mod mutable;
 
 pub use heap_tree::HeapTree;
 pub use malloc::{free, malloc};
@@ -21,6 +23,8 @@ pub use serial::{deserialize, serialize, Serial};
 pub use string::String;
 pub use vector::Vec;
 pub use print::{init_print, print_raw};
+pub use spinlock::Lock;
+pub use mutable::{Mutable, MutableToken};
 
 static mut PAGE_ALLOCATOR: Option<&'static dyn Fn(*mut u8, bool)> = None;
 static mut PAGE_DEALLOCATOR: Option<&'static dyn Fn(*mut u8)> = None;

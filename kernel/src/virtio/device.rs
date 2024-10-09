@@ -7,7 +7,7 @@ use std::{print, println, Box};
 use crate::gpu::refresh_screen;
 use crate::memory::{alloc_page, virt_to_phys, VirtAddr, PAGE_SIZE};
 use crate::riscv::get_core_id;
-use crate::spinlock::Lock;
+use crate::spinlock::KernelLock;
 use crate::timer::get_ticks;
 use crate::virtio::definitions::{virtio_reg_addr, virtio_reg_read, virtio_reg_write, MmioOffset, VirtqAvail, VirtqDesc, VirtqUsed, MAX_VIRTIO_ID, NUM, VIRTIO_CONFIG_S_ACKNOWLEDGE, VIRTIO_CONFIG_S_DRIVER, VIRTIO_CONFIG_S_DRIVER_OK, VIRTIO_CONFIG_S_FEATURES_OK, VIRTIO_F_ANY_LAYOUT, VIRTIO_MAGIC, VIRTIO_RING_F_EVENT_IDX, VIRTIO_RING_F_INDIRECT_DESC, VRING_DESC_F_NEXT, VRING_DESC_F_WRITE};
 
@@ -21,7 +21,7 @@ pub struct VirtioDevice {
     free: [bool; NUM],
     used_idx: u16,
     info: [bool; NUM],
-    lock: Lock,
+    lock: KernelLock,
     virtio_id: u64,
     irq_waiting: bool,
 }
@@ -48,7 +48,7 @@ impl VirtioDevice {
                 free: [true; NUM],
                 used_idx: 0,
                 info: [false; NUM],
-                lock: Lock::new(),
+                lock: KernelLock::new(),
                 virtio_id: id,
                 irq_waiting: false,
             });

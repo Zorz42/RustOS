@@ -35,7 +35,6 @@ mod font;
 mod input;
 mod console;
 mod scheduler;
-mod mutable;
 
 pub const ROOT_MAGIC: u32 = 0x63726591;
 

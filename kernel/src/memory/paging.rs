@@ -8,7 +8,7 @@ use crate::riscv::{get_satp, set_satp};
 use core::intrinsics::write_bytes;
 use core::sync::atomic::{fence, Ordering};
 use std::init_std_memory;
-use crate::mutable::Mutable;
+use std::Mutable;
 
 pub static SEGMENTS_BITSET: Mutable<BitSetRaw> = Mutable::new(BitSetRaw::new_empty());
 

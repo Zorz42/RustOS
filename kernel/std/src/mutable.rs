@@ -1,4 +1,4 @@
-use core::cell::{RefCell, UnsafeCell};
+use core::cell::{UnsafeCell};
 use crate::spinlock::Lock;
 
 // container for mutable data that is static
