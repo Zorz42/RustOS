@@ -15,7 +15,7 @@ fn test_fs_erase() {
     init_fs();
     
     for _ in 0..100 {
-        //get_fs().erase();
+        get_fs().erase();
     }
 }
 
