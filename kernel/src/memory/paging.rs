@@ -8,19 +8,24 @@ use crate::riscv::{get_satp, set_satp};
 use core::intrinsics::write_bytes;
 use core::sync::atomic::{fence, Ordering};
 use std::init_std_memory;
+use crate::mutable::Mutable;
 
-pub static mut SEGMENTS_BITSET: BitSetRaw = BitSetRaw::new_empty();
+pub static SEGMENTS_BITSET: Mutable<BitSetRaw> = Mutable::new(BitSetRaw::new_empty());
 
 pub fn get_num_free_pages() -> u64 {
-    unsafe { SEGMENTS_BITSET.get_count0() as u64 }
+    let t = SEGMENTS_BITSET.borrow();
+    let res = SEGMENTS_BITSET.get(&t).get_count0() as u64;
+    SEGMENTS_BITSET.release(t);
+    res
 }
 
 pub fn alloc_page() -> PhysAddr {
-    let index = unsafe { SEGMENTS_BITSET.get_zero_element() };
+    let t = SEGMENTS_BITSET.borrow();
+    let index = SEGMENTS_BITSET.get_mut(&t).get_zero_element();
     if let Some(index) = index {
-        unsafe {
-            SEGMENTS_BITSET.set(index, true);
-        }
+        SEGMENTS_BITSET.get_mut(&t).set(index, true);
+
+        SEGMENTS_BITSET.release(t);
         index as u64 * PAGE_SIZE + KERNEL_OFFSET
     } else {
         panic!("Out of memory");
@@ -28,33 +33,33 @@ pub fn alloc_page() -> PhysAddr {
 }
 
 pub fn alloc_continuous_pages(num: u64) -> PhysAddr {
+    let t = SEGMENTS_BITSET.borrow();
     for i in 0..=NUM_PAGES - num {
         let mut all_free = true;
         for j in 0..num {
-            if unsafe { SEGMENTS_BITSET.get(i as usize + j as usize) } {
+            if SEGMENTS_BITSET.get(&t).get(i as usize + j as usize) {
                 all_free = false;
                 break;
             }
         }
         if all_free {
             for k in 0..num {
-                unsafe {
-                    SEGMENTS_BITSET.set(i as usize + k as usize, true);
-                }
+                SEGMENTS_BITSET.get_mut(&t).set(i as usize + k as usize, true);
             }
             return i * PAGE_SIZE + KERNEL_OFFSET;
         }
     }
+    SEGMENTS_BITSET.release(t);
     panic!("Out of memory");
 }
 
 pub fn free_page(addr: PhysAddr) {
     debug_assert!(addr >= KERNEL_OFFSET);
     let index = ((addr - KERNEL_OFFSET) / PAGE_SIZE) as usize;
-    unsafe {
-        assert!(SEGMENTS_BITSET.get(index));
-        SEGMENTS_BITSET.set(index, false);
-    }
+    let t = SEGMENTS_BITSET.borrow();
+    assert!(SEGMENTS_BITSET.get(&t).get(index));
+    SEGMENTS_BITSET.get_mut(&t).set(index, false);
+    SEGMENTS_BITSET.release(t);
 }
 
 fn page_allocator(page: VirtAddr, ignore_if_exists: bool) {
@@ -72,15 +77,13 @@ pub fn init_paging() {
     let bitset_size_pages = (bitset_size_bytes as u64 + PAGE_SIZE - 1) / PAGE_SIZE;
     let kernel_size_pages = (kernel_end - KERNEL_OFFSET) / PAGE_SIZE;
 
-    unsafe {
-        SEGMENTS_BITSET = BitSetRaw::new(NUM_PAGES as usize, kernel_end as *mut u64);
-    }
+    let t = SEGMENTS_BITSET.borrow();
+    *SEGMENTS_BITSET.get_mut(&t) = BitSetRaw::new(NUM_PAGES as usize, kernel_end as *mut u64);
+
 
     // mark kernel and bitset pages as taken
     for i in 0..bitset_size_pages + kernel_size_pages {
-        unsafe {
-            SEGMENTS_BITSET.set(i as usize, true);
-        }
+        SEGMENTS_BITSET.get_mut(&t).set(i as usize, true);
     }
 
     let stack_size = NUM_CORES * STACK_SIZE;
@@ -88,10 +91,9 @@ pub fn init_paging() {
 
     // mark stack pages as taken
     for i in 0..stack_size_pages {
-        unsafe {
-            SEGMENTS_BITSET.set((NUM_PAGES - 1 - i) as usize, true);
-        }
+        SEGMENTS_BITSET.get_mut(&t).set((NUM_PAGES - 1 - i) as usize, true);
     }
+    SEGMENTS_BITSET.release(t);
 
     let page_table = create_page_table();
     switch_to_page_table(page_table);

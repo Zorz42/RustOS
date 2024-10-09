@@ -4,6 +4,7 @@ use crate::font::{CHAR_HEIGHT, CHAR_WIDTH, DEFAULT_FONT};
 use crate::gpu::{get_framebuffer, get_screen_size, refresh_screen};
 use crate::spinlock::Lock;
 use core::fmt::Write;
+use crate::mutable::Mutable;
 use crate::riscv::interrupts_get;
 use crate::timer::get_ticks;
 
@@ -173,36 +174,31 @@ impl Writer {
     }
 }
 
-static mut WRITER: Writer = Writer::new();
+static WRITER: Mutable<Writer> = Mutable::new(Writer::new());
 
 pub fn init_print() {
     std::init_print(&_print);
 }
 
-static PRINT_LOCK: Lock = Lock::new();
-static mut LAST_REFRESH: u64 = 0;
+static LAST_REFRESH: Mutable<u64> = Mutable::new(0);
 
 #[doc(hidden)]
 pub fn _print(args: fmt::Arguments) {
-    PRINT_LOCK.spinlock();
-    unsafe {
-        WRITER.write_fmt(args).unwrap();
-    }
-    PRINT_LOCK.unlock();
+    let t = WRITER.borrow();
+    WRITER.get_mut(&t).write_fmt(args).unwrap();
+    WRITER.release(t);
     check_screen_refresh_for_print();
 }
 
 const PRINT_REFRESH_INTERVAL: u64 = 50;
 
 pub fn check_screen_refresh_for_print() {
-    PRINT_LOCK.spinlock();
-    if get_ticks() - unsafe { LAST_REFRESH } > PRINT_REFRESH_INTERVAL && interrupts_get() {
+    let t = LAST_REFRESH.borrow();
+    if get_ticks() - *LAST_REFRESH.get(&t) > PRINT_REFRESH_INTERVAL && interrupts_get() {
         refresh_screen();
-        unsafe {
-            LAST_REFRESH = get_ticks();
-        }
+        *LAST_REFRESH.get_mut(&t) = get_ticks();
     }
-    PRINT_LOCK.unlock();
+    LAST_REFRESH.release(t);
 }
 
 impl Write for Writer {
@@ -215,19 +211,19 @@ impl Write for Writer {
 }
 
 pub fn set_print_color(text_color: TextColor, background_color: TextColor) {
-    unsafe {
-        WRITER.set_color(text_color, background_color);
-    }
+    let t = WRITER.borrow();
+    WRITER.get_mut(&t).set_color(text_color, background_color);
+    WRITER.release(t);
 }
 
 pub fn reset_print_color() {
-    unsafe {
-        WRITER.set_color(TextColor::White, TextColor::Black);
-    }
+    let t = WRITER.borrow();
+    WRITER.get_mut(&t).set_color(TextColor::White, TextColor::Black);
+    WRITER.release(t);
 }
 
 pub fn move_cursor_back() {
-    unsafe {
-        WRITER.move_cursor_back();
-    }
+    let t = WRITER.borrow();
+    WRITER.get_mut(&t).move_cursor_back();
+    WRITER.release(t);
 }

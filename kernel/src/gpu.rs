@@ -1,4 +1,5 @@
 use crate::memory::{alloc_continuous_pages, PAGE_SIZE};
+use crate::mutable::Mutable;
 use crate::virtio::definitions::MAX_VIRTIO_ID;
 use crate::virtio::device::VirtioDevice;
 
@@ -247,34 +248,43 @@ impl Gpu {
     }
 }
 
-static mut GPU: Option<Gpu> = None;
+static GPU: Mutable<Option<Gpu>> = Mutable::new(None);
 
 pub fn init_gpu() {
     for id in 0..MAX_VIRTIO_ID {
         if let Some(gpu) = get_gpu_at(id) {
-            unsafe {
-                GPU = Some(gpu);
-                GPU.as_mut().unwrap().virtio_fetch_resolution();
-                GPU.as_mut().unwrap().virtio_create_resource();
-                GPU.as_mut().unwrap().virtio_create_framebuffer();
-                GPU.as_mut().unwrap().virtio_set_scanout();
-            }
+            let t = GPU.borrow();
+            *GPU.get_mut(&t) = Some(gpu);
+            GPU.get_mut(&t).as_mut().unwrap().virtio_fetch_resolution();
+            GPU.get_mut(&t).as_mut().unwrap().virtio_create_resource();
+            GPU.get_mut(&t).as_mut().unwrap().virtio_create_framebuffer();
+            GPU.get_mut(&t).as_mut().unwrap().virtio_set_scanout();
+            GPU.release(t);
             break;
         }
     }
-    unsafe {
-        assert!(GPU.is_some());
-    }
+
+    let t = GPU.borrow();
+    assert!(GPU.get(&t).is_some());
+    GPU.release(t);
 }
 
 pub fn get_framebuffer() -> *mut u32 {
-    unsafe { GPU.as_ref().unwrap().framebuffer }
+    let t = GPU.borrow();
+    let result = GPU.get(&t).as_ref().unwrap().framebuffer;
+    GPU.release(t);
+    result
 }
 
 pub fn refresh_screen() {
-    unsafe { GPU.as_mut().unwrap().refresh_screen() }
+    let t = GPU.borrow();
+    GPU.get_mut(&t).as_mut().unwrap().refresh_screen();
+    GPU.release(t);
 }
 
 pub fn get_screen_size() -> (u32, u32) {
-    unsafe { GPU.as_ref().unwrap().pixels_size }
+    let t = GPU.borrow();
+    let result = GPU.get(&t).as_ref().unwrap().pixels_size;
+    GPU.release(t);
+    result
 }

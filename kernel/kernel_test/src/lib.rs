@@ -1,11 +1,11 @@
 use proc_macro::TokenStream;
 use std::ops::Add;
-
+use std::sync::Mutex;
 use syn::{ItemFn, ItemStruct};
 
-static mut TESTS: Vec<String> = Vec::new();
-static mut PERF_TESTS: Vec<String> = Vec::new();
-static mut CURR_MOD: String = String::new();
+static TESTS: Mutex<Vec<String>> = Mutex::new(Vec::new());
+static PERF_TESTS: Mutex<Vec<String>> = Mutex::new(Vec::new());
+static CURR_MOD: Mutex<String> = Mutex::new(String::new());
 
 #[proc_macro_attribute]
 pub fn kernel_test(_args: TokenStream, input: TokenStream) -> TokenStream {
@@ -13,7 +13,7 @@ pub fn kernel_test(_args: TokenStream, input: TokenStream) -> TokenStream {
 
     let input_fn = syn::parse_macro_input!(input as ItemFn);
     let test_fn = input_fn.sig.ident;
-    let function_full_name =  unsafe { format!("{CURR_MOD}::{test_fn}") };
+    let function_full_name =  format!("{}::{}", CURR_MOD.lock().unwrap(), test_fn);
 
     let code = format!(
         r#"
@@ -21,9 +21,7 @@ pub fn kernel_test(_args: TokenStream, input: TokenStream) -> TokenStream {
     "#
     );
 
-    unsafe {
-        TESTS.push(function_full_name.to_string());
-    }
+    TESTS.lock().unwrap().push(function_full_name.to_string());
 
     code.parse().expect("Generated invalid tokens")
 }
@@ -34,7 +32,7 @@ pub fn kernel_perf(_args: TokenStream, input: TokenStream) -> TokenStream {
 
     let input_struct = syn::parse_macro_input!(input as ItemStruct);
     let test_struct = input_struct.ident;
-    let struct_full_name = unsafe { format!("{CURR_MOD}::{test_struct}") };
+    let struct_full_name = format!("{}::{}", CURR_MOD.lock().unwrap(), test_struct);
 
     let code = format!(
         r#"
@@ -42,9 +40,7 @@ pub fn kernel_perf(_args: TokenStream, input: TokenStream) -> TokenStream {
     "#
     );
 
-    unsafe {
-        PERF_TESTS.push(struct_full_name.to_string());
-    }
+    PERF_TESTS.lock().unwrap().push(struct_full_name.to_string());
 
     code.parse().expect("Generated invalid tokens")
 }
@@ -54,7 +50,7 @@ pub fn all_tests(_item: TokenStream) -> TokenStream {
     let mut code = "[".to_owned();
 
     unsafe {
-        for test in TESTS.iter() {
+        for test in TESTS.lock().unwrap().iter() {
             let function_name = test.split(':').last().unwrap();
             code = code.add(&format!("({test} as fn(), \"{function_name}\"),"));
         }
@@ -67,13 +63,11 @@ pub fn all_tests(_item: TokenStream) -> TokenStream {
 
 #[proc_macro]
 pub fn all_perf_tests(_item: TokenStream) -> TokenStream {
-    let mut code = format!("println!(\"Running {} performance tests.\");", unsafe { PERF_TESTS.len() });
+    let mut code = format!("println!(\"Running {} performance tests.\");", PERF_TESTS.lock().unwrap().len());
 
-    unsafe {
-        for test in PERF_TESTS.iter() {
-            let struct_name = test.split(':').last().unwrap();
-            code = code.add(&format!("run_perf_test::<{test}>(\"{struct_name}\");"));
-        }
+    for test in PERF_TESTS.lock().unwrap().iter() {
+        let struct_name = test.split(':').last().unwrap();
+        code = code.add(&format!("run_perf_test::<{test}>(\"{struct_name}\");"));
     }
 
     code.parse().expect("Generated invalid tokens")
@@ -81,9 +75,7 @@ pub fn all_perf_tests(_item: TokenStream) -> TokenStream {
 
 #[proc_macro]
 pub fn kernel_test_mod(item: TokenStream) -> TokenStream {
-    unsafe {
-        CURR_MOD = item.to_string();
-    }
+    *CURR_MOD.lock().unwrap() = item.to_string();
 
     String::new().parse().expect("Generated invalid tokens")
 }
