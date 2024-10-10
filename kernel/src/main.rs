@@ -115,6 +115,7 @@ pub fn main() {
         get_fs().create_file(&String::from("test_program")).write(&test_program_vec);
 
         run_program(&String::from("test_program"));
+        run_program(&String::from("test_program"));
 
         jump_to_program();
 

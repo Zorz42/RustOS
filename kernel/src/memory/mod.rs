@@ -35,7 +35,7 @@ pub const KERNEL_VIRTUAL_TOP: u64 = KERNEL_PT_ROOT_ENTRIES * (1u64 << (12 + 2 * 
 const _: [(); (KERNEL_VIRTUAL_TOP - KERNEL_VIRTUAL_END) as usize] = [(); (KERNEL_VIRTUAL_TOP - KERNEL_VIRTUAL_END) as usize];
 
 pub use bitset::{bitset_size_bytes, BitSetRaw, BitSet};
-pub use paging::{alloc_page, alloc_continuous_pages, free_page, get_num_free_pages, init_paging, init_paging_hart, map_page, map_page_auto, unmap_page, virt_to_phys, PhysAddr, VirtAddr, PageTable};
+pub use paging::{alloc_page, alloc_continuous_pages, free_page, get_num_free_pages, init_paging, init_paging_hart, map_page, map_page_auto, unmap_page, virt_to_phys, PhysAddr, VirtAddr, PageTable, create_page_table, switch_to_page_table};
 
 extern "C" {
     pub static _end: u8;

@@ -3,7 +3,7 @@ pub type VirtAddr = *mut u8;
 
 use crate::boot::{NUM_CORES, STACK_SIZE};
 use crate::memory::bitset::{bitset_size_bytes, BitSetRaw};
-use crate::memory::{get_kernel_top_address, HEAP_BASE_ADDR, HEAP_TREE_ADDR, ID_MAP_END, KERNEL_OFFSET, NUM_PAGES, PAGE_SIZE};
+use crate::memory::{get_kernel_top_address, HEAP_BASE_ADDR, HEAP_TREE_ADDR, ID_MAP_END, KERNEL_OFFSET, KERNEL_PT_ROOT_ENTRIES, NUM_PAGES, PAGE_SIZE};
 use crate::riscv::{get_satp, set_satp};
 use core::intrinsics::write_bytes;
 use core::sync::atomic::{fence, Ordering};
@@ -104,6 +104,10 @@ pub fn init_paging() {
     }
     switch_to_page_table(page_table);
 
+    unsafe {
+        KERNEL_PAGE_TABLE = page_table;
+    }
+
     init_std_memory(&page_allocator, &page_deallocator, HEAP_TREE_ADDR, HEAP_BASE_ADDR);
 }
 
@@ -127,19 +131,33 @@ const PAGE_TABLE_SIZE: usize = 512;
 static mut CURRENT_PAGE_TABLE: PageTable = 0 as PageTable;
 static mut KERNEL_PAGE_TABLE: PageTable = 0 as PageTable;
 
-fn create_page_table() -> PageTable {
+pub fn create_page_table() -> PageTable {
     let page_table = alloc_page() as PageTable;
     unsafe {
         write_bytes(page_table as *mut u8, 0, PAGE_SIZE as usize);
     }
 
+    unsafe {
+        if KERNEL_PAGE_TABLE != 0 as PageTable {
+            for i in 0..KERNEL_PT_ROOT_ENTRIES {
+                *page_table.add(i as usize) = *KERNEL_PAGE_TABLE.add(i as usize);
+            }
+            for i in KERNEL_PT_ROOT_ENTRIES..PAGE_TABLE_SIZE as u64 {
+                assert_eq!(0, *KERNEL_PAGE_TABLE.add(i as usize));
+            }
+        }
+    }
+
     page_table
 }
 
-fn switch_to_page_table(page_table: PageTable) {
+pub fn switch_to_page_table(page_table: PageTable) {
     debug_assert_eq!(page_table as u64 % PAGE_SIZE, 0);
     fence(Ordering::Release);
     unsafe {
+        if CURRENT_PAGE_TABLE == page_table {
+            return;
+        }
         CURRENT_PAGE_TABLE = page_table;
     }
     set_satp((page_table as u64 / PAGE_SIZE) | (8u64 << 60));

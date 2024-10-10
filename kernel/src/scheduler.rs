@@ -1,7 +1,7 @@
 use core::ptr::{copy, write_bytes};
 use std::{println, String, Vec};
 use crate::disk::filesystem::get_fs;
-use crate::memory::{map_page_auto, PageTable, VirtAddr, KERNEL_VIRTUAL_TOP, PAGE_SIZE, USER_CONTEXT, USER_STACK};
+use crate::memory::{create_page_table, map_page_auto, switch_to_page_table, PageTable, VirtAddr, KERNEL_VIRTUAL_TOP, PAGE_SIZE, USER_CONTEXT, USER_STACK};
 use crate::riscv::{get_core_id, get_sstatus, interrupts_enable, set_sstatus, SSTATUS_SPP, SSTATUS_UIE};
 use crate::trap::switch_to_user_trap;
 
@@ -84,9 +84,10 @@ pub struct Context {
 #[derive(Clone, Copy)]
 pub struct CpuData {
     pub was_last_interrupt_external: bool,
+    pub curr_proc_idx: usize,
 }
 
-static mut CPU_DATA: [CpuData; 4] = [CpuData { was_last_interrupt_external: false }; 4];
+static mut CPU_DATA: [CpuData; 4] = [CpuData { was_last_interrupt_external: false, curr_proc_idx: 0 }; 4];
 
 pub fn get_cpu_data() -> &'static mut CpuData {
     unsafe {
@@ -140,6 +141,32 @@ fn verify_elf_header(header: &ElfHeader) -> bool {
     true
 }
 
+enum ProcessState {
+    Running,
+    Ready,
+    Exited,
+}
+
+pub struct Process {
+    state: ProcessState,
+    page_table: PageTable,
+}
+
+const NUM_PROC: usize = 16;
+static mut PROCTABLE: [Option<Process>; NUM_PROC] = [const { None }; NUM_PROC];
+
+fn get_free_proc() -> usize {
+    unsafe {
+        for i in 0..NUM_PROC {
+            if PROCTABLE[i].is_none() {
+                return i;
+            }
+        }
+    }
+
+    panic!("No free process slots");
+}
+
 pub fn run_program(path: &String) {
     println!("Running program: {}", path);
 
@@ -164,6 +191,17 @@ pub fn run_program(path: &String) {
     for header in &program_headers {
         println!("{:?}", header);
     }*/
+
+    let page_table = create_page_table();
+    switch_to_page_table(page_table);
+    let free_proc = get_free_proc();
+
+    unsafe {
+        PROCTABLE[free_proc] = Some(Process {
+            state: ProcessState::Ready,
+            page_table,
+        });
+    }
 
     // map program headers to memory
     for header in &program_headers {
@@ -209,32 +247,33 @@ extern "C" {
     fn jump_to_user() -> !;
 }
 
-enum ProcessState {
-    Running,
-    Ready,
-    Exited,
-}
-
-pub struct Process {
-    state: ProcessState,
-    page_table: PageTable,
-}
-
-const NUM_PROC: usize = 16;
-static mut PROCTABLE: [Option<Process>; NUM_PROC] = [const { None }; NUM_PROC];
-
 pub fn jump_to_program() -> ! {
-    interrupts_enable(false);
+    loop {
+        let proc_idx = get_cpu_data().curr_proc_idx;
+        get_cpu_data().curr_proc_idx += 1;
+        get_cpu_data().curr_proc_idx %= NUM_PROC;
 
-    // clear bit in sstatus
-    set_sstatus(get_sstatus() & !SSTATUS_SPP);
+        unsafe {
+            if PROCTABLE[proc_idx].is_none() {
+                continue;
+            }
+        }
 
-    // set user interrupt enable
-    set_sstatus(get_sstatus() | SSTATUS_UIE);
+        interrupts_enable(false);
 
-    switch_to_user_trap();
+        // clear bit in sstatus
+        set_sstatus(get_sstatus() & !SSTATUS_SPP);
 
-    unsafe {
-        jump_to_user()
+        // set user interrupt enable
+        set_sstatus(get_sstatus() | SSTATUS_UIE);
+
+        switch_to_user_trap();
+
+        let chosen_proc = 0;
+
+        unsafe {
+            switch_to_page_table(PROCTABLE[chosen_proc].as_ref().unwrap().page_table);
+            jump_to_user();
+        }
     }
 }
