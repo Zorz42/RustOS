@@ -8,10 +8,10 @@ pub const KERNEL_OFFSET: u64 = 0x80000000;
 pub const TOP_ADDR: u64 = KERNEL_OFFSET + MEMORY_SIZE;
 pub const NUM_PAGES: u64 = MEMORY_SIZE / PAGE_SIZE;
 
-pub const KERNEL_PT_ROOT_ENTRIES: u64 = 4; // how many entries are used for kernel page table (all the rest is for user page tables)
+pub const KERNEL_PT_ROOT_ENTRIES: u64 = 9; // how many entries are used for kernel page table (all the rest is for user page tables)
 
 pub const ID_MAP_END: u64 = 3u64 << (12 + 2 * 9); // the end of identity mapping of physical memory
-const FRAME_SIZE: u64 = 1u64 << 27;
+const FRAME_SIZE: u64 = 1u64 << 30;
 // where the heap starts
 pub const HEAP_BASE_ADDR: u64 = ID_MAP_END;
 // where the heap tree starts (describes the heap)

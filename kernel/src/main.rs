@@ -3,7 +3,7 @@
 
 use crate::boot::infinite_loop;
 use crate::disk::disk::{Disk, scan_for_disks};
-use crate::memory::{get_num_free_pages, init_paging, init_paging_hart, PageTable, NUM_PAGES};
+use crate::memory::{get_num_free_pages, init_paging, init_paging_hart, NUM_PAGES};
 use crate::print::{init_print, reset_print_color, set_print_color, TextColor};
 use crate::riscv::{enable_fpu, get_core_id, interrupts_enable};
 use crate::trap::switch_to_kernel_trap;
