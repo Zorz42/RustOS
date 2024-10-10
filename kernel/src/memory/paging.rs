@@ -97,6 +97,11 @@ pub fn init_paging() {
     SEGMENTS_BITSET.release(t);
 
     let page_table = create_page_table();
+    for i in 0..3 {
+        unsafe {
+            *page_table.add(i) = create_page_table_entry(((i as u64) << (12 + 2 * 9)) as PhysAddr) | PTE_READ | PTE_WRITE | PTE_EXECUTE;
+        }
+    }
     switch_to_page_table(page_table);
 
     init_std_memory(&page_allocator, &page_deallocator, HEAP_TREE_ADDR, HEAP_BASE_ADDR);
@@ -126,9 +131,6 @@ fn create_page_table() -> PageTable {
     let page_table = alloc_page() as PageTable;
     unsafe {
         write_bytes(page_table as *mut u8, 0, PAGE_SIZE as usize);
-        for i in 0..3 {
-            *page_table.add(i) = create_page_table_entry(((i as u64) << (12 + 2 * 9)) as PhysAddr) | PTE_READ | PTE_WRITE | PTE_EXECUTE;
-        }
     }
 
     page_table
