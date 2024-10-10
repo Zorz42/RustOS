@@ -1,7 +1,7 @@
 use core::ptr::{copy, write_bytes};
 use std::{println, String, Vec};
 use crate::disk::filesystem::get_fs;
-use crate::memory::{map_page_auto, VirtAddr, KERNEL_VIRTUAL_TOP, PAGE_SIZE, USER_CONTEXT, USER_STACK};
+use crate::memory::{map_page_auto, PageTable, VirtAddr, KERNEL_VIRTUAL_TOP, PAGE_SIZE, USER_CONTEXT, USER_STACK};
 use crate::riscv::{get_core_id, get_sstatus, interrupts_enable, set_sstatus, SSTATUS_SPP, SSTATUS_UIE};
 use crate::trap::switch_to_user_trap;
 
@@ -209,8 +209,21 @@ extern "C" {
     fn jump_to_user() -> !;
 }
 
-pub fn jump_to_program() -> ! {
+enum ProcessState {
+    Running,
+    Ready,
+    Exited,
+}
 
+pub struct Process {
+    state: ProcessState,
+    page_table: PageTable,
+}
+
+const NUM_PROC: usize = 16;
+static mut PROCTABLE: [Option<Process>; NUM_PROC] = [const { None }; NUM_PROC];
+
+pub fn jump_to_program() -> ! {
     interrupts_enable(false);
 
     // clear bit in sstatus

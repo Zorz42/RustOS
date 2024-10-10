@@ -120,6 +120,7 @@ pub const PTE_USER: u64 = 1 << 4;
 const PAGE_TABLE_SIZE: usize = 512;
 
 static mut CURRENT_PAGE_TABLE: PageTable = 0 as PageTable;
+static mut KERNEL_PAGE_TABLE: PageTable = 0 as PageTable;
 
 fn create_page_table() -> PageTable {
     let page_table = alloc_page() as PageTable;

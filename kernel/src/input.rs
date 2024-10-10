@@ -244,8 +244,7 @@ impl VirtioInputDevice {
     }
 }
 
-const ARRAY_REPEAT_VALUE: Option<VirtioInputDevice> = None;
-static mut DEVICES: [Option<VirtioInputDevice>; MAX_VIRTIO_ID as usize] = [ARRAY_REPEAT_VALUE; MAX_VIRTIO_ID as usize];
+static mut DEVICES: [Option<VirtioInputDevice>; MAX_VIRTIO_ID as usize] = [const { None }; MAX_VIRTIO_ID as usize];
 
 pub fn init_input_devices() {
     for id in 0..MAX_VIRTIO_ID {

@@ -93,8 +93,7 @@ impl KernelPerf for PerfBox1000 {
     }
 
     fn run(&mut self) {
-        const ARRAY_REPEAT_VALUE: Option<Box<i32>> = None;
-        let mut arr = [ARRAY_REPEAT_VALUE; 1000];
+        let mut arr = [const { None }; 1000];
         for i in &mut arr {
             *i = Some(Box::new(463278));
         }

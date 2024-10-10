@@ -24,8 +24,7 @@ pub struct VirtioDevice {
     irq_waiting: bool,
 }
 
-const ARRAY_REPEAT_VALUE: Option<VirtioDevice> = None;
-static mut DEVICES: [Option<VirtioDevice>; MAX_VIRTIO_ID as usize] = [ARRAY_REPEAT_VALUE; MAX_VIRTIO_ID as usize];
+static mut DEVICES: [Option<VirtioDevice>; MAX_VIRTIO_ID as usize] = [const { None }; MAX_VIRTIO_ID as usize];
 
 impl VirtioDevice {
     pub fn get_device_at(id: u64, expected_version: u32, expected_device_id: u32, expected_vendor_id: u32, features: u32) -> Option<&'static mut Self> {
