@@ -143,6 +143,7 @@ fn sched_resume() -> ! {
             1 => {
                 // print char
                 let arg1 = get_context().a3 as u8 as char;
+
                 print!("{}", arg1);
             }
             2 => {

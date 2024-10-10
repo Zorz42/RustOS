@@ -1,5 +1,5 @@
 use core::ptr::{copy, write_bytes};
-use std::{println, String, Vec};
+use std::{free, println, String, Vec};
 use crate::disk::filesystem::get_fs;
 use crate::memory::{create_page_table, map_page_auto, switch_to_page_table, PageTable, VirtAddr, KERNEL_VIRTUAL_TOP, PAGE_SIZE, USER_CONTEXT, USER_STACK};
 use crate::riscv::{get_core_id, get_sstatus, interrupts_enable, set_sstatus, SSTATUS_SPP, SSTATUS_UIE};
@@ -195,6 +195,7 @@ pub fn run_program(path: &String) {
     let page_table = create_page_table();
     switch_to_page_table(page_table);
     let free_proc = get_free_proc();
+    println!("pid {}", free_proc);
 
     unsafe {
         PROCTABLE[free_proc] = Some(Process {
@@ -269,10 +270,8 @@ pub fn jump_to_program() -> ! {
 
         switch_to_user_trap();
 
-        let chosen_proc = 0;
-
         unsafe {
-            switch_to_page_table(PROCTABLE[chosen_proc].as_ref().unwrap().page_table);
+            switch_to_page_table(PROCTABLE[proc_idx].as_ref().unwrap().page_table);
             jump_to_user();
         }
     }
