@@ -9,13 +9,13 @@ use crate::riscv::{enable_fpu, get_core_id, get_cycle, get_instret, get_time, in
 use crate::trap::switch_to_kernel_trap;
 use core::panic::PanicInfo;
 use core::sync::atomic::{fence, Ordering};
-use std::{println, String, Vec};
+use std::{println, Box, String, Vec};
 use crate::disk::filesystem::{close_fs, get_fs, init_fs};
 use crate::disk::memory_disk::mount_disk;
 use crate::gpu::init_gpu;
 use crate::input::{init_input_devices};
 use crate::plic::{plicinit, plicinithart};
-use crate::scheduler::{jump_to_program, run_program};
+use crate::scheduler::{scheduler, run_program};
 
 mod boot;
 mod disk;
@@ -98,12 +98,6 @@ pub fn main() {
             perf_test_runner();
         }
 
-        fence(Ordering::Release);
-        unsafe {
-            INITIALIZED = true;
-        }
-        fence(Ordering::Release);
-
         let all_memory = (NUM_PAGES * 4) as f32 / 1000.0;
         let used_memory = ((NUM_PAGES - get_num_free_pages()) * 4) as f32 / 1000.0;
         let portion = used_memory / all_memory * 100.0;
@@ -118,9 +112,16 @@ pub fn main() {
             run_program(&String::from("test_program"));
         }
 
-        jump_to_program();
+        //scheduler();
 
         //run_console();
+
+        fence(Ordering::Release);
+        unsafe {
+            INITIALIZED = true;
+        }
+        fence(Ordering::Release);
+
     } else {
         while unsafe { !INITIALIZED } {}
 
@@ -130,6 +131,13 @@ pub fn main() {
         init_paging_hart();
         plicinithart();
         println!("Core {} has initialized", get_core_id());
+    }
+
+    if get_core_id() == 1 {
+        println!("Running scheduler on core {}", get_core_id());
+        scheduler();
+
+        println!("core {} is going to sleep", get_core_id());
     }
 }
 

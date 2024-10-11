@@ -4,7 +4,7 @@ pub type VirtAddr = *mut u8;
 use crate::boot::{NUM_CORES, STACK_SIZE};
 use crate::memory::bitset::{bitset_size_bytes, BitSetRaw};
 use crate::memory::{get_kernel_top_address, HEAP_BASE_ADDR, HEAP_TREE_ADDR, ID_MAP_END, KERNEL_OFFSET, KERNEL_PT_ROOT_ENTRIES, NUM_PAGES, PAGE_SIZE};
-use crate::riscv::{get_satp, set_satp};
+use crate::riscv::{get_core_id, get_satp, set_satp};
 use core::intrinsics::write_bytes;
 use core::sync::atomic::{fence, Ordering};
 use std::init_std_memory;
@@ -113,7 +113,7 @@ pub fn init_paging() {
 
 pub fn init_paging_hart() {
     unsafe {
-        switch_to_page_table(CURRENT_PAGE_TABLE);
+        switch_to_page_table(KERNEL_PAGE_TABLE);
     }
 }
 
@@ -128,7 +128,7 @@ pub const PTE_USER: u64 = 1 << 4;
 
 const PAGE_TABLE_SIZE: usize = 512;
 
-static mut CURRENT_PAGE_TABLE: PageTable = 0 as PageTable;
+static mut CURRENT_PAGE_TABLE: [PageTable; NUM_CORES] = [0 as PageTable; NUM_CORES];
 static mut KERNEL_PAGE_TABLE: PageTable = 0 as PageTable;
 
 pub fn create_page_table() -> PageTable {
@@ -155,10 +155,10 @@ pub fn switch_to_page_table(page_table: PageTable) {
     debug_assert_eq!(page_table as u64 % PAGE_SIZE, 0);
     fence(Ordering::Release);
     unsafe {
-        if CURRENT_PAGE_TABLE == page_table {
+        if CURRENT_PAGE_TABLE[get_core_id() as usize] == page_table {
             return;
         }
-        CURRENT_PAGE_TABLE = page_table;
+        CURRENT_PAGE_TABLE[get_core_id() as usize] = page_table;
     }
     set_satp((page_table as u64 / PAGE_SIZE) | (8u64 << 60));
     fence(Ordering::Release);
@@ -194,7 +194,7 @@ fn create_page_table_entry(addr: PhysAddr) -> PageTableEntry {
 }
 
 fn get_address_page_table_entry(virtual_addr: VirtAddr) -> Option<&'static mut PageTableEntry> {
-    let mut curr_table = unsafe { CURRENT_PAGE_TABLE };
+    let mut curr_table = unsafe { CURRENT_PAGE_TABLE[get_core_id() as usize] };
     for i in 0..2 {
         let index = (virtual_addr as u64 >> (30 - 9 * i)) & 0b111111111;
         unsafe {

@@ -5,7 +5,7 @@ use std::{print, println};
 use crate::input::virtio_input_irq;
 use crate::plic::{plic_complete, plic_irq};
 use crate::print::check_screen_refresh_for_print;
-use crate::scheduler::{get_context, get_cpu_data, jump_to_program};
+use crate::scheduler::{get_context, get_cpu_data, scheduler};
 use crate::virtio::device::virtio_irq;
 
 global_asm!(include_str!("asm/kernelvec.S"));
@@ -159,5 +159,5 @@ fn sched_resume() -> ! {
         }
     }
     check_screen_refresh_for_print();
-    jump_to_program()
+    scheduler()
 }

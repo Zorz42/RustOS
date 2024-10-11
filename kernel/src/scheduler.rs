@@ -248,7 +248,7 @@ extern "C" {
     fn jump_to_user() -> !;
 }
 
-pub fn jump_to_program() -> ! {
+pub fn scheduler() -> ! {
     loop {
         let proc_idx = get_cpu_data().curr_proc_idx;
         get_cpu_data().curr_proc_idx += 1;
