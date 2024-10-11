@@ -1,5 +1,6 @@
+use core::arch::asm;
 use core::ptr::{copy, write_bytes};
-use std::{free, println, String, Vec};
+use std::{println, Lock, String, Vec};
 use crate::disk::filesystem::get_fs;
 use crate::memory::{create_page_table, map_page_auto, switch_to_page_table, PageTable, VirtAddr, KERNEL_VIRTUAL_TOP, PAGE_SIZE, USER_CONTEXT, USER_STACK};
 use crate::riscv::{get_core_id, get_sstatus, interrupts_enable, set_sstatus, SSTATUS_SPP, SSTATUS_UIE};
@@ -141,6 +142,7 @@ fn verify_elf_header(header: &ElfHeader) -> bool {
     true
 }
 
+#[derive(PartialEq)]
 enum ProcessState {
     Running,
     Ready,
@@ -154,6 +156,8 @@ pub struct Process {
 
 const NUM_PROC: usize = 16;
 static mut PROCTABLE: [Option<Process>; NUM_PROC] = [const { None }; NUM_PROC];
+static PROCTABLE_ALLOC_LOCK: Lock = Lock::new();
+static PROCTABLE_LOCKS: [Lock; NUM_PROC] = [const { Lock::new() }; NUM_PROC];
 
 fn get_free_proc() -> usize {
     unsafe {
@@ -194,15 +198,20 @@ pub fn run_program(path: &String) {
 
     let page_table = create_page_table();
     switch_to_page_table(page_table);
+
+    PROCTABLE_ALLOC_LOCK.spinlock();
     let free_proc = get_free_proc();
     println!("pid {}", free_proc);
 
+    PROCTABLE_LOCKS[free_proc].spinlock();
     unsafe {
         PROCTABLE[free_proc] = Some(Process {
             state: ProcessState::Ready,
             page_table,
         });
     }
+    PROCTABLE_LOCKS[free_proc].unlock();
+    PROCTABLE_ALLOC_LOCK.unlock();
 
     // map program headers to memory
     for header in &program_headers {
@@ -249,18 +258,30 @@ extern "C" {
 }
 
 pub fn scheduler() -> ! {
+    let mut misses = 0;
     loop {
-        let proc_idx = get_cpu_data().curr_proc_idx;
-        get_cpu_data().curr_proc_idx += 1;
-        get_cpu_data().curr_proc_idx %= NUM_PROC;
-
-        unsafe {
-            if PROCTABLE[proc_idx].is_none() {
-                continue;
+        if misses == NUM_PROC {
+            misses = 0;
+            unsafe {
+                asm!("wfi");
             }
         }
 
+        let proc_idx = get_cpu_data().curr_proc_idx;
+
         interrupts_enable(false);
+
+        PROCTABLE_LOCKS[proc_idx].spinlock();
+
+        unsafe {
+            if PROCTABLE[proc_idx].is_none() || PROCTABLE[proc_idx].as_ref().unwrap().state != ProcessState::Ready {
+                misses += 1;
+                get_cpu_data().curr_proc_idx += 1;
+                get_cpu_data().curr_proc_idx %= NUM_PROC;
+                PROCTABLE_LOCKS[proc_idx].unlock();
+                continue;
+            }
+        }
 
         // clear bit in sstatus
         set_sstatus(get_sstatus() & !SSTATUS_SPP);
@@ -272,7 +293,20 @@ pub fn scheduler() -> ! {
 
         unsafe {
             switch_to_page_table(PROCTABLE[proc_idx].as_ref().unwrap().page_table);
+            PROCTABLE[proc_idx].as_mut().unwrap().state = ProcessState::Running;
+
+            PROCTABLE_LOCKS[proc_idx].unlock();
             jump_to_user();
         }
     }
+}
+
+pub fn mark_process_interrupted(proc_idx: usize) {
+    PROCTABLE_LOCKS[proc_idx].spinlock();
+
+    unsafe {
+        PROCTABLE[proc_idx].as_mut().unwrap().state = ProcessState::Ready;
+    }
+
+    PROCTABLE_LOCKS[proc_idx].unlock();
 }

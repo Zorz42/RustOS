@@ -108,7 +108,7 @@ pub fn main() {
         let test_program_vec = Vec::new_from_slice(test_program);
         get_fs().create_file(&String::from("test_program")).write(&test_program_vec);
 
-        for _ in 0..1 {
+        for _ in 0..10 {
             run_program(&String::from("test_program"));
         }
 
@@ -133,12 +133,7 @@ pub fn main() {
         println!("Core {} has initialized", get_core_id());
     }
 
-    if get_core_id() == 1 {
-        println!("Running scheduler on core {}", get_core_id());
-        scheduler();
-
-        println!("core {} is going to sleep", get_core_id());
-    }
+    scheduler();
 }
 
 #[panic_handler]

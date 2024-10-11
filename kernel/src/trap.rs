@@ -5,7 +5,7 @@ use std::{print, println};
 use crate::input::virtio_input_irq;
 use crate::plic::{plic_complete, plic_irq};
 use crate::print::check_screen_refresh_for_print;
-use crate::scheduler::{get_context, get_cpu_data, scheduler};
+use crate::scheduler::{get_context, get_cpu_data, mark_process_interrupted, scheduler};
 use crate::virtio::device::virtio_irq;
 
 global_asm!(include_str!("asm/kernelvec.S"));
@@ -95,7 +95,6 @@ extern "C" fn usertrap() -> ! {
             if get_core_id() == 0 {
                 tick();
             }
-
             // acknowledge the software interrupt by clearing
             // the SSIP bit in sip.
             let mut sip = get_sip();
@@ -132,6 +131,8 @@ extern "C" fn usertrap() -> ! {
     set_sstatus(get_sstatus() & !SSTATUS_UIE);
 
     interrupts_enable(true);
+
+    mark_process_interrupted(get_cpu_data().curr_proc_idx);
 
     sched_resume()
 }
