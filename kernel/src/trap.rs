@@ -142,7 +142,10 @@ fn sched_resume() -> ! {
         match int_code {
             1 => {
                 // print char
-                let arg1 = get_context().a3 as u8 as char;
+                let arg1 = get_context().a3 as *mut u8;
+                let arg2 = get_context().a4;
+                // convert to &str
+                let arg1 = unsafe { core::str::from_utf8_unchecked(core::slice::from_raw_parts(arg1, arg2 as usize)) };
 
                 print!("{}", arg1);
             }

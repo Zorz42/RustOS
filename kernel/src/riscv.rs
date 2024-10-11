@@ -146,6 +146,12 @@ csr_get_set!(scause);
 csr_get_set!(sepc);
 csr_get_set!(stval);
 
+csr_get_set!(cycle);
+csr_get_set!(time);
+csr_get_set!(instret);
+csr_get_set!(mcounteren);
+csr_get_set!(menvcfg);
+
 // supervisor interrupt pending
 csr_get_set!(sip);
 

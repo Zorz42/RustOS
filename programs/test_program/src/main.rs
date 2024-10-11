@@ -21,6 +21,12 @@ fn syscall1(code: u64, arg1: u64) {
     }
 }
 
+fn syscall2(code: u64, arg1: u64, arg2: u64) {
+    unsafe {
+        asm!("ecall", in("a7") code, in("a3") arg1, in("a4") arg2);
+    }
+}
+
 fn syscall0r(code: u64) -> u64 {
     let ret: u64;
     unsafe {
@@ -29,8 +35,8 @@ fn syscall0r(code: u64) -> u64 {
     ret
 }
 
-fn print_char(c: u8) {
-    syscall1(1, c as u64);
+fn print_str(s: &str) {
+    syscall2(1, s.as_ptr() as u64, s.len() as u64);
 }
 
 fn get_ticks() -> u64 {
@@ -41,9 +47,7 @@ struct Writer;
 
 impl Write for Writer {
     fn write_str(&mut self, s: &str) -> fmt::Result {
-        for c in s.bytes() {
-            print_char(c);
-        }
+        print_str(s);
         Ok(())
     }
 }

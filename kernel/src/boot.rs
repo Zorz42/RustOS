@@ -1,4 +1,4 @@
-use crate::riscv::{get_mhartid, get_mstatus, get_sie, get_sstatus, set_medeleg, set_mepc, set_mideleg, set_mstatus, set_pmpaddr0, set_pmpcfg0, set_satp, set_sie, set_sstatus, set_tp, MSTATUS_MACHINE, MSTATUS_SUPERVISOR, SIE_EXTERNAL, SIE_SOFTWARE, SIE_TIMER, SSTATUS_SUM};
+use crate::riscv::{get_mcounteren, get_menvcfg, get_mhartid, get_mstatus, get_sie, get_sstatus, set_mcounteren, set_medeleg, set_menvcfg, set_mepc, set_mideleg, set_mstatus, set_pmpaddr0, set_pmpcfg0, set_satp, set_sie, set_sstatus, set_tp, MSTATUS_MACHINE, MSTATUS_SUPERVISOR, SIE_EXTERNAL, SIE_SOFTWARE, SIE_TIMER, SSTATUS_SUM};
 use core::arch::asm;
 
 use crate::main;
@@ -56,6 +56,12 @@ extern "C" fn rust_entry() -> ! {
     set_sstatus(get_sstatus() | SSTATUS_SUM);
 
     machine_mode_timer_init();
+
+    // enable the sstc extension (i.e. stimecmp).
+    set_menvcfg(get_menvcfg() | (1u64 << 63));
+
+    // allow supervisor to use cycle.
+    set_mcounteren(get_mcounteren() | 7);
 
     // load hartid into tp
     set_tp(get_mhartid());
