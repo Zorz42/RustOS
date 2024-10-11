@@ -258,6 +258,9 @@ extern "C" {
 }
 
 pub fn scheduler() -> ! {
+    get_cpu_data().curr_proc_idx += 1;
+    get_cpu_data().curr_proc_idx %= NUM_PROC;
+
     let mut misses = 0;
     loop {
         if misses == NUM_PROC {

@@ -108,13 +108,9 @@ pub fn main() {
         let test_program_vec = Vec::new_from_slice(test_program);
         get_fs().create_file(&String::from("test_program")).write(&test_program_vec);
 
-        for _ in 0..10 {
+        for _ in 0..16 {
             run_program(&String::from("test_program"));
         }
-
-        //scheduler();
-
-        //run_console();
 
         fence(Ordering::Release);
         unsafe {
