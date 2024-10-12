@@ -4,7 +4,7 @@ use crate::font::{CHAR_HEIGHT, CHAR_WIDTH, DEFAULT_FONT};
 use crate::gpu::{get_framebuffer, get_screen_size, refresh_screen};
 use core::fmt::Write;
 use std::Mutable;
-use crate::riscv::interrupts_get;
+use crate::riscv::{get_core_id, interrupts_get};
 use crate::timer::get_ticks;
 
 #[allow(dead_code)]
@@ -192,6 +192,10 @@ pub fn _print(args: fmt::Arguments) {
 const PRINT_REFRESH_INTERVAL: u64 = 50;
 
 pub fn check_screen_refresh_for_print() {
+    if get_core_id() != 0 {
+        return;
+    }
+
     let t = LAST_REFRESH.borrow();
     if get_ticks() - *LAST_REFRESH.get(&t) > PRINT_REFRESH_INTERVAL && interrupts_get() {
         refresh_screen();

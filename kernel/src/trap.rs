@@ -5,7 +5,7 @@ use std::{print, println};
 use crate::input::virtio_input_irq;
 use crate::plic::{plic_complete, plic_irq};
 use crate::print::check_screen_refresh_for_print;
-use crate::scheduler::{get_context, get_cpu_data, mark_process_interrupted, scheduler};
+use crate::scheduler::{get_context, get_cpu_data, mark_process_interrupted, scheduler, scheduler_next_proc};
 use crate::virtio::device::virtio_irq;
 
 global_asm!(include_str!("asm/kernelvec.S"));
@@ -34,6 +34,8 @@ extern "C" fn kerneltrap() {
             let mut sip = get_sip();
             sip &= !2;
             set_sip(sip);
+
+            scheduler_next_proc();
         }
         InterruptType::OtherDevice => {
             let irq = plic_irq();
@@ -100,6 +102,8 @@ extern "C" fn usertrap() -> ! {
             let mut sip = get_sip();
             sip &= !2;
             set_sip(sip);
+
+            scheduler_next_proc();
         }
         InterruptType::OtherDevice => {
             let irq = plic_irq();
@@ -153,6 +157,10 @@ fn sched_resume() -> ! {
             2 => {
                 // get ticks
                 get_context().a2 = get_ticks();
+            }
+            3 => {
+                // get pid
+                get_context().a2 = get_cpu_data().curr_proc_idx as u64;
             }
             _ => {
                 println!("Unknown user interrupt occurred with code {}", int_code);

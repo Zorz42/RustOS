@@ -43,6 +43,10 @@ fn get_ticks() -> u64 {
     syscall0r(2)
 }
 
+fn get_pid() -> u64 {
+    syscall0r(3)
+}
+
 struct Writer;
 
 impl Write for Writer {
@@ -79,7 +83,7 @@ pub fn main() -> i32 {
     loop {
         if get_ticks() / 1000 != curr_ticks {
             curr_ticks = get_ticks() / 1000;
-            println!("Ticks: {}", get_ticks());
+            println!("Ticks {}: {}", get_pid(), get_ticks());
         }
     }
 }

@@ -257,10 +257,12 @@ extern "C" {
     fn jump_to_user() -> !;
 }
 
-pub fn scheduler() -> ! {
+pub fn scheduler_next_proc() {
     get_cpu_data().curr_proc_idx += 1;
     get_cpu_data().curr_proc_idx %= NUM_PROC;
+}
 
+pub fn scheduler() -> ! {
     let mut misses = 0;
     loop {
         if misses == NUM_PROC {
