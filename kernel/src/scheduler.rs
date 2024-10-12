@@ -3,6 +3,7 @@ use core::ptr::{copy, write_bytes};
 use std::{println, Lock, String, Vec};
 use crate::disk::filesystem::get_fs;
 use crate::memory::{create_page_table, map_page_auto, switch_to_page_table, PageTable, VirtAddr, KERNEL_VIRTUAL_TOP, PAGE_SIZE, USER_CONTEXT, USER_STACK};
+use crate::print::check_screen_refresh_for_print;
 use crate::riscv::{get_core_id, get_sstatus, interrupts_enable, set_sstatus, SSTATUS_SPP, SSTATUS_UIE};
 use crate::trap::switch_to_user_trap;
 
@@ -267,6 +268,7 @@ pub fn scheduler() -> ! {
     loop {
         if misses == NUM_PROC {
             misses = 0;
+            check_screen_refresh_for_print();
             unsafe {
                 asm!("wfi");
             }
