@@ -1,11 +1,12 @@
 #![no_std]
 #![no_main]
 
+use core::arch::asm;
 use crate::boot::infinite_loop;
 use crate::disk::disk::{Disk, scan_for_disks};
 use crate::memory::{get_num_free_pages, init_paging, init_paging_hart, NUM_PAGES};
 use crate::print::{init_print, reset_print_color, set_print_color, TextColor};
-use crate::riscv::{enable_fpu, get_core_id, get_cycle, get_instret, get_time, interrupts_enable};
+use crate::riscv::{enable_fpu, get_core_id, get_cycle, get_instret, get_instruction_count, get_time, interrupts_enable};
 use crate::trap::switch_to_kernel_trap;
 use core::panic::PanicInfo;
 use core::sync::atomic::{fence, Ordering};
@@ -109,7 +110,7 @@ pub fn main() {
         get_fs().create_file(&String::from("test_program")).write(&test_program_vec);
 
         for _ in 0..16 {
-            run_program(&String::from("test_program"));
+            //run_program(&String::from("test_program"));
         }
 
         fence(Ordering::Release);

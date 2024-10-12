@@ -160,3 +160,11 @@ pub fn enable_fpu() {
     sstatus |= 1 << 13;
     set_sstatus(sstatus);
 }
+
+pub fn get_instruction_count() -> u64 {
+    let x;
+    unsafe {
+        asm!("rdinstret {}", out(reg) x);
+    }
+    x
+}
