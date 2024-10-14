@@ -109,9 +109,11 @@ pub fn main() {
         let test_program_vec = Vec::new_from_slice(test_program);
         get_fs().create_file(&String::from("test_program")).write(&test_program_vec);
 
-        for _ in 0..16 {
-            //run_program(&String::from("test_program"));
+        println!("Loading programs...");
+        for _ in 0..6 {
+            run_program(&String::from("test_program"));
         }
+        println!("Loaded!");
 
         fence(Ordering::Release);
         unsafe {

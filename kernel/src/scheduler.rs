@@ -89,7 +89,7 @@ pub struct CpuData {
     pub curr_proc_idx: usize,
 }
 
-static mut CPU_DATA: [CpuData; 4] = [CpuData { was_last_interrupt_external: false, curr_proc_idx: 0 }; 4];
+static mut CPU_DATA: [CpuData; 4] = [CpuData { was_last_interrupt_external: false, curr_proc_idx: 1000 }; 4];
 
 pub fn get_cpu_data() -> &'static mut CpuData {
     unsafe {
@@ -145,8 +145,9 @@ fn verify_elf_header(header: &ElfHeader) -> bool {
 
 #[derive(PartialEq)]
 enum ProcessState {
-    Running,
+    Loading,
     Ready,
+    Running,
     Exited,
 }
 
@@ -173,10 +174,10 @@ fn get_free_proc() -> usize {
 }
 
 pub fn run_program(path: &String) {
-    println!("Running program: {}", path);
+    //println!("Running program: {}", path);
 
     let program = get_fs().get_file(path).unwrap().read();
-    println!("Program size {}", program.size());
+    //println!("Program size {}", program.size());
     let elf_header = unsafe { (program.as_ptr() as *const ElfHeader).read() };
 
     if !verify_elf_header(&elf_header) {
@@ -202,12 +203,11 @@ pub fn run_program(path: &String) {
 
     PROCTABLE_ALLOC_LOCK.spinlock();
     let free_proc = get_free_proc();
-    println!("pid {}", free_proc);
 
     PROCTABLE_LOCKS[free_proc].spinlock();
     unsafe {
         PROCTABLE[free_proc] = Some(Process {
-            state: ProcessState::Ready,
+            state: ProcessState::Loading,
             page_table,
         });
     }
@@ -251,7 +251,13 @@ pub fn run_program(path: &String) {
     get_context().pc = elf_header.entry;
     get_context().sp = stack_top;
 
-    println!("entry is at {:#x}", elf_header.entry);
+    PROCTABLE_LOCKS[free_proc].spinlock();
+    unsafe {
+        PROCTABLE[free_proc].as_mut().unwrap().state = ProcessState::Ready;
+    }
+    PROCTABLE_LOCKS[free_proc].unlock();
+
+    //println!("entry is at {:#x}", elf_header.entry);
 }
 
 extern "C" {
@@ -276,8 +282,6 @@ pub fn scheduler() -> ! {
 
         let proc_idx = get_cpu_data().curr_proc_idx;
 
-        interrupts_enable(false);
-
         PROCTABLE_LOCKS[proc_idx].spinlock();
 
         unsafe {
@@ -289,6 +293,8 @@ pub fn scheduler() -> ! {
                 continue;
             }
         }
+
+        interrupts_enable(false);
 
         // clear bit in sstatus
         set_sstatus(get_sstatus() & !SSTATUS_SPP);
