@@ -86,10 +86,11 @@ pub struct Context {
 #[derive(Clone, Copy)]
 pub struct CpuData {
     pub was_last_interrupt_external: bool,
-    pub curr_proc_idx: usize,
+    pub curr_pid: usize,
+    pub last_pid: usize,
 }
 
-static mut CPU_DATA: [CpuData; 4] = [CpuData { was_last_interrupt_external: false, curr_proc_idx: 1000 }; 4];
+static mut CPU_DATA: [CpuData; 4] = [CpuData { was_last_interrupt_external: false, curr_pid: 1000, last_pid: 1000 }; 4];
 
 pub fn get_cpu_data() -> &'static mut CpuData {
     unsafe {
@@ -265,8 +266,8 @@ extern "C" {
 }
 
 pub fn scheduler_next_proc() {
-    get_cpu_data().curr_proc_idx += 1;
-    get_cpu_data().curr_proc_idx %= NUM_PROC;
+    get_cpu_data().curr_pid += 1;
+    get_cpu_data().curr_pid %= NUM_PROC;
 }
 
 pub fn scheduler() -> ! {
@@ -280,16 +281,15 @@ pub fn scheduler() -> ! {
             }
         }
 
-        let proc_idx = get_cpu_data().curr_proc_idx;
+        let pid = get_cpu_data().curr_pid;
 
-        PROCTABLE_LOCKS[proc_idx].spinlock();
+        PROCTABLE_LOCKS[pid].spinlock();
 
         unsafe {
-            if PROCTABLE[proc_idx].is_none() || PROCTABLE[proc_idx].as_ref().unwrap().state != ProcessState::Ready {
+            if PROCTABLE[pid].is_none() || PROCTABLE[pid].as_ref().unwrap().state != ProcessState::Ready {
                 misses += 1;
-                get_cpu_data().curr_proc_idx += 1;
-                get_cpu_data().curr_proc_idx %= NUM_PROC;
-                PROCTABLE_LOCKS[proc_idx].unlock();
+                scheduler_next_proc();
+                PROCTABLE_LOCKS[pid].unlock();
                 continue;
             }
         }
@@ -305,21 +305,22 @@ pub fn scheduler() -> ! {
         switch_to_user_trap();
 
         unsafe {
-            switch_to_page_table(PROCTABLE[proc_idx].as_ref().unwrap().page_table);
-            PROCTABLE[proc_idx].as_mut().unwrap().state = ProcessState::Running;
+            switch_to_page_table(PROCTABLE[pid].as_ref().unwrap().page_table);
+            PROCTABLE[pid].as_mut().unwrap().state = ProcessState::Running;
+            get_cpu_data().last_pid = pid;
+            PROCTABLE_LOCKS[pid].unlock();
 
-            PROCTABLE_LOCKS[proc_idx].unlock();
             jump_to_user();
         }
     }
 }
 
-pub fn mark_process_interrupted(proc_idx: usize) {
-    PROCTABLE_LOCKS[proc_idx].spinlock();
+pub fn mark_process_interrupted(pid: usize) {
+    PROCTABLE_LOCKS[pid].spinlock();
 
     unsafe {
-        PROCTABLE[proc_idx].as_mut().unwrap().state = ProcessState::Ready;
+        PROCTABLE[pid].as_mut().unwrap().state = ProcessState::Ready;
     }
 
-    PROCTABLE_LOCKS[proc_idx].unlock();
+    PROCTABLE_LOCKS[pid].unlock();
 }

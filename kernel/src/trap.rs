@@ -92,6 +92,8 @@ extern "C" fn usertrap() -> ! {
     let ty = get_interrupt_type();
     get_cpu_data().was_last_interrupt_external = false;
 
+    mark_process_interrupted(get_cpu_data().last_pid);
+
     match ty {
         InterruptType::Timer => {
             if get_core_id() == 0 {
@@ -136,8 +138,6 @@ extern "C" fn usertrap() -> ! {
 
     interrupts_enable(true);
 
-    mark_process_interrupted(get_cpu_data().curr_proc_idx);
-
     sched_resume()
 }
 
@@ -160,7 +160,7 @@ fn sched_resume() -> ! {
             }
             3 => {
                 // get pid
-                get_context().a2 = get_cpu_data().curr_proc_idx as u64;
+                get_context().a2 = get_cpu_data().curr_pid as u64;
             }
             _ => {
                 println!("Unknown user interrupt occurred with code {}", int_code);
