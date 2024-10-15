@@ -12,6 +12,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "kernel_std"
+version = "0.1.0"
+dependencies = [
+ "derive",
+]
+
+[[package]]
 name = "proc-macro2"
 version = "1.0.86"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -30,13 +37,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "std"
-version = "0.1.0"
-dependencies = [
- "derive",
-]
-
-[[package]]
 name = "syn"
 version = "2.0.79"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -51,7 +51,7 @@ dependencies = [
 name = "test_program"
 version = "0.1.0"
 dependencies = [
- "std",
+ "kernel_std",
 ]
 
 [[package]]

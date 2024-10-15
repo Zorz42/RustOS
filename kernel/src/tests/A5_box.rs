@@ -1,6 +1,6 @@
 use crate::tests::KernelPerf;
 use kernel_test::{kernel_perf, kernel_test, kernel_test_mod};
-use std::{free, malloc, Box, Rng};
+use kernel_std::{free, malloc, Box, Rng};
 
 kernel_test_mod!(crate::tests::A5_box);
 

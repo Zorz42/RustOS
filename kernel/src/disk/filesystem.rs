@@ -3,7 +3,7 @@
 use core::mem::swap;
 use crate::memory::{DISK_OFFSET, PAGE_SIZE};
 use crate::disk::memory_disk::{get_mounted_disk, DiskBox};
-use std::{deserialize, serialize, String, Vec, Box, Mutable};
+use kernel_std::{deserialize, serialize, String, Vec, Box, Mutable};
 
 pub struct Path {
     dirs: Vec<String>,
@@ -41,7 +41,7 @@ impl Path {
     }
 }
 
-#[derive(std::derive::Serial)]
+#[derive(kernel_std::derive::Serial)]
 pub struct File {
     name: String,
     size: i32,
@@ -107,7 +107,7 @@ impl File {
     }
 }
 
-#[derive(std::derive::Serial)]
+#[derive(kernel_std::derive::Serial)]
 pub struct Directory {
     name: String,
     files: Vec::<File>,

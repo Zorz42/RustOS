@@ -1,6 +1,6 @@
 use crate::tests::get_test_disk;
 use kernel_test::{kernel_test, kernel_test_mod};
-use std::{print, println, Rng, Vec};
+use kernel_std::{print, println, Rng, Vec};
 
 kernel_test_mod!(crate::tests::A8_disk);
 

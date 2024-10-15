@@ -1,5 +1,5 @@
 use crate::memory::{alloc_continuous_pages, PAGE_SIZE};
-use std::Mutable;
+use kernel_std::Mutable;
 use crate::virtio::definitions::MAX_VIRTIO_ID;
 use crate::virtio::device::VirtioDevice;
 

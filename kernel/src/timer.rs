@@ -1,6 +1,6 @@
 use crate::boot::NUM_CORES;
 use crate::riscv::{get_mhartid, get_mie, get_mstatus, set_mie, set_mscratch, set_mstatus, set_mtvec, CLINT, MIE_TIMER, MSTATUS_MMI};
-use std::Lock;
+use kernel_std::Lock;
 use core::ptr::{addr_of, write_volatile};
 
 extern "C" {

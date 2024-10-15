@@ -2,7 +2,7 @@ use core::arch::asm;
 use core::ops::{Deref, DerefMut};
 use core::ptr::addr_of;
 use kernel_test::all_perf_tests;
-use std::{deserialize, get_spinlock_count, print, println, serialize, Mutable, String, Vec};
+use kernel_std::{deserialize, get_spinlock_count, print, println, serialize, Mutable, String, Vec};
 
 use crate::disk::disk::Disk;
 use crate::memory::bitset_size_bytes;

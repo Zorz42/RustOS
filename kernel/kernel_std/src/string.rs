@@ -1,5 +1,5 @@
 use core::fmt::{Display, Formatter, Write};
-use crate as std;
+use crate as kernel_std;
 use crate::vector::{VecIntoIterator, VecIterator};
 use crate::Vec;
 use core::ops::{Index, IndexMut};

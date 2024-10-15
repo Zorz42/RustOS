@@ -10,7 +10,7 @@ use crate::riscv::{enable_fpu, get_core_id, interrupts_enable};
 use crate::trap::switch_to_kernel_trap;
 use core::panic::PanicInfo;
 use core::sync::atomic::{fence, Ordering};
-use std::{get_spinlock_count, println, Box, String, Vec};
+use kernel_std::{get_spinlock_count, println, Box, String, Vec};
 use crate::disk::filesystem::{close_fs, get_fs, init_fs};
 use crate::disk::memory_disk::mount_disk;
 use crate::gpu::init_gpu;

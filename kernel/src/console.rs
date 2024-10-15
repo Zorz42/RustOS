@@ -1,5 +1,5 @@
 use core::arch::asm;
-use std::{print, println, String};
+use kernel_std::{print, println, String};
 use crate::input::{check_for_virtio_input_event, keycode_to_char, EventType};
 use crate::print::check_screen_refresh_for_print;
 use crate::timer::get_ticks;

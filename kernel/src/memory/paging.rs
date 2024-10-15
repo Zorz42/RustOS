@@ -7,8 +7,8 @@ use crate::memory::{get_kernel_top_address, HEAP_BASE_ADDR, HEAP_TREE_ADDR, ID_M
 use crate::riscv::{get_core_id, get_satp, set_satp};
 use core::intrinsics::write_bytes;
 use core::sync::atomic::{fence, Ordering};
-use std::init_std_memory;
-use std::Mutable;
+use kernel_std::init_std_memory;
+use kernel_std::Mutable;
 
 pub static SEGMENTS_BITSET: Mutable<BitSetRaw> = Mutable::new(BitSetRaw::new_empty());
 

@@ -5,7 +5,7 @@ use core::arch::{asm, global_asm};
 use core::fmt;
 use core::fmt::Write;
 use core::panic::PanicInfo;
-use std::{init_print, print, println};
+use kernel_std::{init_print, print, println};
 
 global_asm!(include_str!("asm/entry.S"));
 

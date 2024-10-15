@@ -30,7 +30,7 @@ pub fn serial_derive(input: TokenStream) -> TokenStream {
     });
 
     let expanded = quote! (
-        impl std::Serial for #name {
+        impl kernel_std::Serial for #name {
             fn serialize(&mut self, vec: &mut Vec<u8>) {
                 #(#fields1)*
             }

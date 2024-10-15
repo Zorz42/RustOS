@@ -1,5 +1,5 @@
 use crate::virtio::definitions::MAX_VIRTIO_ID;
-use std::Vec;
+use kernel_std::Vec;
 use crate::virtio::device::VirtioDevice;
 
 pub const VIRTIO_BLK_F_RO: u32 = 5; // Disk is read-only

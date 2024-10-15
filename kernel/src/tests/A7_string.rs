@@ -1,5 +1,5 @@
 use kernel_test::{kernel_test, kernel_test_mod};
-use std::{String, Vec};
+use kernel_std::{String, Vec};
 kernel_test_mod!(crate::tests::A7_string);
 
 #[kernel_test]

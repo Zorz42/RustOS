@@ -21,7 +21,7 @@ panic = "abort"
 [dependencies]
 # this is just a macro, it doesn't get included in the execuable
 paste = "1.0"
-std = { path = "std" }
+kernel_std = { path = "kernel_std" }
 kernel_test = { path = "kernel_test" }
 
 [lints.clippy]

@@ -1,6 +1,6 @@
 use core::fmt;
 use core::fmt::Write;
-use std::Mutable;
+use kernel_std::Mutable;
 use crate::riscv::{get_core_id, interrupts_get};
 use crate::text_renderer::{get_screen_height_chars, get_screen_width_chars, render_text_to_screen, scroll, set_char, TextColor};
 use crate::timer::get_ticks;
@@ -65,7 +65,7 @@ impl Writer {
 static WRITER: Mutable<Writer> = Mutable::new(Writer::new());
 
 pub fn init_print() {
-    std::init_print(&_print);
+    kernel_std::init_print(&_print);
 }
 
 static LAST_REFRESH: Mutable<u64> = Mutable::new(0);

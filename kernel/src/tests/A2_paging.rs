@@ -3,7 +3,7 @@ use kernel_test::{kernel_test, kernel_test_mod};
 
 use crate::memory::map_page;
 use crate::memory::{alloc_page, free_page, unmap_page, virt_to_phys, PhysAddr, VirtAddr, PAGE_SIZE, TESTING_OFFSET};
-use std::Rng;
+use kernel_std::Rng;
 
 kernel_test_mod!(crate::tests::A2_paging);
 

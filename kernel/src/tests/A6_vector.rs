@@ -1,6 +1,6 @@
 use crate::tests::KernelPerf;
 use kernel_test::{kernel_perf, kernel_test, kernel_test_mod};
-use std::{deserialize, free, malloc, serialize, Rng, Serial, String, Vec};
+use kernel_std::{deserialize, free, malloc, serialize, Rng, Serial, String, Vec};
 kernel_test_mod!(crate::tests::A6_vector);
 
 #[kernel_test]
@@ -179,7 +179,7 @@ where
     }
 }
 
-#[derive(std::derive::Serial, PartialEq)]
+#[derive(kernel_std::derive::Serial, PartialEq)]
 struct Sample {
     a: i32,
     b: u8,

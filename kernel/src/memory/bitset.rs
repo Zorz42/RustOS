@@ -1,6 +1,6 @@
 use core::ops::{Deref, DerefMut};
 use core::ptr::{copy_nonoverlapping, write_bytes};
-use std::Vec;
+use kernel_std::Vec;
 
 pub struct BitSetRaw {
     data: *mut u64,

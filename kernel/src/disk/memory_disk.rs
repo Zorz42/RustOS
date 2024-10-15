@@ -1,5 +1,5 @@
 use core::ptr::{copy_nonoverlapping, read_volatile, write_volatile};
-use std::{deserialize, serialize, Serial, Vec, Mutable};
+use kernel_std::{deserialize, serialize, Serial, Vec, Mutable};
 
 use crate::disk::disk::Disk;
 use crate::memory::{map_page_auto, VirtAddr, DISK_OFFSET, PAGE_SIZE, unmap_page, BitSet};
