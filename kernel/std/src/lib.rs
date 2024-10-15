@@ -23,7 +23,7 @@ pub use serial::{deserialize, serialize, Serial};
 pub use string::String;
 pub use vector::Vec;
 pub use print::{init_print, print_raw};
-pub use spinlock::Lock;
+pub use spinlock::{Lock, get_spinlock_count};
 pub use mutable::{Mutable, MutableToken};
 
 static mut PAGE_ALLOCATOR: Option<&'static dyn Fn(*mut u8, bool)> = None;

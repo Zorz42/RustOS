@@ -1,7 +1,4 @@
 use core::fmt;
-use core::intrinsics::{copy_nonoverlapping, write_bytes};
-use crate::font::{CHAR_HEIGHT, CHAR_WIDTH, DEFAULT_FONT};
-use crate::gpu::{get_framebuffer, get_screen_size, refresh_screen};
 use core::fmt::Write;
 use std::Mutable;
 use crate::riscv::{get_core_id, interrupts_get};

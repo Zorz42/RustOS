@@ -7,6 +7,14 @@ pub struct KernelLock {
     locked_by: i32, // which core locked it?
 }
 
+static mut KERN_SPINLOCK_COUNT: u64 = 0;
+
+pub fn get_kern_spinlock_count() -> u64 {
+    unsafe {
+        KERN_SPINLOCK_COUNT
+    }
+}
+
 impl KernelLock {
     pub const fn new() -> Self {
         Self { acquired: 0, locked_by: 0 }
@@ -26,7 +34,9 @@ impl KernelLock {
     }
 
     pub fn spinlock(&self) {
-        while !self.try_lock() {}
+        while !self.try_lock() {
+
+        }
     }
 
     pub fn unlock(&self) {

@@ -2,16 +2,18 @@ use core::arch::asm;
 use core::ops::{Deref, DerefMut};
 use core::ptr::addr_of;
 use kernel_test::all_perf_tests;
-use std::{deserialize, print, println, serialize, Mutable, String, Vec};
+use std::{deserialize, get_spinlock_count, print, println, serialize, Mutable, String, Vec};
 
 use crate::disk::disk::Disk;
 use crate::memory::bitset_size_bytes;
-use crate::print::{reset_print_color, set_print_color, TextColor};
+use crate::print::{reset_print_color, set_print_color};
 use crate::timer::get_ticks;
 use kernel_test::all_tests;
 use crate::disk::filesystem::get_fs;
 use crate::riscv::get_instruction_count;
 use crate::ROOT_MAGIC;
+use crate::spinlock::get_kern_spinlock_count;
+use crate::text_renderer::TextColor;
 
 mod A0_rand;
 mod A1_bitset;

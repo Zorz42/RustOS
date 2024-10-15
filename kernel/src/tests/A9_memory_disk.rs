@@ -1,12 +1,8 @@
-use core::arch::asm;
-use core::hint::black_box;
-use core::ptr::write_volatile;
 use crate::memory::{DISK_OFFSET, PAGE_SIZE};
 use crate::disk::memory_disk::{get_mounted_disk, mount_disk, unmount_disk, DiskBox};
 use crate::tests::get_test_disk;
 use kernel_test::{kernel_test, kernel_test_mod};
-use std::{deserialize, println, serialize, Rng, Vec};
-use crate::print::scroll;
+use std::{deserialize, serialize, Rng, Vec};
 
 kernel_test_mod!(crate::tests::A9_memory_disk);
 

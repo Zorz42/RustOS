@@ -1,5 +1,5 @@
 use core::intrinsics::write_bytes;
-use std::{println, Mutable, Vec};
+use std::{Mutable, Vec};
 use crate::font::{CHAR_HEIGHT, CHAR_WIDTH, DEFAULT_FONT};
 use crate::gpu::{get_framebuffer, get_screen_size, refresh_screen};
 
@@ -47,7 +47,7 @@ const fn text_color_to_rgb(color: TextColor) -> (u8, u8, u8) {
 
 const BORDER_PADDING: usize = 8;
 
-static SCREEN_CHARS: Mutable<Vec<u8>> = Mutable::new(unsafe { Vec::new_empty() });
+static SCREEN_CHARS: Mutable<Vec<(u8, TextColor, TextColor)>> = Mutable::new(unsafe { Vec::new_empty() });
 static mut SCREEN_WIDTH_CHARS: usize = 0;
 static mut SCREEN_HEIGHT_CHARS: usize = 0;
 
@@ -57,9 +57,9 @@ pub fn init_text_renderer() {
         SCREEN_HEIGHT_CHARS = (get_screen_size().1 as usize - 2 * BORDER_PADDING) / CHAR_HEIGHT;
     }
     let t = SCREEN_CHARS.borrow();
-    *SCREEN_CHARS.get_mut(&t) = Vec::new_with_size(get_screen_width_chars() * get_screen_height_chars());
+    *SCREEN_CHARS.get_mut(&t) = unsafe { Vec::new_with_size_uninit(get_screen_width_chars() * get_screen_height_chars()) };
     for c in SCREEN_CHARS.get_mut(&t) {
-        *c = b' ';
+        *c = (b' ', TextColor::White, TextColor::Black);
     }
     SCREEN_CHARS.release(t);
 }
@@ -87,7 +87,7 @@ pub fn scroll() {
         }
     }
     for x in 0..screen_width {
-        screen_chars[(screen_height - 1) * screen_width + x] = b' ';
+        screen_chars[(screen_height - 1) * screen_width + x] = (b' ', TextColor::White, TextColor::Black);
     }
     SCREEN_CHARS.release(t);
 }
@@ -144,7 +144,7 @@ fn draw_char(x: usize, y: usize, c: u8, text_color: (u8, u8, u8), background_col
 pub fn set_char(x: usize, y: usize, c: u8, text_color: TextColor, background_color: TextColor) {
     let t = SCREEN_CHARS.borrow();
     let screen_width = unsafe { SCREEN_WIDTH_CHARS };
-    SCREEN_CHARS.get_mut(&t)[x + screen_width * y] = c;
+    SCREEN_CHARS.get_mut(&t)[x + screen_width * y] = (c, text_color, background_color);
     SCREEN_CHARS.release(t);
 }
 
@@ -155,7 +155,8 @@ pub fn render_text_to_screen() {
 
     for y in 0..get_screen_height_chars() {
         for x in 0..get_screen_width_chars() {
-            draw_char(x, y, screen_chars[x + get_screen_width_chars() * y], (255, 255, 255), (0, 0, 0));
+            let ch = screen_chars[x + get_screen_width_chars() * y];
+            draw_char(x, y, ch.0, text_color_to_rgb(ch.1), text_color_to_rgb(ch.2));
         }
     }
 

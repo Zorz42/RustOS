@@ -10,13 +10,14 @@ use crate::riscv::{enable_fpu, get_core_id, interrupts_enable};
 use crate::trap::switch_to_kernel_trap;
 use core::panic::PanicInfo;
 use core::sync::atomic::{fence, Ordering};
-use std::{println, Box, String, Vec};
+use std::{get_spinlock_count, println, Box, String, Vec};
 use crate::disk::filesystem::{close_fs, get_fs, init_fs};
 use crate::disk::memory_disk::mount_disk;
 use crate::gpu::init_gpu;
 use crate::input::{init_input_devices};
 use crate::plic::{plicinit, plicinithart};
 use crate::scheduler::{scheduler, run_program};
+use crate::spinlock::get_kern_spinlock_count;
 use crate::text_renderer::{get_screen_height_chars, get_screen_width_chars, init_text_renderer, TextColor};
 
 mod boot;
