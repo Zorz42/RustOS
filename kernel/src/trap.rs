@@ -5,7 +5,7 @@ use std::{print, println};
 use crate::input::virtio_input_irq;
 use crate::plic::{plic_complete, plic_irq};
 use crate::print::check_screen_refresh_for_print;
-use crate::scheduler::{get_context, get_cpu_data, mark_process_interrupted, scheduler, scheduler_next_proc};
+use crate::scheduler::{get_context, get_cpu_data, mark_process_interrupted, scheduler, scheduler_next_proc, terminate_process};
 use crate::virtio::device::virtio_irq;
 
 global_asm!(include_str!("asm/kernelvec.S"));
@@ -161,6 +161,10 @@ fn sched_resume() -> ! {
             3 => {
                 // get pid
                 get_context().a2 = get_cpu_data().curr_pid as u64;
+            }
+            4 => {
+                // exit process
+                terminate_process(get_cpu_data().last_pid);
             }
             _ => {
                 println!("Unknown user interrupt occurred with code {}", int_code);

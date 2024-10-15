@@ -151,6 +151,17 @@ pub fn create_page_table() -> PageTable {
     page_table
 }
 
+pub fn destroy_page_table(page_table: PageTable) {
+    for i in 0..PAGE_TABLE_SIZE {
+        let entry = *get_sub_page_table_entry(page_table, i);
+        let kernel_entry = *get_sub_page_table_entry(unsafe { KERNEL_PAGE_TABLE }, i);
+        if is_entry_table(entry) && entry != kernel_entry {
+            destroy_page_table(get_entry_addr(entry).unwrap());
+        }
+    }
+    free_page(page_table as PhysAddr);
+}
+
 pub fn switch_to_page_table(page_table: PageTable) {
     debug_assert_eq!(page_table as u64 % PAGE_SIZE, 0);
     fence(Ordering::Release);

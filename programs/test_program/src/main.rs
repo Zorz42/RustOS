@@ -62,21 +62,24 @@ pub fn _print(args: fmt::Arguments) {
     writer.write_fmt(args).unwrap();
 }
 
+pub fn exit() -> ! {
+    syscall0(4);
+    loop {}
+}
+
 #[no_mangle]
 fn rust_entry() -> ! {
     init_print(&_print);
 
     main();
 
-    loop {
-
-    }
+    exit();
 }
 
 const ARRAY_SIZE: usize = 100000;
 static mut ARRAY: [u32; ARRAY_SIZE] = [0; ARRAY_SIZE];
 
-pub fn main() -> i32 {
+pub fn main() {
     println!("Hello, world!");
 
     let mut curr_ticks = get_ticks() / 1000;
@@ -84,6 +87,9 @@ pub fn main() -> i32 {
         if get_ticks() / 1000 != curr_ticks {
             curr_ticks = get_ticks() / 1000;
             println!("Ticks {}: {}", get_pid(), get_ticks());
+            if curr_ticks >= 5 + get_pid() {
+                break;
+            }
         }
     }
 }

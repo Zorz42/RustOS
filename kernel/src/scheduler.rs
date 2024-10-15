@@ -2,7 +2,7 @@ use core::arch::asm;
 use core::ptr::{copy, write_bytes};
 use std::{println, Lock, String, Vec};
 use crate::disk::filesystem::get_fs;
-use crate::memory::{create_page_table, map_page_auto, switch_to_page_table, PageTable, VirtAddr, KERNEL_VIRTUAL_TOP, PAGE_SIZE, USER_CONTEXT, USER_STACK};
+use crate::memory::{create_page_table, destroy_page_table, map_page_auto, switch_to_page_table, PageTable, VirtAddr, KERNEL_VIRTUAL_TOP, PAGE_SIZE, USER_CONTEXT, USER_STACK};
 use crate::print::check_screen_refresh_for_print;
 use crate::riscv::{get_core_id, get_sstatus, interrupts_enable, set_sstatus, SSTATUS_SPP, SSTATUS_UIE};
 use crate::trap::switch_to_user_trap;
@@ -320,6 +320,17 @@ pub fn mark_process_interrupted(pid: usize) {
 
     unsafe {
         PROCTABLE[pid].as_mut().unwrap().state = ProcessState::Ready;
+    }
+
+    PROCTABLE_LOCKS[pid].unlock();
+}
+
+pub fn terminate_process(pid: usize) {
+    PROCTABLE_LOCKS[pid].spinlock();
+
+    unsafe {
+        destroy_page_table(PROCTABLE[pid].as_ref().unwrap().page_table);
+        PROCTABLE[pid] = None;
     }
 
     PROCTABLE_LOCKS[pid].unlock();
