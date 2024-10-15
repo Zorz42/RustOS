@@ -2,16 +2,23 @@
 use core::arch::asm;
 use core::fmt;
 use core::fmt::Write;
+use core::panic::PanicInfo;
 use kernel_std::init_print;
 
 pub use kernel_std::{print, println};
-
 
 extern "C" {
     fn main();
 }
 
-pub fn init() -> ! {
+#[doc(hidden)]
+pub fn _on_panic(info: &PanicInfo) -> ! {
+    println!("{}", info);
+    exit();
+}
+
+#[doc(hidden)]
+pub fn _init() -> ! {
     init_print(&_print);
 
     unsafe {

@@ -13,13 +13,12 @@ _start:
 
 #[no_mangle]
 extern "C" fn rust_entry() -> ! {
-    std::init();
+    std::_init();
 }
 
 #[panic_handler]
 fn panic(info: &core::panic::PanicInfo) -> ! {
-    println!("panic: {}", info);
-    std::exit();
+    std::_on_panic(info);
 }
 
 #[no_mangle]
