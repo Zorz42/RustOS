@@ -8,7 +8,13 @@ pub struct Ptr<T> {
 impl<T> Ptr<T> {
     pub fn new(size: usize) -> Self {
         Self {
-            ptr: malloc(size * core::mem::size_of::<T>()) as *mut T,
+            ptr: malloc(size * size_of::<T>()) as *mut T,
+        }
+    }
+
+    pub const unsafe fn new_empty() -> Self {
+        Self {
+            ptr: core::ptr::null_mut(),
         }
     }
 
@@ -37,7 +43,9 @@ impl<T: Default> Ptr<T> {
 impl<T> Drop for Ptr<T> {
     fn drop(&mut self) {
         unsafe {
-            free(self.ptr as *mut u8);
+            if self.ptr != 0 as *mut T {
+                free(self.ptr as *mut u8);
+            }
         }
     }
 }

@@ -5,8 +5,8 @@ use core::arch::asm;
 use crate::boot::infinite_loop;
 use crate::disk::disk::{Disk, scan_for_disks};
 use crate::memory::{get_num_free_pages, init_paging, init_paging_hart, NUM_PAGES};
-use crate::print::{init_print, reset_print_color, set_print_color, TextColor};
-use crate::riscv::{enable_fpu, get_core_id, get_cycle, get_instret, get_instruction_count, get_time, interrupts_enable};
+use crate::print::{init_print, reset_print_color, set_print_color};
+use crate::riscv::{enable_fpu, get_core_id, interrupts_enable};
 use crate::trap::switch_to_kernel_trap;
 use core::panic::PanicInfo;
 use core::sync::atomic::{fence, Ordering};
@@ -17,6 +17,7 @@ use crate::gpu::init_gpu;
 use crate::input::{init_input_devices};
 use crate::plic::{plicinit, plicinithart};
 use crate::scheduler::{scheduler, run_program};
+use crate::text_renderer::{get_screen_height_chars, get_screen_width_chars, init_text_renderer, TextColor};
 
 mod boot;
 mod disk;
@@ -35,6 +36,7 @@ mod font;
 mod input;
 mod console;
 mod scheduler;
+mod text_renderer;
 
 pub const ROOT_MAGIC: u32 = 0x63726591;
 
@@ -66,8 +68,9 @@ pub fn main() {
         plicinit();
         plicinithart();
 
-        init_print();
         init_gpu();
+        init_print();
+        init_text_renderer();
         let mut disks = scan_for_disks();
 
         println!("Initializing kernel with core 0");

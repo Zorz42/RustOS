@@ -37,6 +37,14 @@ impl<T> Vec<T> {
         }
     }
 
+    pub const unsafe fn new_empty() -> Self {
+        Self {
+            capacity: 0,
+            size: 0,
+            arr: Ptr::new_empty(),
+        }
+    }
+
     pub fn new() -> Self {
         unsafe { Self::new_with_size_uninit(0) }
     }
