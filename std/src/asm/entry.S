@@ -1,4 +1,4 @@
 .section .init
 
-init:
+_start:
     j rust_entry

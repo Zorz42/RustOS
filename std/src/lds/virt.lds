@@ -25,6 +25,7 @@ SECTIONS {
     .rodata ALIGN(0x1000): { *(.rodata .rodata.*) } > REGION_RODATA
     .data ALIGN(0x1000): { *(.data) } > REGION_DATA
     .bss ALIGN(0x1000): { *(.bss) } > REGION_DATA
+    .eh_frame ALIGN(0x1000): { *(.eh_frame) } > REGION_DATA
     _end = .;
 }
 

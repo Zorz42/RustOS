@@ -19,4 +19,4 @@ opt-level = 3
 panic = "abort"
 
 [dependencies]
-kernel_std = { path = "../../kernel/kernel_std" }
+std = { path = "../../std" }
