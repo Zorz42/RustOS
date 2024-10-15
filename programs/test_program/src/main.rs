@@ -1,11 +1,9 @@
 #![no_std]
 #![no_main]
 
-use core::arch::global_asm;
-use core::panic::PanicInfo;
-use std::{exit, get_pid, get_ticks, println};
+use std::{get_pid, get_ticks, println};
 
-global_asm!(r#"
+core::arch::global_asm!(r#"
 .section .init
 
 _start:
@@ -16,6 +14,12 @@ _start:
 #[no_mangle]
 extern "C" fn rust_entry() -> ! {
     std::init();
+}
+
+#[panic_handler]
+fn panic(info: &core::panic::PanicInfo) -> ! {
+    println!("panic: {}", info);
+    std::exit();
 }
 
 #[no_mangle]
@@ -32,10 +36,4 @@ pub extern "C" fn main() {
             }
         }
     }
-}
-
-#[panic_handler]
-fn panic(info: &PanicInfo) -> ! {
-    println!("panic: {}", info);
-    exit();
 }
