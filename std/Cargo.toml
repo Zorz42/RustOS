@@ -5,3 +5,4 @@ edition = "2021"
 
 [dependencies]
 kernel_std = { path = "../kernel/kernel_std" }
+std_derive = { path = "std_derive" }

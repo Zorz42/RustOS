@@ -6,6 +6,7 @@ use core::panic::PanicInfo;
 use kernel_std::init_print;
 
 pub use kernel_std::{print, println};
+pub use std_derive::main as std_main;
 
 extern "C" {
     fn main();
