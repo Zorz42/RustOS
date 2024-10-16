@@ -5,14 +5,6 @@ pub struct Lock {
     acquired: i32,
 }
 
-static mut SPINLOCK_COUNT: u64 = 0;
-
-pub fn get_spinlock_count() -> u64 {
-    unsafe {
-        SPINLOCK_COUNT
-    }
-}
-
 unsafe fn amoswap(addr: *mut i32, val: i32) -> i32 {
     let res: i32;
     asm!("amoswap.w {}, {}, ({})", out(reg) res, in(reg) val, in(reg) addr as u64);
@@ -32,11 +24,7 @@ impl Lock {
     }
 
     pub fn spinlock(&self) {
-        while !self.try_lock() {
-            unsafe {
-                SPINLOCK_COUNT += 1;
-            }
-        }
+        while !self.try_lock() {}
     }
 
     pub fn unlock(&self) {
