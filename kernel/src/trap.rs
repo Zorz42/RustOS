@@ -3,6 +3,7 @@ use crate::riscv::{get_core_id, get_scause, get_sepc, get_sip, get_sstatus, get_
 use crate::timer::{get_ticks, tick};
 use kernel_std::{print, println};
 use crate::input::virtio_input_irq;
+use crate::memory::{free_page, map_page_auto};
 use crate::plic::{plic_complete, plic_irq};
 use crate::print::check_screen_refresh_for_print;
 use crate::scheduler::{get_context, get_cpu_data, mark_process_interrupted, scheduler, scheduler_next_proc, terminate_process};
@@ -165,6 +166,17 @@ fn sched_resume() -> ! {
             4 => {
                 // exit process
                 terminate_process(get_cpu_data().last_pid);
+            }
+            5 => {
+                // Alloc page
+                let addr = get_context().a3 as *mut u8;
+                let ignore_if_exists = get_context().a4 != 0;
+                map_page_auto(addr, ignore_if_exists, true, true, false);
+            }
+            6 => {
+                // Dealloc page
+                let addr = get_context().a3 as *mut u8;
+                free_page(addr as u64);
             }
             _ => {
                 println!("Unknown user interrupt occurred with code {}", int_code);

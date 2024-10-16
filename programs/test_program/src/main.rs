@@ -1,8 +1,6 @@
 #![no_std]
 #![no_main]
 
-use std::{get_pid, get_ticks, println};
-
 #[std::std_main]
 fn main() {
     println!("Hello, world!");

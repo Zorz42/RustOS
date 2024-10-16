@@ -109,7 +109,8 @@ pub fn main() {
         println!("{used_memory} MB / {all_memory} MB of RAM used ({portion:.1}%)");
 
         // write to file "test_program" with contents from the test program
-        let test_program = include_bytes!("../../programs/test_program/target/riscv64gc-unknown-none-elf/debug/test_program");
+
+        let test_program = include_bytes!("../../programs/test_program/target/riscv64gc-unknown-none-elf/release/test_program");
         let test_program_vec = Vec::new_from_slice(test_program);
         get_fs().create_file(&String::from("test_program")).write(&test_program_vec);
 

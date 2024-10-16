@@ -7,6 +7,7 @@ pub fn main(_attr: TokenStream, item: TokenStream) -> TokenStream {
     assert!(item.contains("fn main"), "main function not found");
     let item = item.replace("fn main", "pub extern \"C\" fn main");
     let code = r#"
+        use std::*;
         core::arch::global_asm!(".section .init\n _start: j rust_entry");
         #[no_mangle]
         extern "C" fn rust_entry() -> ! {
