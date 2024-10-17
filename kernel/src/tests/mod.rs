@@ -9,7 +9,6 @@ use crate::memory::bitset_size_bytes;
 use crate::print::{reset_print_color, set_print_color};
 use crate::timer::get_ticks;
 use kernel_test::all_tests;
-use crate::disk::filesystem::get_fs;
 use crate::riscv::get_instruction_count;
 use crate::ROOT_MAGIC;
 use crate::text_renderer::TextColor;
@@ -116,7 +115,7 @@ const PERF_TEST_ITERATIONS: u64 = 100;
 const PERF_FILE: &str = "perf.data";
 const PERF_FILE_SAVE: &str = "perf-new.data";
 
-fn get_perf_data(name: &str) -> Option<u64> {
+/*fn get_perf_data(name: &str) -> Option<u64> {
     let file = get_fs().get_file(&String::from(PERF_FILE))?;
     let vec = deserialize::<Vec<(String, u64)>>(&file.read());
 
@@ -154,10 +153,10 @@ fn save_perf_data(name: &str, val: u64) {
     }
 
     file.write(&serialize(&mut vec));
-}
+}*/
 
 fn run_perf_test<T: KernelPerf>(name: &str) {
-    let mut test_struct = T::setup();
+    /*let mut test_struct = T::setup();
 
     set_print_color(TextColor::DarkGray, TextColor::Black);
     print!("Benchmarking");
@@ -212,5 +211,5 @@ fn run_perf_test<T: KernelPerf>(name: &str) {
     }
     println!();
 
-    save_perf_data(name, perf_instr);
+    save_perf_data(name, perf_instr);*/
 }

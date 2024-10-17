@@ -1,7 +1,6 @@
 use core::arch::asm;
 use core::ptr::{copy, write_bytes};
 use kernel_std::{println, Lock, String, Vec};
-use crate::disk::filesystem::get_fs;
 use crate::memory::{create_page_table, destroy_page_table, map_page_auto, switch_to_page_table, PageTable, VirtAddr, KERNEL_VIRTUAL_TOP, PAGE_SIZE, USER_CONTEXT, USER_STACK};
 use crate::print::check_screen_refresh_for_print;
 use crate::riscv::{get_core_id, get_sstatus, interrupts_enable, set_sstatus, SSTATUS_SPP, SSTATUS_UIE};
@@ -175,7 +174,7 @@ fn get_free_proc() -> usize {
 }
 
 pub fn run_program(path: &String) {
-    //println!("Running program: {}", path);
+    /*//println!("Running program: {}", path);
 
     let program = get_fs().get_file(path).unwrap().read();
     //println!("Program size {}", program.size());
@@ -258,7 +257,7 @@ pub fn run_program(path: &String) {
     }
     PROCTABLE_LOCKS[free_proc].unlock();
 
-    //println!("entry is at {:#x}", elf_header.entry);
+    //println!("entry is at {:#x}", elf_header.entry);*/
 }
 
 extern "C" {

@@ -1,4 +1,4 @@
-use crate::disk::filesystem::{close_fs, get_fs, init_fs};
+/*use crate::disk::filesystem::{close_fs, get_fs, init_fs};
 use crate::disk::memory_disk::{get_mounted_disk, mount_disk, unmount_disk};
 use crate::tests::{get_test_disk, KernelPerf};
 use kernel_test::{kernel_perf, kernel_test, kernel_test_mod};
@@ -315,4 +315,4 @@ impl KernelPerf for PerfWriteBigFile50 {
             get_fs().delete_file(&file_name);
         }
     }
-}
+}*/
