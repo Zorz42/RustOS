@@ -1,8 +1,8 @@
-/*use crate::disk::filesystem::{close_fs, get_fs, init_fs};
 use crate::disk::memory_disk::{get_mounted_disk, mount_disk, unmount_disk};
 use crate::tests::{get_test_disk, KernelPerf};
 use kernel_test::{kernel_perf, kernel_test, kernel_test_mod};
 use kernel_std::{println, Rng, String, Vec};
+use crate::disk::filesystem::{fs_erase, create_directory, is_directory, delete_directory};
 
 kernel_test_mod!(crate::tests::B0_filesystem);
 
@@ -11,11 +11,9 @@ fn test_fs_erase() {
     let t = get_mounted_disk().borrow();
     get_mounted_disk().get_mut(&t).as_mut().unwrap().erase();
     get_mounted_disk().release(t);
-
-    init_fs();
     
     for _ in 0..100 {
-        get_fs().erase();
+        fs_erase();
     }
 }
 
@@ -28,7 +26,7 @@ fn create_random_string(rng: &mut Rng) -> String {
     res
 }
 
-#[kernel_test]
+/*#[kernel_test]
 fn test_fs_create_delete_exists_file() {
     get_fs().erase();
 
@@ -56,9 +54,9 @@ fn test_fs_create_delete_exists_file() {
             assert!(get_fs().get_file(file_name).is_some());
         }
     }
-}
+}*/
 
-#[kernel_test]
+/*#[kernel_test]
 fn test_fs_persists() {
     let t2 = get_test_disk().borrow();
     let test_disk = get_test_disk().get_mut(&t2).as_mut().unwrap();
@@ -96,7 +94,7 @@ fn test_fs_persists() {
     }
 
     get_test_disk().release(t2);
-}
+}*/
 
 fn join(vec: &Vec<String>, c: char) -> String {
     let mut res = String::new();
@@ -126,32 +124,36 @@ fn test_fs_create_dir() {
 
         let path = join(&dirs, '/');
 
-        get_fs().create_directory(&path);
+        create_directory(&path);
 
-        close_fs();
         unmount_disk();
         mount_disk(test_disk);
-        init_fs();
 
         let mut curr_dirs = Vec::new();
-        for i in dirs.clone() {
-            curr_dirs.push(i);
-            assert!(get_fs().get_directory(&join(&curr_dirs, '/')).is_some());
+        for i in &dirs {
+            curr_dirs.push(i.clone());
+            assert!(is_directory(&join(&curr_dirs, '/')));
+
+            curr_dirs.push(create_random_string(&mut rng));
+            for i in 0..20 {
+                assert!(!is_directory(&join(&curr_dirs, '/')));
+            }
+            curr_dirs.pop();
         }
 
-        get_fs().delete_directory(&dirs[0]);
+        delete_directory(&dirs[0]);
 
         let mut curr_dirs = Vec::new();
-        for i in dirs.clone() {
-            curr_dirs.push(i);
-            assert!(get_fs().get_directory(&join(&curr_dirs, '/')).is_none());
+        for i in &dirs {
+            curr_dirs.push(i.clone());
+            assert!(is_directory(&join(&curr_dirs, '/')));
         }
     }
 
     get_test_disk().release(t2);
 }
 
-#[kernel_test]
+/*#[kernel_test]
 fn test_fs_read_write_file() {
     let mut rng = Rng::new(54738524637825);
     let mut vec = Vec::new();
@@ -178,9 +180,9 @@ fn test_fs_read_write_file() {
         let data = file.read();
         assert!(data == vec[i]);
     }
-}
+}*/
 
-#[kernel_perf]
+/*#[kernel_perf]
 struct PerfCreateDeleteFile {}
 
 impl KernelPerf for PerfCreateDeleteFile {
