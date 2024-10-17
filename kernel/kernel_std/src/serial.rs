@@ -56,3 +56,25 @@ implement_serial_direct!(f64);
 implement_serial_direct!(isize);
 implement_serial_direct!(usize);
 implement_serial_direct!(char);
+
+// implement serial for tuple
+macro_rules! implement_serial_tuple {
+    ($($T:ident),*) => {
+        impl<$($T: Serial),*> Serial for ($($T,)*) {
+            fn serialize(&mut self, vec: &mut Vec<u8>) {
+                let ($(ref mut $T,)*) = *self;
+                $($T.serialize(vec);)*
+            }
+
+            fn deserialize(vec: &Vec<u8>, idx: &mut usize) -> Self {
+                ($($T::deserialize(vec, idx),)*)
+            }
+        }
+    };
+}
+
+implement_serial_tuple!(A, B);
+implement_serial_tuple!(A, B, C);
+implement_serial_tuple!(A, B, C, D);
+implement_serial_tuple!(A, B, C, D, E);
+implement_serial_tuple!(A, B, C, D, E, F);
