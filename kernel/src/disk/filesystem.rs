@@ -1,4 +1,4 @@
-use kernel_std::{deserialize, String, Vec};
+use kernel_std::{deserialize, serialize, String, Vec};
 use kernel_std::derive::Serial;
 use crate::disk::memory_disk::get_mounted_disk;
 use crate::memory::{DISK_OFFSET, PAGE_SIZE};
@@ -57,15 +57,115 @@ struct Directory {
 
 fn load_directory(pages: &Vec<usize>, size: usize) -> Directory {
     let data = read_pages_from_disk(pages, size);
-    deserialize(&data)
+    let res = deserialize(&data);
+    let t = get_mounted_disk().borrow();
+    for page in pages {
+        get_mounted_disk().get_mut(&t).as_mut().unwrap().free_page(*page as i32);
+    }
+    get_mounted_disk().release(t);
+    res
+}
+
+fn store_directory(directory: &mut Directory) -> (Vec<usize>, usize) {
+    let data = serialize(directory);
+    let mut pages = Vec::new();
+    let size = data.size();
+    let t = get_mounted_disk().borrow();
+    let num_pages = (size + PAGE_SIZE as usize - 1) / PAGE_SIZE as usize;
+    for _ in 0..num_pages {
+        pages.push(get_mounted_disk().get_mut(&t).as_mut().unwrap().alloc_page() as usize);
+    }
+    get_mounted_disk().release(t);
+    write_to_pages_on_disk(&pages, &data);
+    (pages, data.size())
 }
 
 pub fn fs_erase() {
+    let t = get_mounted_disk().borrow();
+    get_mounted_disk().get_mut(&t).as_mut().unwrap().erase();
+    get_mounted_disk().release(t);
 
+    let mut root = Directory {
+        subdirectories: Vec::new(),
+    };
+
+    let (pages, size) = store_directory(&mut root);
+    let head = serialize(&mut (pages, size));
+
+    let t = get_mounted_disk().borrow();
+    get_mounted_disk().get_mut(&t).as_mut().unwrap().set_head(&head);
+    get_mounted_disk().release(t);
+}
+
+fn get_root() -> Directory {
+    let t = get_mounted_disk().borrow();
+    let head = get_mounted_disk().get_mut(&t).as_mut().unwrap().get_head();
+    get_mounted_disk().release(t);
+
+    let (pages, size) = deserialize(&head);
+    load_directory(&pages, size)
+}
+
+fn parse_path(path: &String) -> Vec<String> {
+    let mut res = Vec::new();
+    let mut curr = String::new();
+    for c in path {
+        if *c == '/' {
+            if curr.size() > 0 {
+                res.push(curr);
+                curr = String::new();
+            }
+        } else {
+            curr.push(*c);
+        }
+    }
+    if curr.size() > 0 {
+        res.push(curr);
+    }
+
+    let mut res2 = Vec::new();
+    for i in res {
+        if i == String::from(".") {
+            continue;
+        }
+
+        if i == String::from("..") {
+            res2.pop();
+            continue;
+        }
+
+        res2.push(i);
+    }
+
+    res2
 }
 
 pub fn create_directory(path: &String) {
+    let mut dirs = Vec::new();
+    dirs.push(get_root());
+    let path = parse_path(path);
 
+    for dir in path {
+        let curr_dir = &dirs[dirs.size() - 1];
+        let mut dir_entry = None;
+        for entry in curr_dir.subdirectories {
+            if entry.2 == dir {
+                dir_entry = Some(entry);
+            }
+        }
+
+        if let Some((pages, size, _)) = dir_entry {
+            dirs.push(load_directory(&pages, size));
+        } else {
+            let mut new_dir = Directory {
+                subdirectories: Vec::new(),
+            };
+            let (pages, size) = store_directory(&mut new_dir);
+            dirs.push(new_dir);
+            let curr_dir = &mut dirs[dirs.size() - 2];
+            curr_dir.subdirectories.push((pages, size, dir));
+        }
+    }
 }
 
 pub fn is_directory(path: &String) -> bool {
