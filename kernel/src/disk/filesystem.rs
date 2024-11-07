@@ -148,21 +148,22 @@ pub fn create_directory(path: &String) {
     for dir in path {
         let curr_dir = &dirs[dirs.size() - 1];
         let mut dir_entry = None;
-        for entry in curr_dir.subdirectories {
+        for entry in &curr_dir.subdirectories {
             if entry.2 == dir {
                 dir_entry = Some(entry);
             }
         }
 
         if let Some((pages, size, _)) = dir_entry {
-            dirs.push(load_directory(&pages, size));
+            dirs.push(load_directory(&pages, *size));
         } else {
             let mut new_dir = Directory {
                 subdirectories: Vec::new(),
             };
             let (pages, size) = store_directory(&mut new_dir);
             dirs.push(new_dir);
-            let curr_dir = &mut dirs[dirs.size() - 2];
+            let dirs_size = dirs.size();
+            let curr_dir = &mut dirs[dirs_size - 2];
             curr_dir.subdirectories.push((pages, size, dir));
         }
     }
