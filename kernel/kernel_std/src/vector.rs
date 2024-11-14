@@ -1,3 +1,4 @@
+use core::fmt::{Display, Formatter};
 use crate::pointer::Ptr;
 use crate::serial::Serial;
 use core::ops::{DerefMut, Index, IndexMut};
@@ -324,5 +325,18 @@ impl<T: Serial> Serial for Vec<T> {
             obj.push(T::deserialize(vec, idx));
         }
         obj
+    }
+}
+
+impl<T: Display> Display for Vec<T> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
+        write!(f, "[")?;
+        for i in 0..self.size {
+            write!(f, "{}", self[i])?;
+            if i != self.size - 1 {
+                write!(f, ", ")?;
+            }
+        }
+        write!(f, "]")
     }
 }

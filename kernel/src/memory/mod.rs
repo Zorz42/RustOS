@@ -19,8 +19,6 @@ pub const HEAP_TREE_ADDR: u64 = ID_MAP_END + FRAME_SIZE;
 // for testing purposes
 #[allow(dead_code)]
 pub const TESTING_OFFSET: u64 = ID_MAP_END + 2 * FRAME_SIZE;
-// where the disk is mapped
-pub const DISK_OFFSET: u64 = ID_MAP_END + 3 * FRAME_SIZE;
 // where users program stack lives
 pub const USER_STACK: u64 = ID_MAP_END + 4 * FRAME_SIZE;
 // where the user context is stored (registers have to be saved when user program is interrupted)
