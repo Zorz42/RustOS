@@ -126,7 +126,6 @@ fn test_fs_create_dir() {
         let path = join(&dirs, '/');
 
         create_directory(&path);
-        println!("Created directory \"{}\"", path);
 
         unmount_disk();
         mount_disk(test_disk);
@@ -134,12 +133,11 @@ fn test_fs_create_dir() {
         let mut curr_dirs = Vec::new();
         for i in &dirs {
             curr_dirs.push(i.clone());
-            println!("Checking directory \"{}\"", join(&curr_dirs, '/'));
             assert!(is_directory(&join(&curr_dirs, '/')));
 
             curr_dirs.push(create_random_string(&mut rng));
             for i in 0..20 {
-                //assert!(!is_directory(&join(&curr_dirs, '/')));
+                assert!(!is_directory(&join(&curr_dirs, '/')));
             }
             curr_dirs.pop();
         }

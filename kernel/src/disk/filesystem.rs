@@ -56,16 +56,12 @@ struct Directory {
 
 fn load_directory(pages: &Vec<usize>, size: usize) -> Directory {
     let data = read_pages_from_disk(pages, size);
-    println!("Got data with size {} at pages {}", data.size(), pages);
-    println!("data: {}", data);
     let res = deserialize(&data);
-    println!("data deserialized");
 
     res
 }
 
 fn delete_pages(pages: &Vec<usize>) {
-    println!("Deleting pages {}", *pages);
     let t = get_mounted_disk().borrow();
     for page in pages {
         get_mounted_disk().get_mut(&t).as_mut().unwrap().free_page(*page as i32);
@@ -84,8 +80,6 @@ fn store_directory(directory: &mut Directory) -> (Vec<usize>, usize) {
     }
     get_mounted_disk().release(t);
     write_to_pages_on_disk(&pages, &data);
-    println!("Stored directory with size {} at pages {}", size, pages);
-    println!("data: {}", data);
     (pages, data.size())
 }
 
@@ -104,11 +98,9 @@ pub fn fs_erase() {
 fn get_root() -> Directory {
     let t = get_mounted_disk().borrow();
     let head = get_mounted_disk().get_mut(&t).as_mut().unwrap().get_head();
-    println!("got head with size {}", head.size());
     get_mounted_disk().release(t);
 
     let (pages, size) = deserialize(&head);
-    println!("deserialized head with size {}", size);
     load_directory(&pages, size)
 }
 
@@ -116,7 +108,6 @@ fn set_root(root: &mut Directory) {
     let (pages, size) = store_directory(root);
     let head = serialize(&mut (pages, size));
 
-    println!("Saving head with size {}", head.size());
     let t = get_mounted_disk().borrow();
     get_mounted_disk().get_mut(&t).as_mut().unwrap().set_head(&head);
     get_mounted_disk().release(t);
