@@ -2,7 +2,7 @@ use crate::memory::PAGE_SIZE;
 use crate::disk::memory_disk::{get_mounted_disk, mount_disk, unmount_disk};
 use crate::tests::get_test_disk;
 use kernel_test::{kernel_test, kernel_test_mod};
-use kernel_std::{deserialize, println, serialize, Rng, Vec};
+use kernel_std::{Rng, Vec};
 
 kernel_test_mod!(crate::tests::A9_memory_disk);
 
@@ -19,7 +19,7 @@ fn test_disk_mount_erase() {
     get_test_disk().release(t2);
 }
 
-/*#[kernel_test]
+#[kernel_test]
 fn test_disk_persists() {
     let t2 = get_test_disk().borrow();
     let test_disk = get_test_disk().get_mut(&t2).as_mut().unwrap();
@@ -28,33 +28,25 @@ fn test_disk_persists() {
     for _ in 0..20 {
         let t = get_mounted_disk().borrow();
         let page = get_mounted_disk().get_mut(&t).as_mut().unwrap().alloc_page();
-        let addr = (DISK_OFFSET + PAGE_SIZE * page as u64) as *mut u8;
         let mut data = [0; PAGE_SIZE as usize];
-        get_mounted_disk().get_mut(&t).as_mut().unwrap().declare_write(addr as u64, addr as u64 + PAGE_SIZE);
         for i in 0..PAGE_SIZE {
-            data[i as usize] = rng.get(0, 1 << 8) as u8;
-            unsafe {
-                *addr.add(i as usize) = data[i as usize];
-            }
+            data[i as usize] = rng.get(0, 255) as u8;
         }
+        get_mounted_disk().get_mut(&t).as_mut().unwrap().write_page(page, &data);
         get_mounted_disk().release(t);
 
         unmount_disk();
         mount_disk(test_disk);
 
         let t = get_mounted_disk().borrow();
-        get_mounted_disk().get_mut(&t).as_mut().unwrap().declare_read(addr as u64, addr as u64 + PAGE_SIZE);
-        for i in 0..PAGE_SIZE {
-            unsafe {
-                assert_eq!(*addr.add(i as usize), data[i as usize]);
-            }
-        }
+        let data2 = get_mounted_disk().get_mut(&t).as_mut().unwrap().read_page(page);
+        assert_eq!(data, data2);
         get_mounted_disk().get_mut(&t).as_mut().unwrap().free_page(page);
         get_mounted_disk().release(t);
     }
 
     get_test_disk().release(t2);
-}*/
+}
 
 #[kernel_test]
 fn test_disk_head_persists() {

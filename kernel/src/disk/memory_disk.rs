@@ -60,8 +60,8 @@ impl MemoryDisk {
 
     pub fn read_page(&mut self, page: i32) -> [u8; PAGE_SIZE as usize] {
         let mut data = [0; PAGE_SIZE as usize];
-        for i in 0..4 {
-            let sector = self.disk.read((page * 4 + i) as usize);
+        for i in 0..8 {
+            let sector = self.disk.read((page * 8 + i) as usize);
             for j in 0..512 {
                 data[(i * 512 + j) as usize] = sector[j as usize];
             }
@@ -70,12 +70,12 @@ impl MemoryDisk {
     }
 
     pub fn write_page(&mut self, page: i32, data: &[u8; PAGE_SIZE as usize]) {
-        for i in 0..4 {
+        for i in 0..8 {
             let mut sector = [0; 512];
             for j in 0..512 {
                 sector[j] = data[i * 512 + j];
             }
-            self.disk.write(page as usize * 4 + i, &sector);
+            self.disk.write(page as usize * 8 + i, &sector);
         }
     }
 
