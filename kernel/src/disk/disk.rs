@@ -10,6 +10,8 @@ pub const VIRTIO_BLK_F_MQ: u32 = 12; // support more than one vq
 pub const VIRTIO_BLK_T_IN: u32 = 0; // read the disk
 pub const VIRTIO_BLK_T_OUT: u32 = 1; // write the disk
 
+pub const SECTOR_SIZE: usize = 512;
+
 #[derive(Clone, Copy)]
 #[repr(C)]
 pub struct VirtioBlqReq {
@@ -54,7 +56,7 @@ pub fn get_disk_at(id: u64) -> Option<Disk> {
 }
 
 impl Disk {
-    pub fn read(&mut self, sector: usize) -> [u8; 512] {
+    pub fn read(&mut self, sector: usize) -> [u8; SECTOR_SIZE] {
         assert!(sector < self.size);
 
         let req = VirtioBlqReq {
@@ -63,14 +65,14 @@ impl Disk {
             sector: sector as u64,
         };
 
-        let res: ([u8; 512], u8) = self.virtio_device.virtio_send_rww(&req);
+        let res: ([u8; SECTOR_SIZE], u8) = self.virtio_device.virtio_send_rww(&req);
 
         assert_eq!(res.1, 0);
 
         res.0
     }
 
-    pub fn write(&mut self, sector: usize, data: &[u8; 512]) {
+    pub fn write(&mut self, sector: usize, data: &[u8; SECTOR_SIZE]) {
         assert!(sector < self.size);
 
         let req = VirtioBlqReq {

@@ -1,24 +1,24 @@
 use kernel_std::{deserialize, serialize, String, Vec};
 use kernel_std::derive::Serial;
+use crate::disk::disk::SECTOR_SIZE;
 use crate::disk::memory_disk::get_mounted_disk;
-use crate::memory::PAGE_SIZE;
 
-fn read_pages_from_disk(pages: &Vec<usize>, size: usize) -> Vec<u8> {
+fn read_sectors_from_disk(sectors: &Vec<usize>, size: usize) -> Vec<u8> {
     let t = get_mounted_disk().borrow();
-    let min_size = pages.size() * PAGE_SIZE as usize - PAGE_SIZE as usize + 1;
-    let max_size = pages.size() * PAGE_SIZE as usize;
+    let min_size = sectors.size() * SECTOR_SIZE - SECTOR_SIZE + 1;
+    let max_size = sectors.size() * SECTOR_SIZE;
     assert!(size >= min_size && size <= max_size);
     let mut res = Vec::new();
 
     let mut size_left = size;
-    for page in pages {
-        let page_data = get_mounted_disk().get_mut(&t).as_mut().unwrap().read_page(*page as i32);
-        for i in 0..PAGE_SIZE {
+    for sector in sectors {
+        let sector_data = get_mounted_disk().get_mut(&t).as_mut().unwrap().read_sector(*sector);
+        for i in 0..SECTOR_SIZE {
             if size_left == 0 {
                 break;
             }
             size_left -= 1;
-            res.push(page_data[i as usize]);
+            res.push(sector_data[i]);
         }
     }
 
@@ -27,23 +27,23 @@ fn read_pages_from_disk(pages: &Vec<usize>, size: usize) -> Vec<u8> {
     res
 }
 
-fn write_to_pages_on_disk(pages: &Vec<usize>, data: &Vec<u8>) {
+fn write_to_sectors_on_disk(sectors: &Vec<usize>, data: &Vec<u8>) {
     let t = get_mounted_disk().borrow();
-    let min_size = pages.size() * PAGE_SIZE as usize - PAGE_SIZE as usize + 1;
-    let max_size = pages.size() * PAGE_SIZE as usize;
+    let min_size = sectors.size() * SECTOR_SIZE - SECTOR_SIZE + 1;
+    let max_size = sectors.size() * SECTOR_SIZE;
     assert!(data.size() >= min_size && data.size() <= max_size);
 
     let mut size_left = data.size();
-    for page in pages {
-        let mut page_data = [0; PAGE_SIZE as usize];
-        for i in 0..PAGE_SIZE {
+    for sector in sectors {
+        let mut sector_data = [0; SECTOR_SIZE];
+        for i in 0..SECTOR_SIZE {
             if size_left == 0 {
                 break;
             }
-            page_data[i as usize] = data[data.size() - size_left];
+            sector_data[i] = data[data.size() - size_left];
             size_left -= 1;
         }
-        get_mounted_disk().get_mut(&t).as_mut().unwrap().write_page(*page as i32, &page_data);
+        get_mounted_disk().get_mut(&t).as_mut().unwrap().write_sector(*sector, &sector_data);
     }
 
     get_mounted_disk().release(t);
@@ -51,7 +51,7 @@ fn write_to_pages_on_disk(pages: &Vec<usize>, data: &Vec<u8>) {
 
 #[derive(Serial)]
 struct Directory {
-    subdirectories: Vec::<(Vec::<usize>,usize,String)>, // each directory is a tuple of (pages, size, name)
+    subdirectories: Vec::<(Vec::<usize>,usize,String)>, // each directory is a tuple of (sectors, size, name)
 }
 
 impl Directory {
@@ -71,33 +71,33 @@ impl Directory {
     }
 }
 
-fn load_directory(pages: &Vec<usize>, size: usize) -> Directory {
-    let data = read_pages_from_disk(pages, size);
+fn load_directory(sectors: &Vec<usize>, size: usize) -> Directory {
+    let data = read_sectors_from_disk(sectors, size);
     let res = deserialize(&data);
 
     res
 }
 
-fn delete_pages(pages: &Vec<usize>) {
+fn delete_sectors(sectors: &Vec<usize>) {
     let t = get_mounted_disk().borrow();
-    for page in pages {
-        get_mounted_disk().get_mut(&t).as_mut().unwrap().free_page(*page as i32);
+    for sector in sectors {
+        get_mounted_disk().get_mut(&t).as_mut().unwrap().free_sector(*sector);
     }
     get_mounted_disk().release(t);
 }
 
 fn store_directory(directory: &mut Directory) -> (Vec<usize>, usize) {
     let data = serialize(directory);
-    let mut pages = Vec::new();
+    let mut sectors = Vec::new();
     let size = data.size();
     let t = get_mounted_disk().borrow();
-    let num_pages = (size + PAGE_SIZE as usize - 1) / PAGE_SIZE as usize;
-    for _ in 0..num_pages {
-        pages.push(get_mounted_disk().get_mut(&t).as_mut().unwrap().alloc_page() as usize);
+    let num_sectors = (size + SECTOR_SIZE - 1) / SECTOR_SIZE;
+    for _ in 0..num_sectors {
+        sectors.push(get_mounted_disk().get_mut(&t).as_mut().unwrap().alloc_sector() as usize);
     }
     get_mounted_disk().release(t);
-    write_to_pages_on_disk(&pages, &data);
-    (pages, data.size())
+    write_to_sectors_on_disk(&sectors, &data);
+    (sectors, data.size())
 }
 
 pub fn fs_erase() {
@@ -115,13 +115,13 @@ fn get_root() -> Directory {
     let head = get_mounted_disk().get_mut(&t).as_mut().unwrap().get_head();
     get_mounted_disk().release(t);
 
-    let (pages, size) = deserialize(&head);
-    load_directory(&pages, size)
+    let (sectors, size) = deserialize(&head);
+    load_directory(&sectors, size)
 }
 
 fn set_root(root: &mut Directory) {
-    let (pages, size) = store_directory(root);
-    let head = serialize(&mut (pages, size));
+    let (sectors, size) = store_directory(root);
+    let head = serialize(&mut (sectors, size));
 
     let t = get_mounted_disk().borrow();
     get_mounted_disk().get_mut(&t).as_mut().unwrap().set_head(&head);
@@ -164,10 +164,12 @@ fn parse_path(path: &String) -> Vec<String> {
 
 fn store_directory_chain(dirs: &mut Vec<Directory>, path: &Vec<String>) {
     for i in (1..dirs.size()).rev() {
-        let (pages, size) = store_directory(&mut dirs[i]);
+        let (sectors, size) = store_directory(&mut dirs[i]);
         let name = path[i - 1].clone();
-        dirs[i - 1].subdirectories.push((pages, size, name));
+        dirs[i - 1].subdirectories.push((sectors, size, name));
     }
+
+    set_root(&mut dirs[0]);
 }
 
 pub fn create_directory(path: &String) {
@@ -182,9 +184,9 @@ pub fn create_directory(path: &String) {
         let idx = dirs.size() - 1;
         dirs[idx].subdirectories.retain(&|entry| &entry.2 != dir);
 
-        if let Some((pages, size, _)) = dir_entry {
-            dirs.push(load_directory(&pages, size));
-            delete_pages(&pages);
+        if let Some((sectors, size, _)) = dir_entry {
+            dirs.push(load_directory(&sectors, size));
+            delete_sectors(&sectors);
         } else {
             let new_dir = Directory::new();
             dirs.push(new_dir);
@@ -192,8 +194,6 @@ pub fn create_directory(path: &String) {
     }
 
     store_directory_chain(&mut dirs, &path);
-
-    set_root(&mut dirs[0]);
 }
 
 pub fn is_directory(path: &String) -> bool {
@@ -204,8 +204,8 @@ pub fn is_directory(path: &String) -> bool {
     for dir in &path {
         let dir_entry = dirs[dirs.size() - 1].get_subdirectory(dir).cloned();
 
-        if let Some((pages, size, _)) = dir_entry {
-            dirs.push(load_directory(&pages, size));
+        if let Some((sectors, size, _)) = dir_entry {
+            dirs.push(load_directory(&sectors, size));
         } else {
             return false;
         }
@@ -222,9 +222,9 @@ pub fn delete_directory(path: &String) {
     for dir in &path {
         let dir_entry = dirs[dirs.size() - 1].get_subdirectory(dir).cloned();
 
-        if let Some((pages, size, _)) = dir_entry {
-            dirs.push(load_directory(&pages, size));
-            delete_pages(&pages);
+        if let Some((sectors, size, _)) = dir_entry {
+            dirs.push(load_directory(&sectors, size));
+            delete_sectors(&sectors);
         } else {
             return;
         }
@@ -238,6 +238,4 @@ pub fn delete_directory(path: &String) {
     dirs[idx].subdirectories.retain(&|entry| &entry.2 != &path[path.size() - 1]);
 
     store_directory_chain(&mut dirs, &path);
-
-    set_root(&mut dirs[0]);
 }

@@ -3,6 +3,7 @@ use crate::disk::memory_disk::{get_mounted_disk, mount_disk, unmount_disk};
 use crate::tests::get_test_disk;
 use kernel_test::{kernel_test, kernel_test_mod};
 use kernel_std::{Rng, Vec};
+use crate::disk::disk::SECTOR_SIZE;
 
 kernel_test_mod!(crate::tests::A9_memory_disk);
 
@@ -27,21 +28,21 @@ fn test_disk_persists() {
     let mut rng = Rng::new(56437285922);
     for _ in 0..20 {
         let t = get_mounted_disk().borrow();
-        let page = get_mounted_disk().get_mut(&t).as_mut().unwrap().alloc_page();
-        let mut data = [0; PAGE_SIZE as usize];
-        for i in 0..PAGE_SIZE {
+        let page = get_mounted_disk().get_mut(&t).as_mut().unwrap().alloc_sector();
+        let mut data = [0; SECTOR_SIZE as usize];
+        for i in 0..SECTOR_SIZE {
             data[i as usize] = rng.get(0, 255) as u8;
         }
-        get_mounted_disk().get_mut(&t).as_mut().unwrap().write_page(page, &data);
+        get_mounted_disk().get_mut(&t).as_mut().unwrap().write_sector(page, &data);
         get_mounted_disk().release(t);
 
         unmount_disk();
         mount_disk(test_disk);
 
         let t = get_mounted_disk().borrow();
-        let data2 = get_mounted_disk().get_mut(&t).as_mut().unwrap().read_page(page);
+        let data2 = get_mounted_disk().get_mut(&t).as_mut().unwrap().read_sector(page);
         assert_eq!(data, data2);
-        get_mounted_disk().get_mut(&t).as_mut().unwrap().free_page(page);
+        get_mounted_disk().get_mut(&t).as_mut().unwrap().free_sector(page);
         get_mounted_disk().release(t);
     }
 
