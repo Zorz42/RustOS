@@ -1,4 +1,4 @@
-use kernel_std::{deserialize, println, serialize, String, Vec};
+use kernel_std::{deserialize, serialize, String, Vec};
 use kernel_std::derive::Serial;
 use crate::disk::memory_disk::get_mounted_disk;
 use crate::memory::PAGE_SIZE;
@@ -54,6 +54,23 @@ struct Directory {
     subdirectories: Vec::<(Vec::<usize>,usize,String)>, // each directory is a tuple of (pages, size, name)
 }
 
+impl Directory {
+    fn new() -> Self {
+        Self {
+            subdirectories: Vec::new(),
+        }
+    }
+
+    fn get_subdirectory(&self, name: &String) -> Option<&(Vec<usize>, usize, String)> {
+        for entry in &self.subdirectories {
+            if &entry.2 == name {
+                return Some(entry);
+            }
+        }
+        None
+    }
+}
+
 fn load_directory(pages: &Vec<usize>, size: usize) -> Directory {
     let data = read_pages_from_disk(pages, size);
     let res = deserialize(&data);
@@ -88,9 +105,7 @@ pub fn fs_erase() {
     get_mounted_disk().get_mut(&t).as_mut().unwrap().erase();
     get_mounted_disk().release(t);
 
-    let mut root = Directory {
-        subdirectories: Vec::new(),
-    };
+    let mut root = Directory::new();
 
     set_root(&mut root);
 }
@@ -147,22 +162,21 @@ fn parse_path(path: &String) -> Vec<String> {
     res2
 }
 
+fn store_directory_chain(dirs: &mut Vec<Directory>, path: &Vec<String>) {
+    for i in (1..dirs.size()).rev() {
+        let (pages, size) = store_directory(&mut dirs[i]);
+        let name = path[i - 1].clone();
+        dirs[i - 1].subdirectories.push((pages, size, name));
+    }
+}
+
 pub fn create_directory(path: &String) {
     let mut dirs = Vec::new();
     dirs.push(get_root());
     let path = parse_path(path);
 
     for dir in &path {
-        let dir_entry = {
-            let curr_dir = &dirs[dirs.size() - 1];
-            let mut dir_entry = None;
-            for entry in &curr_dir.subdirectories {
-                if &entry.2 == dir {
-                    dir_entry = Some(entry);
-                }
-            }
-            dir_entry.cloned()
-        };
+        let dir_entry = dirs[dirs.size() - 1].get_subdirectory(dir).cloned();
 
         // remove the directory as it will be reinserted
         let idx = dirs.size() - 1;
@@ -172,19 +186,12 @@ pub fn create_directory(path: &String) {
             dirs.push(load_directory(&pages, size));
             delete_pages(&pages);
         } else {
-            let new_dir = Directory {
-                subdirectories: Vec::new(),
-            };
+            let new_dir = Directory::new();
             dirs.push(new_dir);
         }
     }
 
-    // store all directories to disk
-    for i in (1..dirs.size()).rev() {
-        let (pages, size) = store_directory(&mut dirs[i]);
-        let name = path[i - 1].clone();
-        dirs[i - 1].subdirectories.push((pages, size, name));
-    }
+    store_directory_chain(&mut dirs, &path);
 
     set_root(&mut dirs[0]);
 }
@@ -195,16 +202,10 @@ pub fn is_directory(path: &String) -> bool {
     let path = parse_path(path);
 
     for dir in &path {
-        let curr_dir = &dirs[dirs.size() - 1];
-        let mut dir_entry = None;
-        for entry in &curr_dir.subdirectories {
-            if &entry.2 == dir {
-                dir_entry = Some(entry);
-            }
-        }
+        let dir_entry = dirs[dirs.size() - 1].get_subdirectory(dir).cloned();
 
         if let Some((pages, size, _)) = dir_entry {
-            dirs.push(load_directory(&pages, *size));
+            dirs.push(load_directory(&pages, size));
         } else {
             return false;
         }
@@ -214,5 +215,29 @@ pub fn is_directory(path: &String) -> bool {
 }
 
 pub fn delete_directory(path: &String) {
+    let mut dirs = Vec::new();
+    dirs.push(get_root());
+    let path = parse_path(path);
 
+    for dir in &path {
+        let dir_entry = dirs[dirs.size() - 1].get_subdirectory(dir).cloned();
+
+        if let Some((pages, size, _)) = dir_entry {
+            dirs.push(load_directory(&pages, size));
+            delete_pages(&pages);
+        } else {
+            return;
+        }
+    }
+
+    // remove last dir
+    dirs.pop();
+
+    // also remove its reference from the parent
+    let idx = dirs.size() - 1;
+    dirs[idx].subdirectories.retain(&|entry| &entry.2 != &path[path.size() - 1]);
+
+    store_directory_chain(&mut dirs, &path);
+
+    set_root(&mut dirs[0]);
 }

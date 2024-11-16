@@ -109,7 +109,7 @@ fn join(vec: &Vec<String>, c: char) -> String {
 }
 
 #[kernel_test]
-fn test_fs_create_dir() {
+fn test_fs_create_delete_check_dir() {
     let t2 = get_test_disk().borrow();
     let test_disk = get_test_disk().get_mut(&t2).as_mut().unwrap();
 
@@ -141,13 +141,23 @@ fn test_fs_create_dir() {
             curr_dirs.pop();
         }
 
-        delete_directory(&dirs[0]);
-
         let mut curr_dirs = Vec::new();
         for i in &dirs {
             curr_dirs.push(i.clone());
             assert!(is_directory(&join(&curr_dirs, '/')));
         }
+
+        assert!(is_directory(&path));
+
+        delete_directory(&dirs[0]);
+
+        let mut curr_dirs = Vec::new();
+        for i in &dirs {
+            curr_dirs.push(i.clone());
+            assert!(!is_directory(&join(&curr_dirs, '/')));
+        }
+
+        assert!(!is_directory(&path));
     }
 
     get_test_disk().release(t2);
