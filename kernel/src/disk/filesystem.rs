@@ -52,17 +52,28 @@ fn write_to_sectors_on_disk(sectors: &Vec<usize>, data: &Vec<u8>) {
 #[derive(Serial)]
 struct Directory {
     subdirectories: Vec::<(Vec::<usize>,usize,String)>, // each directory is a tuple of (sectors, size, name)
+    files: Vec::<(Vec::<usize>,usize,String)>, // each file is a tuple of (sectors, size, name)
 }
 
 impl Directory {
     fn new() -> Self {
         Self {
             subdirectories: Vec::new(),
+            files: Vec::new(),
         }
     }
 
     fn get_subdirectory(&self, name: &String) -> Option<&(Vec<usize>, usize, String)> {
         for entry in &self.subdirectories {
+            if &entry.2 == name {
+                return Some(entry);
+            }
+        }
+        None
+    }
+
+    fn get_file(&self, name: &String) -> Option<&(Vec<usize>, usize, String)> {
+        for entry in &self.files {
             if &entry.2 == name {
                 return Some(entry);
             }
@@ -93,7 +104,7 @@ fn store_directory(directory: &mut Directory) -> (Vec<usize>, usize) {
     let t = get_mounted_disk().borrow();
     let num_sectors = (size + SECTOR_SIZE - 1) / SECTOR_SIZE;
     for _ in 0..num_sectors {
-        sectors.push(get_mounted_disk().get_mut(&t).as_mut().unwrap().alloc_sector() as usize);
+        sectors.push(get_mounted_disk().get_mut(&t).as_mut().unwrap().alloc_sector());
     }
     get_mounted_disk().release(t);
     write_to_sectors_on_disk(&sectors, &data);
@@ -236,6 +247,89 @@ pub fn delete_directory(path: &String) {
     // also remove its reference from the parent
     let idx = dirs.size() - 1;
     dirs[idx].subdirectories.retain(&|entry| &entry.2 != &path[path.size() - 1]);
+
+    store_directory_chain(&mut dirs, &path);
+}
+
+pub fn create_file(path: &String) {
+    let mut dirs = Vec::new();
+    dirs.push(get_root());
+    let mut path = parse_path(path);
+    let file_name = path.pop().unwrap();
+
+    for dir in &path {
+        let dir_entry = dirs[dirs.size() - 1].get_subdirectory(dir).cloned();
+
+        // remove the directory as it will be reinserted
+        let idx = dirs.size() - 1;
+        dirs[idx].subdirectories.retain(&|entry| &entry.2 != dir);
+
+        if let Some((sectors, size, _)) = dir_entry {
+            dirs.push(load_directory(&sectors, size));
+            delete_sectors(&sectors);
+        } else {
+            let new_dir = Directory::new();
+            dirs.push(new_dir);
+        }
+    }
+
+    let idx = dirs.size() - 1;
+    let parent_dir = &mut dirs[idx];
+    if parent_dir.get_file(&file_name).is_some() {
+        return;
+    }
+
+    parent_dir.files.push((Vec::new(), 0, file_name));
+
+    store_directory_chain(&mut dirs, &path);
+}
+
+pub fn is_file(path: &String) -> bool {
+    let mut dirs = Vec::new();
+    dirs.push(get_root());
+    let mut path = parse_path(path);
+    let file_name = path.pop().unwrap();
+
+    for dir in &path {
+        let dir_entry = dirs[dirs.size() - 1].get_subdirectory(dir).cloned();
+
+        if let Some((sectors, size, _)) = dir_entry {
+            dirs.push(load_directory(&sectors, size));
+        } else {
+            return false;
+        }
+    }
+
+    let idx = dirs.size() - 1;
+    let parent_dir = &mut dirs[idx];
+    parent_dir.get_file(&file_name).is_some()
+}
+
+pub fn delete_file(path: &String) {
+    let mut dirs = Vec::new();
+    dirs.push(get_root());
+    let mut path = parse_path(path);
+    let file_name = path.pop().unwrap();
+
+    for dir in &path {
+        let dir_entry = dirs[dirs.size() - 1].get_subdirectory(dir).cloned();
+
+        // remove the directory as it will be reinserted
+        let idx = dirs.size() - 1;
+        dirs[idx].subdirectories.retain(&|entry| &entry.2 != dir);
+
+        if let Some((sectors, size, _)) = dir_entry {
+            dirs.push(load_directory(&sectors, size));
+            delete_sectors(&sectors);
+        } else {
+            let new_dir = Directory::new();
+            dirs.push(new_dir);
+        }
+    }
+
+    let idx = dirs.size() - 1;
+    let parent_dir = &mut dirs[idx];
+    parent_dir.files.retain(&|entry| entry.2 != file_name);
 
     store_directory_chain(&mut dirs, &path);
 }
