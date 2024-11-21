@@ -1,4 +1,3 @@
-use crate::memory::PAGE_SIZE;
 use crate::disk::memory_disk::{get_mounted_disk, mount_disk, unmount_disk};
 use crate::tests::get_test_disk;
 use kernel_test::{kernel_test, kernel_test_mod};

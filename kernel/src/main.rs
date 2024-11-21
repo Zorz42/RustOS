@@ -11,6 +11,7 @@ use crate::trap::switch_to_kernel_trap;
 use core::panic::PanicInfo;
 use core::sync::atomic::{fence, Ordering};
 use kernel_std::{println, Box, String, Vec};
+use crate::disk::filesystem::{fs_erase, write_to_file};
 use crate::disk::memory_disk::mount_disk;
 use crate::gpu::init_gpu;
 use crate::input::{init_input_devices};
@@ -91,9 +92,7 @@ pub fn main() {
 
         let root_disk = find_root_disk(&mut disks);
 
-        //close_fs();
-        //mount_disk(&root_disk);
-        //init_fs();
+        mount_disk(&root_disk);
 
         #[cfg(feature = "run_perf")]
         {
@@ -110,7 +109,7 @@ pub fn main() {
 
         let test_program = include_bytes!("../../programs/test_program/target/riscv64gc-unknown-none-elf/release/test_program");
         let test_program_vec = Vec::new_from_slice(test_program);
-        //get_fs().create_file(&String::from("test_program")).write(&test_program_vec);
+        write_to_file(&String::from("test_program"), &test_program_vec);
 
         println!("Loading programs...");
         for _ in 0..6 {

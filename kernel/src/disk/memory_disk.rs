@@ -79,7 +79,7 @@ impl MemoryDisk {
     }
 
     pub fn set_head(&mut self, data: &Vec<u8>) {
-        let mut first_sector = [0; SECTOR_SIZE];
+        let mut first_sector = self.read_sector(0);
 
         unsafe {
             write_volatile(&mut first_sector[0] as *mut u8 as *mut i32, data.size() as i32);
