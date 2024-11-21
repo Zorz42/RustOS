@@ -2,7 +2,7 @@ use crate::disk::memory_disk::{get_mounted_disk, mount_disk, unmount_disk};
 use crate::tests::get_test_disk;
 use kernel_test::{kernel_test, kernel_test_mod};
 use kernel_std::{Rng, String, Vec};
-use crate::disk::filesystem::{fs_erase, create_directory, is_directory, delete_directory, create_file, delete_file, is_file};
+use crate::disk::filesystem::{fs_erase, create_directory, is_directory, delete_directory, write_to_file, delete_file, is_file, read_file};
 
 kernel_test_mod!(crate::tests::B0_filesystem);
 
@@ -106,7 +106,7 @@ fn test_fs_create_delete_exists_file() {
         if rng.get(0, 2) == 0 || existing_files.size() == 0 {
             // create file
             let file_name = create_random_string(&mut rng);
-            create_file(&file_name);
+            write_to_file(&file_name, &Vec::new());
             existing_files.push(file_name);
         } else {
             // destroy file
@@ -140,7 +140,7 @@ fn test_fs_persists() {
         if rng.get(0, 2) == 0 || existing_files.size() == 0 {
             // create file
             let file_name = create_random_string(&mut rng);
-            create_file(&file_name);
+            write_to_file(&file_name, &Vec::new());
             existing_files.push(file_name);
         } else {
             // destroy file
@@ -162,12 +162,12 @@ fn test_fs_persists() {
     }
 }
 
-/*#[kernel_test]
+#[kernel_test]
 fn test_fs_read_write_file() {
     let mut rng = Rng::new(54738524637825);
     let mut vec = Vec::new();
 
-    get_fs().create_directory(&String::from("vec"));
+    create_directory(&String::from("vec"));
 
     for i in 0..20 {
         let mut data = Vec::new();
@@ -177,19 +177,17 @@ fn test_fs_read_write_file() {
         }
         let mut file_name = String::from("vec/");
         file_name.push(('A' as u8 + i as u8) as char);
-        let file = get_fs().create_file(&file_name);
-        file.write(&data);
+        write_to_file(&file_name, &data);
         vec.push(data);
     }
 
     for i in 0..20 {
         let mut file_name = String::from("vec/");
         file_name.push(('A' as u8 + i as u8) as char);
-        let file = get_fs().get_file(&file_name).unwrap();
-        let data = file.read();
+        let data = read_file(&file_name).unwrap();
         assert!(data == vec[i]);
     }
-}*/
+}
 
 /*#[kernel_perf]
 struct PerfCreateDeleteFile {}

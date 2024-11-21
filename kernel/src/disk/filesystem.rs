@@ -1,4 +1,4 @@
-use kernel_std::{deserialize, serialize, String, Vec};
+use kernel_std::{deserialize, println, serialize, String, Vec};
 use kernel_std::derive::Serial;
 use crate::disk::disk::SECTOR_SIZE;
 use crate::disk::memory_disk::get_mounted_disk;
@@ -29,9 +29,9 @@ fn read_sectors_from_disk(sectors: &Vec<usize>, size: usize) -> Vec<u8> {
 
 fn write_to_sectors_on_disk(sectors: &Vec<usize>, data: &Vec<u8>) {
     let t = get_mounted_disk().borrow();
-    let min_size = sectors.size() * SECTOR_SIZE - SECTOR_SIZE + 1;
-    let max_size = sectors.size() * SECTOR_SIZE;
-    assert!(data.size() >= min_size && data.size() <= max_size);
+    let min_size = sectors.size() as i32 * SECTOR_SIZE as i32 - SECTOR_SIZE as i32 + 1;
+    let max_size = sectors.size() as i32 * SECTOR_SIZE as i32;
+    assert!(data.size() as i32 >= min_size && data.size() as i32 <= max_size);
 
     let mut size_left = data.size();
     for sector in sectors {
@@ -251,7 +251,7 @@ pub fn delete_directory(path: &String) {
     store_directory_chain(&mut dirs, &path);
 }
 
-pub fn create_file(path: &String) {
+pub fn write_to_file(path: &String, data: &Vec<u8>) {
     let mut dirs = Vec::new();
     dirs.push(get_root());
     let mut path = parse_path(path);
@@ -279,7 +279,16 @@ pub fn create_file(path: &String) {
         return;
     }
 
-    parent_dir.files.push((Vec::new(), 0, file_name));
+    let mut sectors = Vec::new();
+    let sectors_count = (data.size() + SECTOR_SIZE - 1) / SECTOR_SIZE;
+    let t = get_mounted_disk().borrow();
+    for _ in 0..sectors_count {
+        sectors.push(get_mounted_disk().get_mut(&t).as_mut().unwrap().alloc_sector());
+    }
+    get_mounted_disk().release(t);
+    write_to_sectors_on_disk(&sectors, data);
+
+    parent_dir.files.push((sectors, data.size(), file_name));
 
     store_directory_chain(&mut dirs, &path);
 }
@@ -332,4 +341,31 @@ pub fn delete_file(path: &String) {
     parent_dir.files.retain(&|entry| entry.2 != file_name);
 
     store_directory_chain(&mut dirs, &path);
+}
+
+pub fn read_file(path: &String) -> Option<Vec<u8>> {
+    let mut dirs = Vec::new();
+    dirs.push(get_root());
+    let mut path = parse_path(path);
+    let file_name = path.pop().unwrap();
+
+    for dir in &path {
+        let dir_entry = dirs[dirs.size() - 1].get_subdirectory(dir).cloned();
+
+        if let Some((sectors, size, _)) = dir_entry {
+            dirs.push(load_directory(&sectors, size));
+        } else {
+            return None;
+        }
+    }
+
+    let idx = dirs.size() - 1;
+    let parent_dir = &mut dirs[idx];
+    let file_entry = parent_dir.get_file(&file_name).cloned();
+
+    if let Some((sectors, size, _)) = file_entry {
+        Some(read_sectors_from_disk(&sectors, size))
+    } else {
+        None
+    }
 }
