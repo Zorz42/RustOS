@@ -126,12 +126,12 @@ fn test_fs_create_delete_exists_file() {
     }
 }
 
-/*#[kernel_test]
+#[kernel_test]
 fn test_fs_persists() {
+    fs_erase();
+
     let t2 = get_test_disk().borrow();
     let test_disk = get_test_disk().get_mut(&t2).as_mut().unwrap();
-
-    get_fs().erase();
 
     let mut existing_files = Vec::new();
     let mut rng = Rng::new(4637894352678);
@@ -140,31 +140,27 @@ fn test_fs_persists() {
         if rng.get(0, 2) == 0 || existing_files.size() == 0 {
             // create file
             let file_name = create_random_string(&mut rng);
-            get_fs().create_file(&file_name);
+            create_file(&file_name);
             existing_files.push(file_name);
         } else {
             // destroy file
             let file_name = existing_files[rng.get(0, existing_files.size() as u64) as usize].clone();
-            get_fs().delete_file(&file_name);
+            delete_file(&file_name);
             existing_files.retain(&|x| *x != file_name);
         }
 
-        close_fs();
         unmount_disk();
         mount_disk(test_disk);
-        init_fs();
 
         for _ in 0..10 {
-            assert!(get_fs().get_file(&create_random_string(&mut rng)).is_none());
+            assert!(!is_file(&create_random_string(&mut rng)));
         }
 
         for file_name in &existing_files {
-            assert!(get_fs().get_file(file_name).is_some());
+            assert!(is_file(file_name));
         }
     }
-
-    get_test_disk().release(t2);
-}*/
+}
 
 /*#[kernel_test]
 fn test_fs_read_write_file() {
