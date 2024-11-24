@@ -252,6 +252,8 @@ pub fn delete_directory(path: &String) {
 }
 
 pub fn write_to_file(path: &String, data: &Vec<u8>) {
+    delete_file(path);
+
     let mut dirs = Vec::new();
     dirs.push(get_root());
     let mut path = parse_path(path);
@@ -275,9 +277,6 @@ pub fn write_to_file(path: &String, data: &Vec<u8>) {
 
     let idx = dirs.size() - 1;
     let parent_dir = &mut dirs[idx];
-    if parent_dir.get_file(&file_name).is_some() {
-        return;
-    }
 
     let mut sectors = Vec::new();
     let sectors_count = (data.size() + SECTOR_SIZE - 1) / SECTOR_SIZE;
@@ -338,6 +337,12 @@ pub fn delete_file(path: &String) {
 
     let idx = dirs.size() - 1;
     let parent_dir = &mut dirs[idx];
+    for (sectors, _, name) in &parent_dir.files {
+        if *name == file_name {
+            delete_sectors(sectors);
+        }
+    }
+
     parent_dir.files.retain(&|entry| entry.2 != file_name);
 
     store_directory_chain(&mut dirs, &path);

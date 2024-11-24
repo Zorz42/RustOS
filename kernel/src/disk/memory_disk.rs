@@ -66,13 +66,13 @@ impl MemoryDisk {
     }
 
     pub fn get_head(&mut self) -> Vec<u8> {
-        let first_page = self.read_sector(0);
+        let first_sector = self.read_sector(0);
 
-        let size = unsafe { *(&first_page[0] as *const u8 as *const i32) } as usize;
+        let size = unsafe { *(&first_sector[0] as *const u8 as *const i32) } as usize;
         let mut data = Vec::new();
 
         for i in 0..size {
-            data.push(first_page[i + 4]);
+            data.push(first_sector[i + 4]);
         }
 
         data
@@ -121,13 +121,13 @@ pub fn unmount_disk() {
 
 
         for i in 0..num_sectors {
-            let mut page = [0; SECTOR_SIZE];
+            let mut sector = [0; SECTOR_SIZE];
             for j in 0..SECTOR_SIZE {
                 if i * SECTOR_SIZE + j < data.size() {
-                    page[j] = data[i * SECTOR_SIZE + j];
+                    sector[j] = data[i * SECTOR_SIZE + j];
                 }
             }
-            mounted_disk.write_sector(i + 1, &page);
+            mounted_disk.write_sector(i + 1, &sector);
         }
     }
 
