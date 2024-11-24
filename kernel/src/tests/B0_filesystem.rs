@@ -1,7 +1,7 @@
 use crate::disk::memory_disk::{get_mounted_disk, mount_disk, unmount_disk};
 use crate::tests::{get_test_disk, KernelPerf};
 use kernel_test::{kernel_perf, kernel_test, kernel_test_mod};
-use kernel_std::{Rng, String, Vec};
+use kernel_std::{print, println, Rng, String, Vec};
 use crate::disk::filesystem::{fs_erase, create_directory, is_directory, delete_directory, write_to_file, delete_file, is_file, read_file};
 
 kernel_test_mod!(crate::tests::B0_filesystem);
@@ -206,6 +206,18 @@ fn test_fs_read_write_file() {
 
     assert!(data1 == data1_read);
     assert!(data2 == data2_read);
+}
+
+#[kernel_test]
+fn test_fs_many_writes() {
+    for _ in 0..1000 {
+        write_to_file(&String::from("test_file"), &Vec::new());
+    }
+
+    for _ in 0..1000 {
+        write_to_file(&String::from("test_file"), &Vec::new());
+        delete_file(&String::from("test_file"));
+    }
 }
 
 #[kernel_perf]
