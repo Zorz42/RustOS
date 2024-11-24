@@ -10,8 +10,8 @@ use crate::riscv::{enable_fpu, get_core_id, interrupts_enable};
 use crate::trap::switch_to_kernel_trap;
 use core::panic::PanicInfo;
 use core::sync::atomic::{fence, Ordering};
-use kernel_std::{println, Box, String, Vec};
-use crate::disk::filesystem::{fs_erase, write_to_file};
+use kernel_std::{print, println, Box, String, Vec};
+use crate::disk::filesystem::{fs_erase, read_file, write_to_file};
 use crate::disk::memory_disk::mount_disk;
 use crate::gpu::init_gpu;
 use crate::input::{init_input_devices};
@@ -93,8 +93,9 @@ pub fn main() {
         let root_disk = find_root_disk(&mut disks);
 
         mount_disk(&root_disk);
+        fs_erase();
 
-        #[cfg(feature = "run_perf")]
+        #[cfg(feature = "run_tests")]
         {
             use crate::tests::perf_test_runner;
             perf_test_runner();

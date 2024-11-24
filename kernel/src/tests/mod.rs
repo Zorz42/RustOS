@@ -9,6 +9,7 @@ use crate::memory::bitset_size_bytes;
 use crate::print::{reset_print_color, set_print_color};
 use crate::timer::get_ticks;
 use kernel_test::all_tests;
+use crate::disk::filesystem::{is_file, read_file, write_to_file};
 use crate::riscv::get_instruction_count;
 use crate::ROOT_MAGIC;
 use crate::text_renderer::TextColor;
@@ -115,9 +116,9 @@ const PERF_TEST_ITERATIONS: u64 = 100;
 const PERF_FILE: &str = "perf.data";
 const PERF_FILE_SAVE: &str = "perf-new.data";
 
-/*fn get_perf_data(name: &str) -> Option<u64> {
-    let file = get_fs().get_file(&String::from(PERF_FILE))?;
-    let vec = deserialize::<Vec<(String, u64)>>(&file.read());
+fn get_perf_data(name: &str) -> Option<u64> {
+    let file = read_file(&String::from(PERF_FILE))?;
+    let vec = deserialize::<Vec<(String, u64)>>(&file);
 
     for (perf_name, val) in vec {
         if perf_name.as_str() == name {
@@ -128,17 +129,11 @@ const PERF_FILE_SAVE: &str = "perf-new.data";
 }
 
 fn save_perf_data(name: &str, val: u64) {
-    let file = if let Some(file) = get_fs().get_file(&String::from(PERF_FILE_SAVE)) {
-        file
-    } else {
-        get_fs().create_file(&String::from(PERF_FILE_SAVE))
-    };
+    let mut vec = Vec::new();
+    if let Some(data) = read_file(&String::from(PERF_FILE_SAVE)) {
+        vec = deserialize::<Vec<(String, u64)>>(&data);
+    }
 
-    let mut vec = if file.read().size() == 0 {
-        Vec::new()
-    } else {
-        deserialize::<Vec<(String, u64)>>(&file.read())
-    };
     let mut saved = false;
     for (perf_name, perf_val) in &mut vec {
         if perf_name.as_str() == name {
@@ -152,11 +147,11 @@ fn save_perf_data(name: &str, val: u64) {
         vec.push((String::from(name), val));
     }
 
-    file.write(&serialize(&mut vec));
-}*/
+    write_to_file(&String::from(PERF_FILE_SAVE), &serialize(&mut vec));
+}
 
 fn run_perf_test<T: KernelPerf>(name: &str) {
-    /*let mut test_struct = T::setup();
+    let mut test_struct = T::setup();
 
     set_print_color(TextColor::DarkGray, TextColor::Black);
     print!("Benchmarking");
@@ -211,5 +206,5 @@ fn run_perf_test<T: KernelPerf>(name: &str) {
     }
     println!();
 
-    save_perf_data(name, perf_instr);*/
+    save_perf_data(name, perf_instr);
 }

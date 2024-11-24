@@ -1,6 +1,6 @@
 use crate::disk::memory_disk::{get_mounted_disk, mount_disk, unmount_disk};
-use crate::tests::get_test_disk;
-use kernel_test::{kernel_test, kernel_test_mod};
+use crate::tests::{get_test_disk, KernelPerf};
+use kernel_test::{kernel_perf, kernel_test, kernel_test_mod};
 use kernel_std::{Rng, String, Vec};
 use crate::disk::filesystem::{fs_erase, create_directory, is_directory, delete_directory, write_to_file, delete_file, is_file, read_file};
 
@@ -187,9 +187,28 @@ fn test_fs_read_write_file() {
         let data = read_file(&file_name).unwrap();
         assert!(data == vec[i]);
     }
+
+    // try two multisector files
+    let mut data1 = Vec::new();
+    for _ in 0..10000 {
+        data1.push(rng.get(0, 1 << 8) as u8);
+    }
+    write_to_file(&String::from("big_file1"), &data1);
+
+    let mut data2 = Vec::new();
+    for _ in 0..10000 {
+        data2.push(rng.get(0, 1 << 8) as u8);
+    }
+    write_to_file(&String::from("big_file2"), &data2);
+
+    let data1_read = read_file(&String::from("big_file1")).unwrap();
+    let data2_read = read_file(&String::from("big_file2")).unwrap();
+
+    assert!(data1 == data1_read);
+    assert!(data2 == data2_read);
 }
 
-/*#[kernel_perf]
+#[kernel_perf]
 struct PerfCreateDeleteFile {}
 
 impl KernelPerf for PerfCreateDeleteFile {
@@ -198,8 +217,8 @@ impl KernelPerf for PerfCreateDeleteFile {
     }
 
     fn run(&mut self) {
-        get_fs().create_file(&String::from("test_file"));
-        get_fs().delete_file(&String::from("test_file"));
+        write_to_file(&String::from("test_file"), &Vec::new());
+        delete_file(&String::from("test_file"));
     }
 }
 
@@ -216,14 +235,14 @@ impl KernelPerf for PerfCreateDeleteFile100 {
             let mut file_name = String::from("test_file");
             file_name.push(('0' as u8 + (i as u8 / 10)) as char);
             file_name.push(('0' as u8 + (i as u8 % 10)) as char);
-            get_fs().create_file(&file_name);
+            write_to_file(&file_name, &Vec::new());
         }
 
         for i in 0..100 {
             let mut file_name = String::from("test_file");
             file_name.push(('0' as u8 + (i as u8 / 10)) as char);
             file_name.push(('0' as u8 + (i as u8 % 10)) as char);
-            get_fs().delete_file(&file_name);
+            delete_file(&file_name);
         }
     }
 }
@@ -237,13 +256,12 @@ impl KernelPerf for PerfWriteFile {
     }
 
     fn run(&mut self) {
-        let file = get_fs().create_file(&String::from("test_file"));
         let mut vec = Vec::new();
         for _ in 0..10 {
             vec.push(111);
         }
-        file.write(&vec);
-        get_fs().delete_file(&String::from("test_file"));
+        write_to_file(&String::from("test_file"), &vec);
+        delete_file(&String::from("test_file"));
     }
 }
 
@@ -256,13 +274,12 @@ impl KernelPerf for PerfWriteFileBig {
     }
 
     fn run(&mut self) {
-        let file = get_fs().create_file(&String::from("test_file"));
         let mut vec = Vec::new();
         for _ in 0..100000 {
             vec.push(111);
         }
-        file.write(&vec);
-        get_fs().delete_file(&String::from("test_file"));
+        write_to_file(&String::from("test_file"), &vec);
+        delete_file(&String::from("test_file"));
     }
 }
 
@@ -283,15 +300,14 @@ impl KernelPerf for PerfWriteFile100 {
             let mut file_name = String::from("test_file");
             file_name.push(('0' as u8 + (i as u8 / 10)) as char);
             file_name.push(('0' as u8 + (i as u8 % 10)) as char);
-            let file = get_fs().create_file(&file_name);
-            file.write(&vec);
+            write_to_file(&file_name, &vec);
         }
 
         for i in 0..100 {
             let mut file_name = String::from("test_file");
             file_name.push(('0' as u8 + (i as u8 / 10)) as char);
             file_name.push(('0' as u8 + (i as u8 % 10)) as char);
-            get_fs().delete_file(&file_name);
+            delete_file(&file_name);
         }
     }
 }
@@ -313,15 +329,14 @@ impl KernelPerf for PerfWriteBigFile50 {
             let mut file_name = String::from("test_file");
             file_name.push(('0' as u8 + (i as u8 / 10)) as char);
             file_name.push(('0' as u8 + (i as u8 % 10)) as char);
-            let file = get_fs().create_file(&file_name);
-            file.write(&vec);
+            write_to_file(&file_name, &vec);
         }
 
         for i in 0..50 {
             let mut file_name = String::from("test_file");
             file_name.push(('0' as u8 + (i as u8 / 10)) as char);
             file_name.push(('0' as u8 + (i as u8 % 10)) as char);
-            get_fs().delete_file(&file_name);
+            delete_file(&file_name);
         }
     }
-}*/
+}
