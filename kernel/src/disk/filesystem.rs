@@ -131,6 +131,15 @@ fn get_root() -> Directory {
 }
 
 fn set_root(root: &mut Directory) {
+    let t = get_mounted_disk().borrow();
+    let head = get_mounted_disk().get_mut(&t).as_mut().unwrap().get_head();
+    get_mounted_disk().release(t);
+
+    if head.size() != 0 {
+        let (sectors, _) = deserialize::<(Vec<usize>, usize)>(&head);
+        delete_sectors(&sectors);
+    }
+
     let (sectors, size) = store_directory(root);
     let head = serialize(&mut (sectors, size));
 
