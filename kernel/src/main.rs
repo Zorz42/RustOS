@@ -11,6 +11,7 @@ use crate::trap::switch_to_kernel_trap;
 use core::panic::PanicInfo;
 use core::sync::atomic::{fence, Ordering};
 use kernel_std::{print, println, Box, String, Vec};
+use crate::console::run_console;
 use crate::disk::filesystem::{fs_erase, read_file, write_to_file};
 use crate::disk::memory_disk::mount_disk;
 use crate::gpu::init_gpu;
@@ -117,6 +118,8 @@ pub fn main() {
             run_program(&String::from("test_program"));
         }
         println!("Loaded!");
+
+        run_console();
 
         fence(Ordering::Release);
         unsafe {

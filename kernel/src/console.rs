@@ -29,7 +29,7 @@ pub fn run_console() {
     render_line(&command, cursor_shown);
 
     let mut prev_cursor_cycle = get_ticks();
-    loop {
+    'console_loop: loop {
         check_screen_refresh_for_print();
 
         while let Some(event) = check_for_virtio_input_event() {
@@ -50,6 +50,9 @@ pub fn run_console() {
                     render_line(&command, false);
                     println!();
                     on_command(&command);
+                    if command == String::from("exit") {
+                        break 'console_loop;
+                    }
                     command = String::new();
                     render_line(&command, cursor_shown);
                 }

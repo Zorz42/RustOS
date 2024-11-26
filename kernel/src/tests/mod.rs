@@ -112,7 +112,7 @@ pub fn perf_test_runner() {
     reset_print_color();
 }
 
-const PERF_TEST_ITERATIONS: u64 = 100;
+const PERF_TEST_MAX_ITERATIONS: u64 = 100;
 const PERF_FILE: &str = "perf.data";
 const PERF_FILE_SAVE: &str = "perf-new.data";
 
@@ -159,11 +159,17 @@ fn run_perf_test<T: KernelPerf>(name: &str) {
     print!(" {name}");
 
     let mut total_instr = 0;
-    for _ in 0..PERF_TEST_ITERATIONS {
+    let mut iterations = 0;
+    let start_time = get_ticks();
+    for _ in 0..PERF_TEST_MAX_ITERATIONS {
         let start_instr = get_instruction_count();
         test_struct.run();
         let end_instr = get_instruction_count();
         total_instr += end_instr - start_instr;
+        iterations += 1;
+        if get_ticks() - start_time > 10000 {
+            break;
+        }
     }
     test_struct.teardown();
 
@@ -176,7 +182,7 @@ fn run_perf_test<T: KernelPerf>(name: &str) {
         print!(" ");
     }
 
-    let perf_instr = total_instr / PERF_TEST_ITERATIONS;
+    let perf_instr = total_instr / iterations;
 
     let saved_perf_instr = get_perf_data(name);
 
