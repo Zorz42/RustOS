@@ -49,10 +49,11 @@ pub fn run_console() {
                 if event.code == 28 {
                     render_line(&command, false);
                     println!();
-                    on_command(&command);
                     if command == String::from("exit") {
+                        println!("Exiting console");
                         break 'console_loop;
                     }
+                    on_command(&command);
                     command = String::new();
                     render_line(&command, cursor_shown);
                 }
