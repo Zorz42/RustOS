@@ -13,7 +13,7 @@ use core::sync::atomic::{fence, Ordering};
 use kernel_std::{print, println, Box, String, Vec};
 use crate::console::run_console;
 use crate::disk::filesystem::{fs_erase, read_file, write_to_file};
-use crate::disk::memory_disk::mount_disk;
+use crate::disk::memory_disk::{mount_disk, unmount_disk};
 use crate::gpu::init_gpu;
 use crate::input::{init_input_devices};
 use crate::plic::{plicinit, plicinithart};
@@ -94,7 +94,7 @@ pub fn main() {
         let root_disk = find_root_disk(&mut disks);
 
         mount_disk(&root_disk);
-        fs_erase();
+        //fs_erase();
 
         #[cfg(feature = "run_tests")]
         {
@@ -120,6 +120,9 @@ pub fn main() {
         println!("Loaded!");
 
         run_console();
+
+        unmount_disk();
+        mount_disk(&root_disk);
 
         fence(Ordering::Release);
         unsafe {

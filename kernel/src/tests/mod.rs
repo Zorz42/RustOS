@@ -129,7 +129,7 @@ fn get_perf_data(name: &str) -> Option<u64> {
 }
 
 fn save_perf_data(name: &str, val: u64) {
-    let mut vec = Vec::new();
+    let mut vec: Vec<(String, u64)> = Vec::new();
     if let Some(data) = read_file(&String::from(PERF_FILE_SAVE)) {
         vec = deserialize::<Vec<(String, u64)>>(&data);
     }
@@ -147,7 +147,8 @@ fn save_perf_data(name: &str, val: u64) {
         vec.push((String::from(name), val));
     }
 
-    write_to_file(&String::from(PERF_FILE_SAVE), &serialize(&mut vec));
+    let data = serialize(&mut vec);
+    write_to_file(&String::from(PERF_FILE_SAVE), &data);
 }
 
 fn run_perf_test<T: KernelPerf>(name: &str) {

@@ -1,5 +1,6 @@
 use core::arch::asm;
-use kernel_std::{print, println, String};
+use kernel_std::{print, println, String, Vec};
+use crate::disk::filesystem::{read_file, write_to_file};
 use crate::input::{check_for_virtio_input_event, keycode_to_char, EventType};
 use crate::print::check_screen_refresh_for_print;
 use crate::timer::get_ticks;
@@ -11,12 +12,57 @@ fn render_line(line: &String, show_cursor: bool) {
     }
 }
 
-fn on_command(command: &String) {
-    if command.size() == 0 {
+fn cp_command(parts: Vec<String>) {
+    if parts.size() != 2 {
+        println!("Usage: cp <source> <destination>");
         return;
     }
 
-    println!("Command: {}", command);
+    let source = &parts[0];
+    let destination = &parts[1];
+
+    let data = if let Some(data) = read_file(source) {
+        data
+    } else {
+        println!("Source file not found: \"{}\"", source);
+        return;
+    };
+    write_to_file(destination, &data);
+}
+
+fn on_command(mut command: String) {
+    command.push(' ');
+    let mut command_parts = Vec::new();
+    let mut current_part = String::new();
+    for c in &command {
+        if *c == ' ' {
+            if current_part.size() > 0 {
+                command_parts.push(current_part);
+                current_part = String::new();
+            }
+        } else {
+            current_part.push(*c);
+        }
+    }
+
+    if command_parts.size() == 0 {
+        return;
+    }
+
+    let command = command_parts[0].clone();
+    command_parts.reverse();
+    command_parts.pop();
+    command_parts.reverse();
+
+    if command == String::from("help") {
+        println!("Commands:");
+        println!("  help - show this help");
+        println!("  exit - exit console");
+    } else if command == String::from("cp") {
+        cp_command(command_parts);
+    } else {
+        println!("Unknown command: {}", command);
+    }
 }
 
 const CURSOR_BLINK_INTERVAL: u64 = 500;
@@ -53,7 +99,7 @@ pub fn run_console() {
                         println!("Exiting console");
                         break 'console_loop;
                     }
-                    on_command(&command);
+                    on_command(command);
                     command = String::new();
                     render_line(&command, cursor_shown);
                 }

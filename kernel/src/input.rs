@@ -348,6 +348,17 @@ pub const fn keycode_to_char(keycode: u16) -> Option<char> {
         0x31 => Some('n'),
         0x32 => Some('m'),
         0x39 => Some(' '),
+        // map other characters like . , / ; ' [ ] \ - = ` to their respective keys
+        0x27 => Some(';'),
+        0x28 => Some('\''),
+        0x29 => Some('`'),
+        0x33 => Some(','),
+        0x34 => Some('.'),
+        0x35 => Some('/'),
+        0x1a => Some('['),
+        0x1b => Some(']'),
+        0x2b => Some('\\'),
+        0x0c => Some('-'),
         _ => None,
     }
 }

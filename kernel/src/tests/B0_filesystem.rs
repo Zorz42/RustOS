@@ -160,6 +160,7 @@ fn test_fs_persists() {
             assert!(is_file(file_name));
         }
     }
+    get_test_disk().release(t2);
 }
 
 #[kernel_test]
@@ -190,6 +191,31 @@ fn test_fs_read_write_file() {
 
     // try two multisector files
     let mut data1 = Vec::new();
+    for _ in 0..5000 {
+        data1.push(rng.get(0, 1 << 8) as u8);
+    }
+    write_to_file(&String::from("big_file1"), &data1);
+
+    let mut data2 = Vec::new();
+    for _ in 0..5000 {
+        data2.push(rng.get(0, 1 << 8) as u8);
+    }
+    write_to_file(&String::from("big_file2"), &data2);
+
+    let t2 = get_test_disk().borrow();
+    let test_disk = get_test_disk().get_mut(&t2).as_mut().unwrap();
+    unmount_disk();
+    mount_disk(test_disk);
+    get_test_disk().release(t2);
+
+    let data1_read = read_file(&String::from("big_file1")).unwrap();
+    let data2_read = read_file(&String::from("big_file2")).unwrap();
+
+    assert!(data1 == data1_read);
+    assert!(data2 == data2_read);
+
+    // try two multisector files again
+    let mut data1 = Vec::new();
     for _ in 0..10000 {
         data1.push(rng.get(0, 1 << 8) as u8);
     }
@@ -200,6 +226,36 @@ fn test_fs_read_write_file() {
         data2.push(rng.get(0, 1 << 8) as u8);
     }
     write_to_file(&String::from("big_file2"), &data2);
+
+    let t2 = get_test_disk().borrow();
+    let test_disk = get_test_disk().get_mut(&t2).as_mut().unwrap();
+    unmount_disk();
+    mount_disk(test_disk);
+    get_test_disk().release(t2);
+
+    let data1_read = read_file(&String::from("big_file1")).unwrap();
+    let data2_read = read_file(&String::from("big_file2")).unwrap();
+
+    assert!(data1 == data1_read);
+    assert!(data2 == data2_read);
+
+    let mut data1 = Vec::new();
+    for _ in 0..5000 {
+        data1.push(rng.get(0, 1 << 8) as u8);
+    }
+    write_to_file(&String::from("big_file1"), &data1);
+
+    let mut data2 = Vec::new();
+    for _ in 0..5000 {
+        data2.push(rng.get(0, 1 << 8) as u8);
+    }
+    write_to_file(&String::from("big_file2"), &data2);
+
+    let t2 = get_test_disk().borrow();
+    let test_disk = get_test_disk().get_mut(&t2).as_mut().unwrap();
+    unmount_disk();
+    mount_disk(test_disk);
+    get_test_disk().release(t2);
 
     let data1_read = read_file(&String::from("big_file1")).unwrap();
     let data2_read = read_file(&String::from("big_file2")).unwrap();
@@ -217,6 +273,53 @@ fn test_fs_many_writes() {
     for _ in 0..1000 {
         write_to_file(&String::from("test_file"), &Vec::new());
         delete_file(&String::from("test_file"));
+    }
+}
+
+#[kernel_test]
+fn test_fs_random_files_persists() {
+    let mut rng = Rng::new(54738524637825);
+    let mut file_data: Vec<Vec<u8>> = Vec::new();
+    let mut file_names: Vec<String> = Vec::new();
+    for i in 0..10 {
+        let mut data = Vec::new();
+        let len = rng.get(0, 1000);
+        for _ in 0..len {
+            data.push(rng.get(0, 1 << 8) as u8);
+        }
+        let mut file_name = String::from("vec/");
+        file_name.push(('A' as u8 + i as u8) as char);
+        write_to_file(&file_name, &data);
+        file_data.push(data);
+        file_names.push(file_name);
+
+        let t2 = get_test_disk().borrow();
+        let test_disk = get_test_disk().get_mut(&t2).as_mut().unwrap();
+        unmount_disk();
+        mount_disk(test_disk);
+        get_test_disk().release(t2);
+    }
+
+    for i in 0..20 {
+        let idx = rng.get(0, file_data.size() as u64) as usize;
+        let len = rng.get(0, 1000);
+        let mut data = Vec::new();
+        for _ in 0..len {
+            data.push(rng.get(0, 1 << 8) as u8);
+        }
+        write_to_file(&file_names[idx], &data);
+        file_data[idx] = data;
+
+        let t2 = get_test_disk().borrow();
+        let test_disk = get_test_disk().get_mut(&t2).as_mut().unwrap();
+        unmount_disk();
+        mount_disk(test_disk);
+        get_test_disk().release(t2);
+
+        for i in 0..file_data.size() {
+            let data = read_file(&file_names[i]).unwrap();
+            assert!(data == file_data[i]);
+        }
     }
 }
 
