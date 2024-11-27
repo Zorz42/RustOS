@@ -13,6 +13,7 @@ use crate::disk::filesystem::{is_file, read_file, write_to_file};
 use crate::riscv::get_instruction_count;
 use crate::ROOT_MAGIC;
 use crate::text_renderer::TextColor;
+use crate::trap::TIMER_INSTRUCTION_COUNT;
 
 mod A0_rand;
 mod A1_bitset;
@@ -163,10 +164,14 @@ fn run_perf_test<T: KernelPerf>(name: &str) {
     let mut iterations = 0;
     let start_time = get_ticks();
     for _ in 0..PERF_TEST_MAX_ITERATIONS {
+        let timer_instr = unsafe { TIMER_INSTRUCTION_COUNT };
         let start_instr = get_instruction_count();
         test_struct.run();
         let end_instr = get_instruction_count();
+        // add instructions
         total_instr += end_instr - start_instr;
+        // ignore instructions from timer
+        total_instr -= unsafe { TIMER_INSTRUCTION_COUNT } - timer_instr;
         iterations += 1;
         if get_ticks() - start_time > 10000 {
             break;

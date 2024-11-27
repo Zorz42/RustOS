@@ -1,5 +1,5 @@
 use core::arch::global_asm;
-use crate::riscv::{get_core_id, get_scause, get_sepc, get_sip, get_sstatus, get_stval, interrupts_enable, interrupts_get, set_sip, set_sstatus, set_stvec, SSTATUS_SPP, SSTATUS_UIE};
+use crate::riscv::{get_core_id, get_instruction_count, get_scause, get_sepc, get_sip, get_sstatus, get_stval, interrupts_enable, interrupts_get, set_sip, set_sstatus, set_stvec, SSTATUS_SPP, SSTATUS_UIE};
 use crate::timer::{get_ticks, tick};
 use kernel_std::{print, println};
 use crate::input::virtio_input_irq;
@@ -17,8 +17,11 @@ extern "C" {
     fn uservec();
 }
 
+pub static mut TIMER_INSTRUCTION_COUNT: u64 = 0;
+
 #[no_mangle]
 extern "C" fn kerneltrap() {
+    let begin_instruction_count = get_instruction_count();
     assert_ne!(get_sstatus() & SSTATUS_SPP, 0);
     assert!(!interrupts_get());
 
@@ -37,6 +40,10 @@ extern "C" fn kerneltrap() {
             set_sip(sip);
 
             scheduler_next_proc();
+
+            unsafe {
+                TIMER_INSTRUCTION_COUNT += get_instruction_count() - begin_instruction_count;
+            }
         }
         InterruptType::OtherDevice => {
             let irq = plic_irq();

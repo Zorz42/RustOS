@@ -164,7 +164,7 @@ pub fn enable_fpu() {
 pub fn get_instruction_count() -> u64 {
     let x;
     unsafe {
-        asm!("rdinstret {}", out(reg) x);
+        asm!("rdcycle {}", out(reg) x);
     }
     x
 }
