@@ -1,8 +1,8 @@
-use core::ptr::{copy_nonoverlapping, read_volatile, write_volatile};
-use kernel_std::{deserialize, serialize, Serial, Vec, Mutable};
+use core::ptr::write_volatile;
+use kernel_std::{Vec, Mutable};
 
 use crate::disk::disk::{Disk, SECTOR_SIZE};
-use crate::memory::{map_page_auto, VirtAddr, PAGE_SIZE, unmap_page, BitSet};
+use crate::memory::BitSet;
 
 pub struct MemoryDisk {
     disk: Disk,
@@ -27,7 +27,7 @@ impl MemoryDisk {
             }
         }
         unsafe {
-            self.is_taken.load_from(data.as_ptr() as *mut u64);
+            self.is_taken.load_from(data.as_mut_ptr() as *mut u64);
         }
     }
 
@@ -86,7 +86,7 @@ impl MemoryDisk {
         }
 
         for i in 0..data.size() {
-            first_sector[i + 4] = data.get(i).unwrap().clone();
+            first_sector[i + 4] = *data.get(i).unwrap();
         }
 
         self.write_sector(0, &first_sector);

@@ -1,6 +1,6 @@
 use core::arch::asm;
 use core::ptr::{copy, write_bytes};
-use kernel_std::{print, println, Lock, String, Vec};
+use kernel_std::{println, Lock, String, Vec};
 use crate::disk::filesystem::read_file;
 use crate::memory::{create_page_table, destroy_page_table, map_page_auto, switch_to_page_table, PageTable, VirtAddr, KERNEL_VIRTUAL_TOP, PAGE_SIZE, USER_CONTEXT, USER_STACK};
 use crate::print::check_screen_refresh_for_print;
@@ -149,7 +149,6 @@ enum ProcessState {
     Loading,
     Ready,
     Running,
-    Exited,
 }
 
 pub struct Process {
@@ -164,8 +163,8 @@ static PROCTABLE_LOCKS: [Lock; NUM_PROC] = [const { Lock::new() }; NUM_PROC];
 
 fn get_free_proc() -> usize {
     unsafe {
-        for i in 0..NUM_PROC {
-            if PROCTABLE[i].is_none() {
+        for (i, proc) in PROCTABLE.iter().enumerate().take(NUM_PROC) {
+            if proc.is_none() {
                 return i;
             }
         }

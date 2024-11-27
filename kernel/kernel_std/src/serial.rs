@@ -73,8 +73,8 @@ macro_rules! implement_serial_tuple {
     };
 }
 
-implement_serial_tuple!(A, B);
-implement_serial_tuple!(A, B, C);
-implement_serial_tuple!(A, B, C, D);
-implement_serial_tuple!(A, B, C, D, E);
-implement_serial_tuple!(A, B, C, D, E, F);
+implement_serial_tuple!(a, b);
+implement_serial_tuple!(a, b, c);
+implement_serial_tuple!(a, b, c, d);
+implement_serial_tuple!(a, b, c, d, e);
+implement_serial_tuple!(a, b, c, d, e, f);

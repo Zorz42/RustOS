@@ -5,7 +5,6 @@ pub const MEMORY_SIZE: u64 = 128 * 1024 * 1024;
 
 pub const PAGE_SIZE: u64 = 4096;
 pub const KERNEL_OFFSET: u64 = 0x80000000;
-pub const TOP_ADDR: u64 = KERNEL_OFFSET + MEMORY_SIZE;
 pub const NUM_PAGES: u64 = MEMORY_SIZE / PAGE_SIZE;
 
 pub const KERNEL_PT_ROOT_ENTRIES: u64 = 9; // how many entries are used for kernel page table (all the rest is for user page tables)
@@ -24,6 +23,7 @@ pub const USER_STACK: u64 = ID_MAP_END + 4 * FRAME_SIZE;
 // where the user context is stored (registers have to be saved when user program is interrupted)
 pub const USER_CONTEXT: u64 = ID_MAP_END + 5 * FRAME_SIZE;
 // this is the top of used kernel virtual memory space
+#[allow(dead_code)]
 pub const KERNEL_VIRTUAL_END: u64 = ID_MAP_END + 6 * FRAME_SIZE;
 
 // this marks the end of kernel virtual memory space (taken by first KERNEL_PT_ROOT_ENTRIES entries)

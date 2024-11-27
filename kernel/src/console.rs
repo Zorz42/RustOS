@@ -12,7 +12,7 @@ fn render_line(line: &String, show_cursor: bool) {
     }
 }
 
-fn cp_command(parts: Vec<String>) {
+fn cp_command(parts: &Vec<String>) {
     if parts.size() != 2 {
         println!("Usage: cp <source> <destination>");
         return;
@@ -21,9 +21,7 @@ fn cp_command(parts: Vec<String>) {
     let source = &parts[0];
     let destination = &parts[1];
 
-    let data = if let Some(data) = read_file(source) {
-        data
-    } else {
+    let Some(data) = read_file(source) else {
         println!("Source file not found: \"{}\"", source);
         return;
     };
@@ -59,7 +57,7 @@ fn on_command(mut command: String) {
         println!("  help - show this help");
         println!("  exit - exit console");
     } else if command == String::from("cp") {
-        cp_command(command_parts);
+        cp_command(&command_parts);
     } else {
         println!("Unknown command: {}", command);
     }

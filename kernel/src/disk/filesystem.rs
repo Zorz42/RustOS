@@ -13,12 +13,12 @@ fn read_sectors_from_disk(sectors: &Vec<usize>, size: usize) -> Vec<u8> {
     let mut size_left = size;
     for sector in sectors {
         let sector_data = get_mounted_disk().get_mut(&t).as_mut().unwrap().read_sector(*sector);
-        for i in 0..SECTOR_SIZE {
+        for i in sector_data {
             if size_left == 0 {
                 break;
             }
             size_left -= 1;
-            res.push(sector_data[i]);
+            res.push(i);
         }
     }
 
@@ -36,11 +36,11 @@ fn write_to_sectors_on_disk(sectors: &Vec<usize>, data: &Vec<u8>) {
     let mut size_left = data.size();
     for sector in sectors {
         let mut sector_data = [0; SECTOR_SIZE];
-        for i in 0..SECTOR_SIZE {
+        for i in &mut sector_data {
             if size_left == 0 {
                 break;
             }
-            sector_data[i] = data[data.size() - size_left];
+            *i = data[data.size() - size_left];
             size_left -= 1;
         }
         get_mounted_disk().get_mut(&t).as_mut().unwrap().write_sector(*sector, &sector_data);
@@ -64,29 +64,17 @@ impl Directory {
     }
 
     fn get_subdirectory(&self, name: &String) -> Option<&(Vec<usize>, usize, String)> {
-        for entry in &self.subdirectories {
-            if &entry.2 == name {
-                return Some(entry);
-            }
-        }
-        None
+        (&self.subdirectories).into_iter().find(|&entry| &entry.2 == name)
     }
 
     fn get_file(&self, name: &String) -> Option<&(Vec<usize>, usize, String)> {
-        for entry in &self.files {
-            if &entry.2 == name {
-                return Some(entry);
-            }
-        }
-        None
+        (&self.files).into_iter().find(|&entry| &entry.2 == name)
     }
 }
 
 fn load_directory(sectors: &Vec<usize>, size: usize) -> Directory {
     let data = read_sectors_from_disk(sectors, size);
-    let res = deserialize(&data);
-
-    res
+    deserialize(&data)
 }
 
 fn delete_sectors(sectors: &Vec<usize>) {
@@ -102,7 +90,7 @@ fn store_directory(directory: &mut Directory) -> (Vec<usize>, usize) {
     let mut sectors = Vec::new();
     let size = data.size();
     let t = get_mounted_disk().borrow();
-    let num_sectors = (size + SECTOR_SIZE - 1) / SECTOR_SIZE;
+    let num_sectors = size.div_ceil(SECTOR_SIZE);
     for _ in 0..num_sectors {
         sectors.push(get_mounted_disk().get_mut(&t).as_mut().unwrap().alloc_sector());
     }
@@ -255,7 +243,7 @@ pub fn delete_directory(path: &String) {
 
     // also remove its reference from the parent
     let idx = dirs.size() - 1;
-    dirs[idx].subdirectories.retain(&|entry| &entry.2 != &path[path.size() - 1]);
+    dirs[idx].subdirectories.retain(&|entry| entry.2 != path[path.size() - 1]);
 
     store_directory_chain(&mut dirs, &path);
 }
@@ -288,7 +276,7 @@ pub fn write_to_file(path: &String, data: &Vec<u8>) {
     let parent_dir = &mut dirs[idx];
 
     let mut sectors = Vec::new();
-    let sectors_count = (data.size() + SECTOR_SIZE - 1) / SECTOR_SIZE;
+    let sectors_count = data.size().div_ceil(SECTOR_SIZE);
     let t = get_mounted_disk().borrow();
     for _ in 0..sectors_count {
         sectors.push(get_mounted_disk().get_mut(&t).as_mut().unwrap().alloc_sector());

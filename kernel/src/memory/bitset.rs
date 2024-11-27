@@ -203,6 +203,7 @@ impl BitSetRaw {
     }
 }
 
+#[allow(dead_code)] // data is not used but its pointer is
 pub struct BitSet {
     bitset: BitSetRaw,
     data: Vec<u8>,

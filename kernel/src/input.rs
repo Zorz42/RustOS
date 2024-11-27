@@ -9,48 +9,9 @@ use crate::virtio::definitions::{virtio_reg_read, virtio_reg_write, MmioOffset, 
 const EVENT_BUFFER_ELEMENTS: usize = 128;
 const VIRTIO_RING_SIZE: usize = 128;
 
-#[repr(C)]
-pub struct Descriptor {
-    pub addr:  u64,
-    pub len:   u32,
-    pub flags: u16,
-    pub next:  u16,
-}
-
-#[repr(C)]
-pub struct Available {
-    pub flags: u16,
-    pub idx:   u16,
-    pub ring:  [u16; VIRTIO_RING_SIZE],
-    pub event: u16,
-}
-
-#[repr(C)]
-pub struct UsedElem {
-    pub id:  u32,
-    pub len: u32,
-}
-
-#[repr(C)]
-pub struct Used {
-    pub flags: u16,
-    pub idx:   u16,
-    pub ring:  [UsedElem; VIRTIO_RING_SIZE],
-    pub event: u16,
-}
-
-#[repr(C)]
-pub struct Queue {
-    pub desc:  [Descriptor; VIRTIO_RING_SIZE],
-    pub avail: Available,
-    // Calculating padding, we need the used ring to start on a page boundary. We take the page size, subtract the
-    // amount the descriptor ring takes then subtract the available structure and ring.
-    pub padding0: [u8; PAGE_SIZE as usize - size_of::<Descriptor>() * VIRTIO_RING_SIZE - size_of::<Available>()],
-    pub used:     Used,
-}
-
 #[repr(u16)]
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
+#[allow(dead_code)]
 pub enum EventType {
     Syn = 0x00,
     Key = 0x01,

@@ -80,7 +80,7 @@ pub fn scroll() {
     let t = SCREEN_CHARS.borrow();
     let screen_width = unsafe { SCREEN_WIDTH_CHARS };
     let screen_height = unsafe { SCREEN_HEIGHT_CHARS };
-    let mut screen_chars = SCREEN_CHARS.get_mut(&t);
+    let screen_chars = SCREEN_CHARS.get_mut(&t);
     for y in 1..screen_height {
         for x in 0..screen_width {
             screen_chars[(y - 1) * screen_width + x] = screen_chars[y * screen_width + x];
