@@ -4,7 +4,7 @@ qemu-system-riscv64
 -machine virt
 -cpu rv64
 -d guest_errors,unimp
--smp 4
+-smp 1
 -m 128M
 -serial mon:stdio
 -bios none
@@ -16,5 +16,5 @@ qemu-system-riscv64
 -device virtio-keyboard-device
 -device virtio-mouse-device
 -global virtio-mmio.force-legacy=false
--icount shift=0
+-icount shift=0,sleep=off
 -kernel """

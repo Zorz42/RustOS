@@ -8,6 +8,7 @@
         #
 .globl kerneltrap
 .globl kernelvec
+.globl INSTRUCTION_COUNT
 .align 4
 kernelvec:
         # make room to save registers.

@@ -10,10 +10,8 @@ use crate::print::{reset_print_color, set_print_color};
 use crate::timer::get_ticks;
 use kernel_test::all_tests;
 use crate::disk::filesystem::{is_file, read_file, write_to_file};
-use crate::riscv::get_instruction_count;
 use crate::ROOT_MAGIC;
 use crate::text_renderer::TextColor;
-use crate::trap::TIMER_INSTRUCTION_COUNT;
 
 mod A0_rand;
 mod A1_bitset;
@@ -113,13 +111,13 @@ pub fn perf_test_runner() {
     reset_print_color();
 }
 
-const PERF_TEST_MAX_ITERATIONS: u64 = 100;
+const PERF_TEST_MAX_ITERATIONS: u64 = 10000;
 const PERF_FILE: &str = "perf.data";
 const PERF_FILE_SAVE: &str = "perf-new.data";
 
-fn get_perf_data(name: &str) -> Option<u64> {
+fn get_perf_data(name: &str) -> Option<f64> {
     let file = read_file(&String::from(PERF_FILE))?;
-    let vec = deserialize::<Vec<(String, u64)>>(&file);
+    let vec = deserialize::<Vec<(String, f64)>>(&file);
 
     for (perf_name, val) in vec {
         if perf_name.as_str() == name {
@@ -129,10 +127,10 @@ fn get_perf_data(name: &str) -> Option<u64> {
     None
 }
 
-fn save_perf_data(name: &str, val: u64) {
-    let mut vec: Vec<(String, u64)> = Vec::new();
+fn save_perf_data(name: &str, val: f64) {
+    let mut vec: Vec<(String, f64)> = Vec::new();
     if let Some(data) = read_file(&String::from(PERF_FILE_SAVE)) {
-        vec = deserialize::<Vec<(String, u64)>>(&data);
+        vec = deserialize::<Vec<(String, f64)>>(&data);
     }
 
     let mut saved = false;
@@ -160,18 +158,15 @@ fn run_perf_test<T: KernelPerf>(name: &str) {
     set_print_color(TextColor::LightCyan, TextColor::Black);
     print!(" {name}");
 
-    let mut total_instr = 0;
+    let mut total_ms = 0;
     let mut iterations = 0;
     let start_time = get_ticks();
     for _ in 0..PERF_TEST_MAX_ITERATIONS {
-        let timer_instr = unsafe { TIMER_INSTRUCTION_COUNT };
-        let start_instr = get_instruction_count();
+        let start_ms = get_ticks();
         test_struct.run();
-        let end_instr = get_instruction_count();
-        // add instructions
-        total_instr += end_instr - start_instr;
-        // ignore instructions from timer
-        total_instr -= unsafe { TIMER_INSTRUCTION_COUNT } - timer_instr;
+        let end_ms = get_ticks();
+        // add ms
+        total_ms += end_ms - start_ms;
         iterations += 1;
         if get_ticks() - start_time > 10000 {
             break;
@@ -188,23 +183,23 @@ fn run_perf_test<T: KernelPerf>(name: &str) {
         print!(" ");
     }
 
-    let perf_instr = total_instr / iterations;
+    let perf_ms = total_ms as f64 / iterations as f64;
 
-    let saved_perf_instr = get_perf_data(name);
+    let saved_perf_ms = get_perf_data(name);
 
     set_print_color(TextColor::White, TextColor::Black);
-    print!("{}", perf_instr);
+    print!("{:.5}", perf_ms);
     set_print_color(TextColor::LightGray, TextColor::Black);
-    print!(" instr");
+    print!("ms");
 
-    if let Some(saved_perf_ms) = saved_perf_instr {
-        let percent = perf_instr as f32 / saved_perf_ms as f32 * 100.0 - 100.0;
+    if let Some(saved_perf_ms) = saved_perf_ms{
+        let percent = perf_ms / saved_perf_ms * 100.0 - 100.0;
 
         print!(" / ");
         set_print_color(TextColor::White, TextColor::Black);
-        print!("{}", saved_perf_ms);
+        print!("{:.5}", saved_perf_ms);
         set_print_color(TextColor::LightGray, TextColor::Black);
-        print!(" instr");
+        print!("ms");
 
         if percent < -10.0 {
             set_print_color(TextColor::LightGreen, TextColor::Black);
@@ -218,5 +213,5 @@ fn run_perf_test<T: KernelPerf>(name: &str) {
     }
     println!();
 
-    save_perf_data(name, perf_instr);
+    save_perf_data(name, perf_ms);
 }

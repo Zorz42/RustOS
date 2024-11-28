@@ -12,7 +12,7 @@ use core::panic::PanicInfo;
 use core::sync::atomic::{fence, Ordering};
 use kernel_std::{println, String, Vec};
 use crate::console::run_console;
-use crate::disk::filesystem::write_to_file;
+use crate::disk::filesystem::{fs_erase, write_to_file};
 use crate::disk::memory_disk::{mount_disk, unmount_disk};
 use crate::gpu::init_gpu;
 use crate::input::{init_input_devices};
@@ -96,7 +96,7 @@ pub fn main() {
         mount_disk(&root_disk);
         //fs_erase();
 
-        #[cfg(feature = "run_tests")]
+        #[cfg(feature = "run_perf")]
         {
             use crate::tests::perf_test_runner;
             perf_test_runner();
