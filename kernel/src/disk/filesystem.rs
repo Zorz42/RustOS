@@ -371,3 +371,32 @@ pub fn read_file(path: &String) -> Option<Vec<u8>> {
         None
     }
 }
+
+// returns (dirs, files)
+pub fn list_directory(path: &String) -> Option<(Vec<String>, Vec<String>)> {
+    let mut dirs = Vec::new();
+    dirs.push(get_root());
+    let path = parse_path(path);
+
+    for dir in &path {
+        let dir_entry = dirs[dirs.size() - 1].get_subdirectory(dir).cloned();
+
+        if let Some((sectors, size, _)) = dir_entry {
+            dirs.push(load_directory(&sectors, size));
+        } else {
+            return None;
+        }
+    }
+
+    let idx = dirs.size() - 1;
+    let dir = &mut dirs[idx];
+    let mut files = Vec::new();
+    for (_, _, name) in &dir.files {
+        files.push(name.clone());
+    }
+    let mut dirs = Vec::new();
+    for (_, _, name) in &dir.subdirectories {
+        dirs.push(name.clone());
+    }
+    Some((dirs, files))
+}

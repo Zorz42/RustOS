@@ -2,7 +2,7 @@ use crate::disk::memory_disk::{get_mounted_disk, mount_disk, unmount_disk};
 use crate::tests::{get_test_disk, KernelPerf};
 use kernel_test::{kernel_perf, kernel_test, kernel_test_mod};
 use kernel_std::{print, println, Rng, String, Vec};
-use crate::disk::filesystem::{fs_erase, create_directory, is_directory, delete_directory, write_to_file, delete_file, is_file, read_file};
+use crate::disk::filesystem::{fs_erase, create_directory, is_directory, delete_directory, write_to_file, delete_file, is_file, read_file, list_directory};
 
 kernel_test_mod!(crate::tests::B0_filesystem);
 
@@ -319,6 +319,112 @@ fn test_fs_random_files_persists() {
         for i in 0..file_data.size() {
             let data = read_file(&file_names[i]).unwrap();
             assert!(data == file_data[i]);
+        }
+    }
+}
+
+fn assert_sets_same(a: &Vec<String>, b: &Vec<String>) {
+    for i in a {
+        let mut found = false;
+        for j in b {
+            if i == j {
+                found = true;
+                break;
+            }
+        }
+        if !found {
+            println!();
+            print!("[");
+            for i in a {
+                print!("{} ", i);
+            }
+            println!("]");
+            print!("[");
+            for i in b {
+                print!("{} ", i);
+            }
+            println!("]");
+        }
+        assert!(found);
+    }
+
+    for i in b {
+        let mut found = false;
+        for j in a {
+            if i == j {
+                found = true;
+                break;
+            }
+        }
+        if !found {
+            for i in a {
+                print!("{} ", i);
+            }
+            println!();
+            for i in b {
+                print!("{} ", i);
+            }
+            println!();
+        }
+        assert!(found);
+    }
+}
+
+#[kernel_test]
+fn test_list_dir() {
+    fs_erase();
+    let mut rng = Rng::new(67453829);
+    let mut dirs = Vec::new();
+    let mut files = Vec::new();
+
+    for _ in 0..100 {
+        let t = rng.get(0, 3);
+        match t {
+            0 => {
+                let dir_name = create_random_string(&mut rng);
+                create_directory(&dir_name);
+                dirs.push((dir_name, Vec::new()));
+            }
+            1 => {
+                let file_name = create_random_string(&mut rng);
+                write_to_file(&file_name, &Vec::new());
+                files.push(file_name);
+            }
+            2 => {
+                if dirs.size() == 0 {
+                    continue;
+                }
+                let dir_idx = rng.get(0, dirs.size() as u64) as usize;
+                let file_name = create_random_string(&mut rng);
+                let mut file_path = dirs[dir_idx].0.clone();
+                file_path.push('/');
+                for c in &file_name {
+                    file_path.push(*c);
+                }
+                write_to_file(&file_path, &Vec::new());
+                dirs[dir_idx].1.push(file_name);
+            }
+            _ => unreachable!(),
+        }
+
+        let mut dirs_names = Vec::new();
+        for (dir_name, _) in &dirs {
+            dirs_names.push(dir_name.clone());
+        }
+        assert_sets_same(&list_directory(&String::from("/")).unwrap().0, &dirs_names);
+        assert_sets_same(&list_directory(&String::from("/")).unwrap().1, &files);
+
+        for (dir_name, dir_files) in &dirs {
+            let mut files_names = Vec::new();
+            for file_name in dir_files {
+                files_names.push(file_name.clone());
+            }
+            let mut dir_path = String::from("/");
+            for c in dir_name {
+                dir_path.push(*c);
+            }
+            assert_sets_same(&list_directory(&dir_path).unwrap().0, &Vec::new());
+            assert_sets_same(&list_directory(&dir_path).unwrap().1, &files_names);
         }
     }
 }

@@ -1,6 +1,4 @@
-use core::arch::asm;
 use core::ops::{Deref, DerefMut};
-use core::ptr::addr_of;
 use kernel_test::all_perf_tests;
 use kernel_std::{deserialize, print, println, serialize, Mutable, String, Vec};
 
@@ -9,7 +7,7 @@ use crate::memory::bitset_size_bytes;
 use crate::print::{reset_print_color, set_print_color};
 use crate::timer::get_ticks;
 use kernel_test::all_tests;
-use crate::disk::filesystem::{is_file, read_file, write_to_file};
+use crate::disk::filesystem::{read_file, write_to_file};
 use crate::ROOT_MAGIC;
 use crate::text_renderer::TextColor;
 
@@ -168,7 +166,7 @@ fn run_perf_test<T: KernelPerf>(name: &str) {
         // add ms
         total_ms += end_ms - start_ms;
         iterations += 1;
-        if get_ticks() - start_time > 10000 {
+        if get_ticks() - start_time > 3000 {
             break;
         }
     }
@@ -201,9 +199,9 @@ fn run_perf_test<T: KernelPerf>(name: &str) {
         set_print_color(TextColor::LightGray, TextColor::Black);
         print!("ms");
 
-        if percent < -10.0 {
+        if percent < -3.0 {
             set_print_color(TextColor::LightGreen, TextColor::Black);
-        } else if percent < 10.0 {
+        } else if percent < 3.0 {
             set_print_color(TextColor::LightGray, TextColor::Black);
         } else {
             set_print_color(TextColor::LightRed, TextColor::Black);

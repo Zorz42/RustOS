@@ -1,6 +1,6 @@
 use core::arch::asm;
 use kernel_std::{print, println, String, Vec};
-use crate::disk::filesystem::{read_file, write_to_file};
+use crate::disk::filesystem::{list_directory, read_file, write_to_file};
 use crate::input::{check_for_virtio_input_event, keycode_to_char, EventType};
 use crate::print::check_screen_refresh_for_print;
 use crate::timer::get_ticks;
@@ -26,6 +26,24 @@ fn cp_command(parts: &Vec<String>) {
         return;
     };
     write_to_file(destination, &data);
+}
+
+fn ls_command(parts: &Vec<String>) {
+    let mut curr_dir = String::from("/");
+    if parts.size() == 1 {
+        curr_dir = parts[0].clone();
+    } else if parts.size() > 1 {
+        println!("Usage: ls <optional dir>");
+        return;
+    }
+
+    let (dirs, files) = list_directory(&curr_dir).unwrap();
+    for dir in dirs {
+        println!("{}/", dir);
+    }
+    for file in files {
+        println!("{}", file);
+    }
 }
 
 fn on_command(mut command: String) {
@@ -55,9 +73,13 @@ fn on_command(mut command: String) {
     if command == String::from("help") {
         println!("Commands:");
         println!("  help - show this help");
+        println!("  cp <source> <destination> - copy file");
+        println!("  ls <optional dir> - list files");
         println!("  exit - exit console");
     } else if command == String::from("cp") {
         cp_command(&command_parts);
+    } else if command == String::from("ls") {
+        ls_command(&command_parts);
     } else {
         println!("Unknown command: {}", command);
     }
