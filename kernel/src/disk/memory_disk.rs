@@ -1,5 +1,6 @@
+use core::ops::Deref;
 use core::ptr::write_volatile;
-use kernel_std::{Vec, Mutable};
+use kernel_std::{Vec, Mutable, Box, println};
 
 use crate::disk::disk::{Disk, SECTOR_SIZE};
 use crate::memory::BitSet;
@@ -7,28 +8,35 @@ use crate::memory::BitSet;
 pub struct MemoryDisk {
     disk: Disk,
     is_taken: BitSet, // which page is taken
+    cache: Vec<Option<Box<[u8; SECTOR_SIZE]>>>,
 }
 
 impl MemoryDisk {
     pub fn new(disk: &Disk) -> Self {
-        Self {
+        let mut res = Self {
             disk: disk.clone(),
             is_taken: BitSet::new(0),
-        }
-    }
+            cache: Vec::new(),
+        };
 
-    pub fn init(&mut self) {
-        self.is_taken = BitSet::new(self.disk.size());
+        for _ in 0..res.get_num_sectors() {
+            res.cache.push(None);
+        }
+
+        res.is_taken = BitSet::new(res.disk.size());
         let mut data = Vec::new();
-        for i in 0..self.get_bitset_num_sectors() {
-            let sector = self.read_sector(i + 1);
+        for i in 0..res.get_bitset_num_sectors() {
+            let sector = res.read_sector(i + 1);
             for j in sector {
                 data.push(j);
             }
         }
+
         unsafe {
-            self.is_taken.load_from(data.as_mut_ptr() as *mut u64);
+            res.is_taken.load_from(data.as_mut_ptr() as *mut u64);
         }
+
+        res
     }
 
     pub const fn get_num_sectors(&self) -> usize {
@@ -58,10 +66,14 @@ impl MemoryDisk {
     }
 
     pub fn read_sector(&mut self, sector: usize) -> [u8; SECTOR_SIZE] {
-        self.disk.read(sector)
+        if self.cache[sector].is_none() {
+            self.cache[sector] = Some(Box::new(self.disk.read(sector)));
+        }
+        self.cache[sector].as_ref().unwrap().deref().clone()
     }
 
     pub fn write_sector(&mut self, sector: usize, data: &[u8; SECTOR_SIZE]) {
+        self.cache[sector] = Some(Box::new(*data));
         self.disk.write(sector, data);
     }
 
@@ -106,6 +118,17 @@ impl MemoryDisk {
         debug_assert!(self.is_taken.get(sector));
         self.is_taken.set(sector, false);
     }
+
+    pub fn flush_cache(&mut self, sector: usize) {
+        if let Some(sector_data) = self.cache[sector].as_ref() {
+            let mut data = [0; SECTOR_SIZE];
+            for i in 0..SECTOR_SIZE {
+                data[i] = sector_data[i];
+            }
+            self.disk.write(sector, &data);
+        }
+        self.cache[sector] = None;
+    }
 }
 
 static MOUNTED_DISK: Mutable<Option<MemoryDisk>> = Mutable::new(None);
@@ -113,14 +136,13 @@ static MOUNTED_DISK: Mutable<Option<MemoryDisk>> = Mutable::new(None);
 pub fn unmount_disk() {
     let t = MOUNTED_DISK.borrow();
     if let Some(mounted_disk) = MOUNTED_DISK.get_mut(&t) {
-        let num_sectors = mounted_disk.get_bitset_num_sectors();
-        let mut data = unsafe { Vec::new_with_size_uninit(num_sectors * SECTOR_SIZE) };
+        let num_bitset_sectors = mounted_disk.get_bitset_num_sectors();
+        let mut data = unsafe { Vec::new_with_size_uninit(num_bitset_sectors * SECTOR_SIZE) };
         unsafe {
             mounted_disk.is_taken.store_to(data.as_mut_ptr() as *mut u64);
         }
 
-
-        for i in 0..num_sectors {
+        for i in 0..num_bitset_sectors {
             let mut sector = [0; SECTOR_SIZE];
             for j in 0..SECTOR_SIZE {
                 if i * SECTOR_SIZE + j < data.size() {
@@ -128,6 +150,10 @@ pub fn unmount_disk() {
                 }
             }
             mounted_disk.write_sector(i + 1, &sector);
+        }
+
+        for i in 0..mounted_disk.get_num_sectors() {
+            mounted_disk.flush_cache(i);
         }
     }
 
@@ -141,7 +167,6 @@ pub fn mount_disk(disk: &Disk) {
     let t = MOUNTED_DISK.borrow();
     let mounted_disk = MemoryDisk::new(disk);
     *MOUNTED_DISK.get_mut(&t) = Some(mounted_disk);
-    MOUNTED_DISK.get_mut(&t).as_mut().unwrap().init();
     MOUNTED_DISK.release(t);
 }
 

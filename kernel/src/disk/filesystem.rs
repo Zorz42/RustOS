@@ -1,3 +1,4 @@
+use core::ops::Deref;
 use kernel_std::{deserialize, serialize, String, Vec};
 use kernel_std::derive::Serial;
 use crate::disk::disk::SECTOR_SIZE;
