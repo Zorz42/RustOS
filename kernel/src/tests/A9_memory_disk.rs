@@ -24,7 +24,7 @@ fn test_disk_persists() {
     let t2 = get_test_disk().borrow();
     let test_disk = get_test_disk().get_mut(&t2).as_mut().unwrap();
 
-    let mut rng = Rng::new(56437285922);
+    let mut rng = Rng::new(43627856234789);
     for _ in 0..20 {
         let t = get_mounted_disk().borrow();
         let page = get_mounted_disk().get_mut(&t).as_mut().unwrap().alloc_sector();
@@ -40,6 +40,37 @@ fn test_disk_persists() {
 
         let t = get_mounted_disk().borrow();
         let data2 = get_mounted_disk().get_mut(&t).as_mut().unwrap().read_sector(page);
+        assert_eq!(data, data2);
+        get_mounted_disk().get_mut(&t).as_mut().unwrap().free_sector(page);
+        get_mounted_disk().release(t);
+    }
+
+    get_test_disk().release(t2);
+}
+
+
+#[kernel_test]
+fn test_disk_partial_read_write() {
+    let t2 = get_test_disk().borrow();
+    let test_disk = get_test_disk().get_mut(&t2).as_mut().unwrap();
+
+    let mut rng = Rng::new(43627856234789);
+    for _ in 0..20 {
+        let t = get_mounted_disk().borrow();
+        let page = get_mounted_disk().get_mut(&t).as_mut().unwrap().alloc_sector();
+        let size = rng.get(0, SECTOR_SIZE as u64 + 1) as usize;
+        let mut data = Vec::new();
+        for i in 0..size {
+            data.push(rng.get(0, 255) as u8);
+        }
+        get_mounted_disk().get_mut(&t).as_mut().unwrap().write_sector_partial(page, &data);
+        get_mounted_disk().release(t);
+
+        unmount_disk();
+        mount_disk(test_disk);
+
+        let t = get_mounted_disk().borrow();
+        let data2 = get_mounted_disk().get_mut(&t).as_mut().unwrap().read_sector_partial(page, size);
         assert_eq!(data, data2);
         get_mounted_disk().get_mut(&t).as_mut().unwrap().free_sector(page);
         get_mounted_disk().release(t);

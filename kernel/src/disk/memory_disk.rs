@@ -88,6 +88,17 @@ impl MemoryDisk {
         self.cache[sector] = Some(Box::new(*data));
     }
 
+    pub fn write_sector_partial(&mut self, sector: usize, data: &Vec<u8>) {
+        assert!(data.size() <= SECTOR_SIZE);
+        if self.cache[sector].is_none() {
+            self.cache[sector] = Some(Box::new([0; SECTOR_SIZE]));
+        }
+        let disk_data = self.cache[sector].as_mut().unwrap();
+        unsafe {
+            copy_nonoverlapping(data.as_ptr(), disk_data.as_mut_ptr(), data.size());
+        }
+    }
+
     pub fn get_head(&mut self) -> Vec<u8> {
         let first_sector = self.read_sector(0);
 

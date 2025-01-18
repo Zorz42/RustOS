@@ -1,4 +1,5 @@
-use core::ops::Deref;
+use core::cmp::min;
+use core::ptr::copy_nonoverlapping;
 use kernel_std::{deserialize, serialize, String, Vec};
 use kernel_std::derive::Serial;
 use crate::disk::disk::SECTOR_SIZE;
@@ -9,18 +10,19 @@ fn read_sectors_from_disk(sectors: &Vec<usize>, size: usize) -> Vec<u8> {
     let min_size = sectors.size() * SECTOR_SIZE - SECTOR_SIZE + 1;
     let max_size = sectors.size() * SECTOR_SIZE;
     assert!(size >= min_size && size <= max_size);
-    let mut res = Vec::new();
+    let mut res: Vec<u8> = unsafe { Vec::new_with_size_uninit(size) };
 
-    let mut size_left = size;
+    let mut curr_idx = 0;
     for sector in sectors {
-        let sector_data = get_mounted_disk().get_mut(&t).as_mut().unwrap().read_sector(*sector);
-        for i in sector_data {
-            if size_left == 0 {
-                break;
-            }
-            size_left -= 1;
-            res.push(i);
+        let this_size = min(size - curr_idx, SECTOR_SIZE);
+
+        let sector_data = get_mounted_disk().get_mut(&t).as_mut().unwrap().read_sector(*sector).as_ptr();
+
+        unsafe {
+            copy_nonoverlapping(sector_data, res.as_mut_ptr().add(curr_idx), this_size);
         }
+
+        curr_idx += this_size;
     }
 
     get_mounted_disk().release(t);

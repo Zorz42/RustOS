@@ -1,4 +1,4 @@
-use core::fmt::{Display, Formatter};
+use core::fmt::{Debug, Display, Formatter};
 use crate::pointer::Ptr;
 use crate::serial::Serial;
 use core::ops::{DerefMut, Index, IndexMut};
@@ -333,6 +333,19 @@ impl<T: Display> Display for Vec<T> {
         write!(f, "[")?;
         for i in 0..self.size {
             write!(f, "{}", self[i])?;
+            if i != self.size - 1 {
+                write!(f, ", ")?;
+            }
+        }
+        write!(f, "]")
+    }
+}
+
+impl<T: Debug> Debug for Vec<T> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
+        write!(f, "Vec[")?;
+        for i in 0..self.size {
+            write!(f, "{:?}", self[i])?;
             if i != self.size - 1 {
                 write!(f, ", ")?;
             }
