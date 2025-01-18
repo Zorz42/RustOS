@@ -1,6 +1,6 @@
 use core::ops::Deref;
-use core::ptr::write_volatile;
-use kernel_std::{Vec, Mutable, Box, println};
+use core::ptr::{copy_nonoverlapping, write_volatile};
+use kernel_std::{Vec, Mutable, Box};
 
 use crate::disk::disk::{Disk, SECTOR_SIZE};
 use crate::memory::BitSet;
@@ -72,9 +72,20 @@ impl MemoryDisk {
         self.cache[sector].as_ref().unwrap().deref().clone()
     }
 
+    pub fn read_sector_partial(&mut self, sector: usize, size: usize) -> Vec<u8> {
+        if self.cache[sector].is_none() {
+            self.cache[sector] = Some(Box::new(self.disk.read(sector)));
+        }
+        let mut res = Vec::new_with_size(size);
+        let data = self.cache[sector].as_ref().unwrap().deref();
+        unsafe {
+            copy_nonoverlapping(data.as_ptr(), res.as_mut_ptr(), size);
+        }
+        res
+    }
+
     pub fn write_sector(&mut self, sector: usize, data: &[u8; SECTOR_SIZE]) {
         self.cache[sector] = Some(Box::new(*data));
-        self.disk.write(sector, data);
     }
 
     pub fn get_head(&mut self) -> Vec<u8> {
