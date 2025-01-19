@@ -117,11 +117,14 @@ impl<T> Vec<T> {
     }
 
     pub fn reverse(&mut self) {
-        let mut new_vec = Vec::new();
-        while let Some(el) = self.pop() {
-            new_vec.push(el);
+        let size = self.size;
+        for i in 0..size / 2 {
+            let ptr1 = &mut self[i] as *mut T;
+            let ptr2 = &mut self[size - 1 - i] as *mut T;
+            unsafe {
+                core::mem::swap(&mut *ptr1, &mut *ptr2);
+            }
         }
-        *self = new_vec;
     }
 
     pub fn retain(&mut self, filter: &dyn Fn(&T) -> bool) {
