@@ -99,6 +99,11 @@ impl<T> Vec<T> {
         }
     }
 
+    pub unsafe fn push_uninit(&mut self, num: usize) {
+        self.reserve(self.size + num);
+        self.size += num;
+    }
+
     pub fn size(&self) -> usize {
         self.size
     }

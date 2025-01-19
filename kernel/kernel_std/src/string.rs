@@ -75,7 +75,6 @@ impl String {
     
     pub fn as_str(&self) -> &str {
         unsafe {
-            //core::str::from_utf8(core::slice::from_raw_parts((self.vec.get_unchecked(0) as *const char) as *const u8, self.vec.size())).unwrap()
             let mut data = Vec::new();
             for c in self {
                 for i in c.encode_utf8(&mut [0; 4]).bytes() {

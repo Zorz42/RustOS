@@ -1,4 +1,5 @@
 use crate::Vec;
+use core::ptr::copy_nonoverlapping;
 
 pub trait Serial {
     fn serialize(&mut self, vec: &mut Vec<u8>);
@@ -9,24 +10,21 @@ macro_rules! implement_serial_direct {
     ($T:ident) => {
         impl Serial for $T {
             fn serialize(&mut self, vec: &mut Vec<u8>) {
-                for i in 0..core::mem::size_of::<$T>() {
-                    unsafe {
-                        let ptr = core::ptr::from_ref(self) as *const u8;
-                        vec.push(*ptr.add(i));
-                    }
+                unsafe {
+                    let size = core::mem::size_of::<$T>();
+                    vec.push_uninit(size);
+                    let ptr = core::ptr::from_ref(self) as *const u8;
+                    copy_nonoverlapping(ptr, vec.as_mut_ptr().add(vec.size() - size), size);
                 }
+
             }
 
             fn deserialize(vec: &Vec<u8>, idx: &mut usize) -> Self {
-                let obj = Self::default();
-                for i in 0..core::mem::size_of::<$T>() {
-                    unsafe {
-                        let ptr = core::ptr::from_ref(&obj) as *mut u8;
-                        *ptr.add(i) = vec[*idx];
-                        *idx += 1;
-                    }
+                unsafe {
+                    let ptr = vec.as_ptr().add(*idx) as *const $T;
+                    *idx += core::mem::size_of::<$T>();
+                    *ptr
                 }
-                obj
             }
         }
     };
