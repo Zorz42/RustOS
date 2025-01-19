@@ -16,10 +16,10 @@ fn read_sectors_from_disk(sectors: &Vec<usize>, size: usize) -> Vec<u8> {
     for sector in sectors {
         let this_size = min(size - curr_idx, SECTOR_SIZE);
 
-        let sector_data = get_mounted_disk().get_mut(&t).as_mut().unwrap().read_sector(*sector).as_ptr();
+        let sector_data = get_mounted_disk().get_mut(&t).as_mut().unwrap().read_sector(*sector);
 
         unsafe {
-            copy_nonoverlapping(sector_data, res.as_mut_ptr().add(curr_idx), this_size);
+            copy_nonoverlapping(sector_data.as_ptr(), res.as_mut_ptr().add(curr_idx), this_size);
         }
 
         curr_idx += this_size;

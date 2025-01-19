@@ -74,19 +74,20 @@ impl<T> Vec<T> {
         }
     }
 
-    fn double_capacity(&mut self) {
-        let mut new_arr = Ptr::new(self.capacity * 2);
+    pub fn reserve(&mut self, size: usize) {
+        if size <= self.capacity {
+            return;
+        }
+        let mut new_capacity = self.capacity;
+        while new_capacity < size {
+            new_capacity *= 2;
+        }
+        let mut new_arr = unsafe { Ptr::new(new_capacity) };
         unsafe {
-            copy_nonoverlapping(self.arr.get_mut() as *mut u8, new_arr.get_mut() as *mut u8, (self.size * core::mem::size_of::<T>() + 7) / 8 * 8);
+            copy_nonoverlapping(self.arr.get_mut() as *mut u8, new_arr.get_mut() as *mut u8, (self.size * size_of::<T>()).div_ceil(8) * 8);
         }
         self.arr = new_arr;
-        self.capacity *= 2;
-    }
-
-    pub fn reserve(&mut self, size: usize) {
-        while self.capacity < size {
-            self.double_capacity();
-        }
+        self.capacity = new_capacity;
     }
 
     pub fn push(&mut self, element: T) -> &mut T {

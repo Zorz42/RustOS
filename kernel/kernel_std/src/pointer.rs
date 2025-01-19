@@ -6,7 +6,7 @@ pub struct Ptr<T> {
 }
 
 impl<T> Ptr<T> {
-    pub fn new(size: usize) -> Self {
+    pub unsafe fn new(size: usize) -> Self {
         Self {
             ptr: malloc(size * size_of::<T>()) as *mut T,
         }
@@ -30,7 +30,7 @@ impl<T> Ptr<T> {
 #[allow(dead_code)]
 impl<T: Default> Ptr<T> {
     pub fn new_default(size: usize) -> Self {
-        let res = Self::new(size);
+        let res = unsafe { Self::new(size) };
         for i in 0..size {
             unsafe {
                 *res.ptr.add(i) = T::default();

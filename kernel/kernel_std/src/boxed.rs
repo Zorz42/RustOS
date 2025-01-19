@@ -8,7 +8,7 @@ pub struct Box<T> {
 
 impl<T> Box<T> {
     pub fn new(val: T) -> Self {
-        let mut ptr = Ptr::new(1);
+        let mut ptr = unsafe { Ptr::new(1) };
         unsafe {
             core::ptr::write(ptr.get_mut(), val);
         }
