@@ -4,7 +4,7 @@
 uservec:
     csrw sscratch, a0
 
-    li a0, 0x200000000
+    li a0, 7 << 30
 
     // save the registers.
     sd ra, 0(a0)
@@ -60,7 +60,7 @@ uservec:
 .globl jump_to_user
 .align 4
 jump_to_user:
-    li a0, 0x200000000
+    li a0, 7 << 30
     // load jump address from 248(a0)
     ld t0, 248(a0)
     csrw sepc, t0

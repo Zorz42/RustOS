@@ -12,6 +12,7 @@ mod vector;
 mod print;
 mod spinlock;
 mod mutable;
+mod malloc2;
 
 pub use heap_tree::HeapTree;
 pub use malloc::{free, malloc};
