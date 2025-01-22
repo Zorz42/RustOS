@@ -217,7 +217,7 @@ pub fn run_program(path: &String) {
     // map program headers to memory
     for header in &program_headers {
         if header.p_type == 1 && header.memory_size != 0 {
-            #[cfg(assertions)]
+            #[cfg(feature = "assertions")]
             assert!(header.vaddr >= KERNEL_VIRTUAL_TOP);
 
             let low_page = header.vaddr / PAGE_SIZE;
@@ -226,7 +226,7 @@ pub fn run_program(path: &String) {
                 map_page_auto((page * PAGE_SIZE) as VirtAddr, true, true, true, true);
             }
 
-            #[cfg(assertions)]
+            #[cfg(feature = "assertions")]
             assert!(header.memory_size >= header.file_size);
             let ptr_low = header.vaddr as *mut u8;
             let ptr_mid = (header.vaddr + header.file_size) as *mut u8;
@@ -238,7 +238,7 @@ pub fn run_program(path: &String) {
     }
 
     let stack_size = 128 * 1024;
-    #[cfg(assertions)]
+    #[cfg(feature = "assertions")]
     assert_eq!(stack_size % PAGE_SIZE, 0);
     let stack_pages = stack_size / PAGE_SIZE;
     let stack_top = USER_STACK + stack_size;

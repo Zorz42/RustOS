@@ -1,4 +1,3 @@
-use core::ops::Add;
 use core::ptr::write_bytes;
 use crate::{allocate_page, bitset_size_bytes, deallocate_page, BitSetRaw, Mutable, HEAP_ADDR};
 use crate::bitset::{get_raw, set_raw};

@@ -8,3 +8,4 @@ derive = { path = "./derive" }
 
 [features]
 test_includes = []
+assertions = []

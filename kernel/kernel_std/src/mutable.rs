@@ -9,7 +9,7 @@ pub struct Mutable<T> {
 }
 
 pub struct MutableToken {
-    token: u32,
+    _token: u32,
 }
 
 impl<T> Mutable<T> {
@@ -24,24 +24,24 @@ impl<T> Mutable<T> {
         let token = unsafe {
             *self.curr_token.get()
         };
-        MutableToken { token }
+        MutableToken { _token: token }
     }
 
-    pub fn get(&self, token: &MutableToken) -> &T {
-        #[cfg(assertions)]
-        assert_eq!(token.token, unsafe { *self.curr_token.get() });
+    pub fn get(&self, _token: &MutableToken) -> &T {
+        #[cfg(feature = "assertions")]
+        assert_eq!(_token._token, unsafe { *self.curr_token.get() });
         unsafe { &*self.data.get() }
     }
 
-    pub fn get_mut(&self, token: &MutableToken) -> &mut T {
-        #[cfg(assertions)]
-        assert_eq!(token.token, unsafe { *self.curr_token.get() });
+    pub fn get_mut(&self, _token: &MutableToken) -> &mut T {
+        #[cfg(feature = "assertions")]
+        assert_eq!(_token._token, unsafe { *self.curr_token.get() });
         unsafe { &mut *(self.data.get()) }
     }
 
-    pub fn release(&self, token: MutableToken) {
-        #[cfg(assertions)]
-        assert_eq!(token.token, unsafe { *self.curr_token.get() });
+    pub fn release(&self, _token: MutableToken) {
+        #[cfg(feature = "assertions")]
+        assert_eq!(_token._token, unsafe { *self.curr_token.get() });
         self.lock.unlock();
     }
 }

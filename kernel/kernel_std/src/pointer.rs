@@ -42,10 +42,8 @@ impl<T: Default> Ptr<T> {
 
 impl<T> Drop for Ptr<T> {
     fn drop(&mut self) {
-        unsafe {
-            if self.ptr != 0 as *mut T {
-                free(self.ptr as *mut u8);
-            }
+        if self.ptr != 0 as *mut T {
+            free(self.ptr as *mut u8);
         }
     }
 }

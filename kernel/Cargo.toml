@@ -6,7 +6,7 @@ edition = "2021"
 [features]
 run_tests = []
 run_perf = []
-assertions = []
+assertions = ["kernel_std/assertions"]
 
 [profile.dev]
 opt-level = 0
