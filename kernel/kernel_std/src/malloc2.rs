@@ -1,8 +1,8 @@
 use core::ops::Add;
-use crate::{allocate_page, bitset_size_bytes, BitSetRaw, Mutable, HEAP_ADDR2};
+use crate::{allocate_page, bitset_size_bytes, println, BitSetRaw, Mutable, HEAP_ADDR2};
 
 pub const HEAP_REGION_SIZE: u64 = 1 << 28;
-const PAGE_SIZE: u64 = 4096;
+const PAGE_SIZE: usize = 4096;
 
 struct HeapRegion {
     bitset: BitSetRaw,
@@ -16,8 +16,9 @@ struct HeapRegion {
 }
 
 impl HeapRegion {
-    fn free(&mut self) {
-        todo!()
+    fn free(&mut self, ptr: *mut u8) {
+        let idx = (ptr as u64 - self.base_addr as u64) / self.block_size as u64;
+        self.bitset.set(idx as usize, false);
     }
 
     fn alloc(&mut self) -> *mut u8 {
@@ -25,14 +26,14 @@ impl HeapRegion {
             self.bitset.set(block, true);
             unsafe { self.base_addr.add(block * self.block_size) }
         } else {
-            let size = self.bitset.get_size() + 1;
-            let new_bitset_page_addr = unsafe { self.bitset_base_addr.add(bitset_size_bytes(size + 1).div_ceil(PAGE_SIZE as usize)) };
+            let size = self.bitset.get_size();
+            let new_bitset_page_addr = unsafe { self.bitset_base_addr.add(bitset_size_bytes(size + 1).div_ceil(PAGE_SIZE) * PAGE_SIZE) };
             if new_bitset_page_addr != self.bitset_page_addr {
                 allocate_page(self.bitset_page_addr, false);
                 self.bitset_page_addr = new_bitset_page_addr;
             }
 
-            let new_heap_page_addr = unsafe { self.base_addr.add((size * self.block_size).div_ceil(PAGE_SIZE as usize)) };
+            let new_heap_page_addr = unsafe { self.base_addr.add(((size + 1) * self.block_size).div_ceil(PAGE_SIZE) * PAGE_SIZE) };
             if new_heap_page_addr != self.heap_page_addr {
                 allocate_page(self.heap_page_addr, false);
                 self.heap_page_addr = new_heap_page_addr;
@@ -88,6 +89,10 @@ pub fn malloc2(size: usize) -> *mut u8 {
     todo!()
 }
 
-pub unsafe fn free2(ptr: *mut u8) {
-    // TODO: implement
+pub fn free2(ptr: *mut u8) {
+    let region_idx = (ptr as u64 - unsafe { HEAP_ADDR2 }) / (2 * HEAP_REGION_SIZE);
+    let t = HEAP_REGIONS.borrow();
+    let region = &mut HEAP_REGIONS.get_mut(&t)[region_idx as usize];
+    region.free(ptr);
+    HEAP_REGIONS.release(t);
 }
