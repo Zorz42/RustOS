@@ -1,4 +1,3 @@
-use core::ops::{Deref, DerefMut};
 use kernel_test::all_perf_tests;
 use kernel_std::{deserialize, print, println, serialize, Mutable, String, Vec};
 

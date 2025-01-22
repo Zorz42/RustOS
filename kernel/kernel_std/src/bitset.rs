@@ -1,5 +1,5 @@
 use core::ops::{Deref, DerefMut};
-use core::ptr::{copy_nonoverlapping, write_bytes};
+use core::ptr::write_bytes;
 use crate::Vec;
 
 /// Layout of the bitset has size times u32.
@@ -210,6 +210,17 @@ impl BitSetRaw {
         for i in 0..self.size {
             let val = get_raw(self.data, 32 * i + 31);
             set_raw(ptr, i, val);
+        }
+    }
+
+    // adds one more element to the bitset
+    pub fn add_one(&mut self) {
+        self.size += 1;
+        self.count0 += 1;
+        unsafe {
+            set_raw(self.data, 32 * (self.size - 1) + 30, false);
+            set_raw(self.data, 32 * (self.size - 1) + 31, false);
+            self.add_to_stack(self.size - 1);
         }
     }
 }

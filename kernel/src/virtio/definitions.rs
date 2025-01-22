@@ -3,8 +3,9 @@ pub const MAX_VIRTIO_ID: u64 = 8;
 pub const VIRTIO_MAGIC: u32 = 0x74726976;
 
 // virtio mmio control registers, mapped starting at 0x10000000 + 0x1000 * id.
-#[allow(dead_code)]
 pub const VIRTIO_MMIO_BASE: u64 = 0x10001000;
+
+#[allow(dead_code)]
 pub enum MmioOffset {
     MagicValue = 0x000,
     Version = 0x004,

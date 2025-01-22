@@ -5,14 +5,14 @@
 use crate::boot::infinite_loop;
 use crate::disk::disk::{Disk, scan_for_disks};
 use crate::memory::{get_num_free_pages, init_paging, init_paging_hart, NUM_PAGES};
-use crate::print::{init_print, reset_print_color, set_print_color};
+use crate::print::{init_print, set_print_color};
 use crate::riscv::{enable_fpu, get_core_id, interrupts_enable};
 use crate::trap::switch_to_kernel_trap;
 use core::panic::PanicInfo;
 use core::sync::atomic::{fence, Ordering};
 use kernel_std::{println, String, Vec};
 use crate::console::run_console;
-use crate::disk::filesystem::{fs_erase, write_to_file};
+use crate::disk::filesystem::write_to_file;
 use crate::disk::memory_disk::{mount_disk, unmount_disk};
 use crate::gpu::init_gpu;
 use crate::input::{init_input_devices};

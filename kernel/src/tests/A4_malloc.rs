@@ -1,16 +1,15 @@
-use crate::tests::KernelPerf;
 use core::ptr::write_bytes;
-use kernel_test::{kernel_perf, kernel_test, kernel_test_mod};
-use kernel_std::{free, malloc, Rng};
+use kernel_test::{kernel_test, kernel_test_mod};
+use kernel_std::{free, malloc, Rng, malloc2, free2};
 
 kernel_test_mod!(crate::tests::A4_malloc);
 
 #[kernel_test]
 fn test_malloc() {
     let mut rng = Rng::new(754389);
-    let _ = malloc(0);
+    let _ = malloc2(0);
     for _ in 0..100 {
-        let _ = malloc(rng.get(0, 100) as usize);
+        let _ = malloc2(rng.get(0, 100) as usize);
     }
 }
 

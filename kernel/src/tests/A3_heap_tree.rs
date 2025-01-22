@@ -1,7 +1,6 @@
 use kernel_test::{kernel_test, kernel_test_mod};
 
 use crate::memory::TESTING_OFFSET;
-use kernel_std::println;
 use kernel_std::{HeapTree, Rng};
 
 kernel_test_mod!(crate::tests::A3_heap_tree);

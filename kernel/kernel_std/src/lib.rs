@@ -17,7 +17,7 @@ mod bitset;
 
 pub use heap_tree::HeapTree;
 pub use malloc::{free, malloc};
-
+pub use malloc2::{free2, malloc2};
 use crate::malloc::init_malloc;
 pub use boxed::Box;
 pub use derive;
@@ -29,6 +29,8 @@ pub use print::{init_print, print_raw};
 pub use spinlock::Lock;
 pub use mutable::{Mutable, MutableToken};
 pub use bitset::{BitSet, BitSetRaw, bitset_size_bytes};
+pub use malloc2::{HEAP_REGION_SIZE};
+use crate::malloc2::init_malloc2;
 
 static mut PAGE_ALLOCATOR: Option<&'static dyn Fn(*mut u8, bool)> = None;
 static mut PAGE_DEALLOCATOR: Option<&'static dyn Fn(*mut u8)> = None;
@@ -65,4 +67,5 @@ pub fn init_std_memory(page_allocator: &'static dyn Fn(*mut u8, bool), page_deal
         HEAP_ADDR2 = heap_addr2;
     }
     init_malloc();
+    init_malloc2();
 }
