@@ -4,7 +4,7 @@ use crate::{allocate_page, deallocate_page};
 const PAGE_SIZE: u64 = 4096;
 
 /// Heap tree is a data structure, that keeps track of free regions on the heap
-/// It does not use malloc/free, because it is used in malloc and free (obviously)
+/// It does not use malloc/free, because it is used in malloc and free
 /// You need to pass it a pointer where it lives, and it will automatically allocate pages and resize itself as it can
 /// This tree has the following capabilities:
 /// - find and occupy a region that has the size 2^n and is also 2^n aligned

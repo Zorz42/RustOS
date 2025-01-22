@@ -3,7 +3,7 @@ use kernel_test::all_perf_tests;
 use kernel_std::{deserialize, print, println, serialize, Mutable, String, Vec};
 
 use crate::disk::disk::Disk;
-use crate::memory::bitset_size_bytes;
+use kernel_std::bitset_size_bytes;
 use crate::print::{reset_print_color, set_print_color};
 use crate::timer::get_ticks;
 use kernel_test::all_tests;

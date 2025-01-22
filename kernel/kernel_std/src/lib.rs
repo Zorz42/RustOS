@@ -13,6 +13,7 @@ mod print;
 mod spinlock;
 mod mutable;
 mod malloc2;
+mod bitset;
 
 pub use heap_tree::HeapTree;
 pub use malloc::{free, malloc};
@@ -27,18 +28,20 @@ pub use vector::Vec;
 pub use print::{init_print, print_raw};
 pub use spinlock::Lock;
 pub use mutable::{Mutable, MutableToken};
+pub use bitset::{BitSet, BitSetRaw, bitset_size_bytes};
 
 static mut PAGE_ALLOCATOR: Option<&'static dyn Fn(*mut u8, bool)> = None;
 static mut PAGE_DEALLOCATOR: Option<&'static dyn Fn(*mut u8)> = None;
 static mut HEAP_TREE_ADDR: u64 = 0;
 static mut HEAP_ADDR: u64 = 0;
+static mut HEAP_ADDR2: u64 = 0;
 
 fn allocate_page(page: *mut u8, ignore_if_exists: bool) {
     unsafe {
         if let Some(page_allocator) = PAGE_ALLOCATOR {
             page_allocator(page, ignore_if_exists);
         } else {
-            panic!("Std library memory was not initialized!");
+            unreachable!("Std library memory was not initialized!");
         }
     }
 }
@@ -48,17 +51,18 @@ fn deallocate_page(page: *mut u8) {
         if let Some(page_allocator) = PAGE_DEALLOCATOR {
             page_allocator(page);
         } else {
-            panic!("Std library memory was not initialized!");
+            unreachable!("Std library memory was not initialized!");
         }
     }
 }
 
-pub fn init_std_memory(page_allocator: &'static dyn Fn(*mut u8, bool), page_deallocator: &'static dyn Fn(*mut u8), heap_tree_addr: u64, heap_addr: u64) {
+pub fn init_std_memory(page_allocator: &'static dyn Fn(*mut u8, bool), page_deallocator: &'static dyn Fn(*mut u8), heap_tree_addr: u64, heap_addr: u64, heap_addr2: u64) {
     unsafe {
         PAGE_ALLOCATOR = Some(page_allocator);
         PAGE_DEALLOCATOR = Some(page_deallocator);
         HEAP_TREE_ADDR = heap_tree_addr;
         HEAP_ADDR = heap_addr;
+        HEAP_ADDR2 = heap_addr2;
     }
     init_malloc();
 }

@@ -3,7 +3,7 @@ use core::ptr::{copy_nonoverlapping, write_volatile};
 use kernel_std::{Vec, Mutable, Box};
 
 use crate::disk::disk::{Disk, SECTOR_SIZE};
-use crate::memory::BitSet;
+use kernel_std::BitSet;
 
 pub struct MemoryDisk {
     disk: Disk,
