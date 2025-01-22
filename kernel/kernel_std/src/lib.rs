@@ -50,8 +50,8 @@ fn allocate_page(page: *mut u8, ignore_if_exists: bool) {
 
 fn deallocate_page(page: *mut u8) {
     unsafe {
-        if let Some(page_allocator) = PAGE_DEALLOCATOR {
-            page_allocator(page);
+        if let Some(page_deallocator) = PAGE_DEALLOCATOR {
+            page_deallocator(page);
         } else {
             unreachable!("Std library memory was not initialized!");
         }

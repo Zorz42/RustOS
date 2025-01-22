@@ -13,20 +13,20 @@ pub struct BitSetRaw {
     stack_size: usize,
 }
 
-unsafe fn get_raw(base: *const u64, index: usize) -> bool {
+pub unsafe fn get_raw(base: *const u64, index: usize) -> bool {
     let byte_index = index / 64;
     let bit_index = index % 64;
     (*base.add(byte_index) & (1 << bit_index)) != 0
 }
 
-unsafe fn set_raw(base: *mut u64, index: usize, val: bool) {
+pub unsafe fn set_raw(base: *mut u64, index: usize, val: bool) {
     let byte_index = index / 64;
     let bit_index = index % 64;
-    if val {
-        *base.add(byte_index) |= 1 << bit_index;
-    } else {
-        *base.add(byte_index) &= !(1 << bit_index);
-    }
+
+    let mut x = *base.add(byte_index);
+    x |= 1 << bit_index;
+    x ^= (1 << bit_index) * (!val) as u64;
+    *base.add(byte_index) = x;
 }
 
 pub const fn bitset_size_bytes(size: usize) -> usize {

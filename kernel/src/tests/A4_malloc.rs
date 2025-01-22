@@ -1,6 +1,7 @@
 use core::ptr::write_bytes;
 use kernel_test::{kernel_test, kernel_test_mod};
-use kernel_std::{free, malloc, Rng, malloc2, free2};
+use kernel_std::{free, malloc, Rng, malloc2, free2, println};
+use crate::memory::get_num_free_pages;
 
 kernel_test_mod!(crate::tests::A4_malloc);
 

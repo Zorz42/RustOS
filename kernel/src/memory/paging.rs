@@ -68,7 +68,9 @@ fn page_allocator(page: VirtAddr, ignore_if_exists: bool) {
 }
 
 fn page_deallocator(page: VirtAddr) {
+    let page_addr = virt_to_phys(page).unwrap();
     unmap_page(page);
+    free_page(page_addr);
 }
 
 pub fn init_paging() {
