@@ -57,6 +57,7 @@ pub fn get_disk_at(id: u64) -> Option<Disk> {
 
 impl Disk {
     pub fn read(&mut self, sector: usize) -> [u8; SECTOR_SIZE] {
+        #[cfg(assertions)]
         assert!(sector < self.size);
 
         let req = VirtioBlqReq {
@@ -67,12 +68,14 @@ impl Disk {
 
         let res: ([u8; SECTOR_SIZE], u8) = self.virtio_device.virtio_send_rww(&req);
 
+        #[cfg(assertions)]
         assert_eq!(res.1, 0);
 
         res.0
     }
 
     pub fn write(&mut self, sector: usize, data: &[u8; SECTOR_SIZE]) {
+        #[cfg(assertions)]
         assert!(sector < self.size);
 
         let req = VirtioBlqReq {
@@ -83,6 +86,7 @@ impl Disk {
 
         let res: u8 = self.virtio_device.virtio_send_rrw(&req, data);
 
+        #[cfg(assertions)]
         assert_eq!(res, 0);
     }
 

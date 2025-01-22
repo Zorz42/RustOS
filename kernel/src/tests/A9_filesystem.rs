@@ -4,7 +4,7 @@ use kernel_test::{kernel_perf, kernel_test, kernel_test_mod};
 use kernel_std::{print, println, Rng, String, Vec};
 use crate::disk::filesystem::{fs_erase, create_directory, is_directory, delete_directory, write_to_file, delete_file, is_file, read_file, list_directory};
 
-kernel_test_mod!(crate::tests::A9e_filesystem);
+kernel_test_mod!(crate::tests::A9_filesystem);
 
 #[kernel_test]
 fn test_fs_erase() {

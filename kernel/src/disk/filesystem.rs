@@ -7,9 +7,11 @@ use crate::disk::memory_disk::get_mounted_disk;
 
 fn read_sectors_from_disk(sectors: &Vec<usize>, size: usize) -> Vec<u8> {
     let t = get_mounted_disk().borrow();
-    let min_size = sectors.size() * SECTOR_SIZE - SECTOR_SIZE + 1;
-    let max_size = sectors.size() * SECTOR_SIZE;
-    assert!(size >= min_size && size <= max_size);
+    #[cfg(assertions)] {
+        let min_size = sectors.size() * SECTOR_SIZE - SECTOR_SIZE + 1;
+        let max_size = sectors.size() * SECTOR_SIZE;
+        assert!(size >= min_size && size <= max_size);
+    }
     let mut res: Vec<u8> = unsafe { Vec::new_with_size_uninit(size) };
 
     let mut curr_idx = 0;
@@ -32,9 +34,11 @@ fn read_sectors_from_disk(sectors: &Vec<usize>, size: usize) -> Vec<u8> {
 
 fn write_to_sectors_on_disk(sectors: &Vec<usize>, data: &Vec<u8>) {
     let t = get_mounted_disk().borrow();
-    let min_size = sectors.size() as i32 * SECTOR_SIZE as i32 - SECTOR_SIZE as i32 + 1;
-    let max_size = sectors.size() as i32 * SECTOR_SIZE as i32;
-    assert!(data.size() as i32 >= min_size && data.size() as i32 <= max_size);
+    #[cfg(assertions)] {
+        let min_size = sectors.size() as i32 * SECTOR_SIZE as i32 - SECTOR_SIZE as i32 + 1;
+        let max_size = sectors.size() as i32 * SECTOR_SIZE as i32;
+        assert!(data.size() as i32 >= min_size && data.size() as i32 <= max_size);
+    }
 
     let mut size_left = data.size();
     for sector in sectors {

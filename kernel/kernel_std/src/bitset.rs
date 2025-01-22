@@ -44,7 +44,8 @@ impl BitSetRaw {
     }
 
     pub fn new(size: usize, addr: *mut u64) -> Self {
-        debug_assert_eq!(addr as u64 % 8, 0);
+        #[cfg(assertions)]
+        assert_eq!(addr as u64 % 8, 0);
         let mut res = Self {
             data: addr,
             size,
@@ -57,7 +58,8 @@ impl BitSetRaw {
 
     /// Takes from memory, does not clear
     pub fn new_from(size: usize, addr: *mut u64) -> Self {
-        debug_assert_eq!(addr as u64 % 8, 0);
+        #[cfg(assertions)]
+        assert_eq!(addr as u64 % 8, 0);
         let mut res = Self {
             data: addr,
             size,
@@ -93,6 +95,7 @@ impl BitSetRaw {
             }
         }
 
+        #[cfg(assertions)]
         assert!(self.stack_size >= self.count0);
     }
 
@@ -104,6 +107,7 @@ impl BitSetRaw {
         unsafe {
             set_raw(self.data, 32 * index + 30, true);
         }
+        #[cfg(assertions)]
         assert!(self.stack_size < self.size);
 
         unsafe {
@@ -118,6 +122,7 @@ impl BitSetRaw {
     }
 
     fn stack_top(&mut self) -> usize {
+        #[cfg(assertions)]
         assert!(self.stack_size >= self.count0);
 
         unsafe {
@@ -129,6 +134,7 @@ impl BitSetRaw {
     }
 
     fn pop_stack(&mut self) {
+        #[cfg(assertions)]
         assert!(self.stack_size >= self.count0);
 
         unsafe {
@@ -139,7 +145,8 @@ impl BitSetRaw {
     }
 
     pub fn set(&mut self, index: usize, val: bool) {
-        debug_assert!(index < self.size);
+        #[cfg(assertions)]
+        assert!(index < self.size);
 
         self.count0 += !val as usize;
         self.count0 -= !self.get(index) as usize;
@@ -152,11 +159,13 @@ impl BitSetRaw {
             self.add_to_stack(index);
         }
 
+        #[cfg(assertions)]
         assert!(self.stack_size >= self.count0);
     }
 
     pub fn get(&self, index: usize) -> bool {
-        debug_assert!(index < self.size);
+        #[cfg(assertions)]
+        assert!(index < self.size);
         unsafe {
             get_raw(self.data, 32 * index + 31)
         }

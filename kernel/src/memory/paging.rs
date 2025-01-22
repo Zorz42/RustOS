@@ -55,9 +55,11 @@ pub fn alloc_continuous_pages(num: u64) -> PhysAddr {
 }
 
 pub fn free_page(addr: PhysAddr) {
+    #[cfg(assertions)]
     debug_assert!(addr >= KERNEL_OFFSET);
     let index = ((addr - KERNEL_OFFSET) / PAGE_SIZE) as usize;
     let t = SEGMENTS_BITSET.borrow();
+    #[cfg(assertions)]
     assert!(SEGMENTS_BITSET.get(&t).get(index));
     SEGMENTS_BITSET.get_mut(&t).set(index, false);
     SEGMENTS_BITSET.release(t);
@@ -144,6 +146,7 @@ pub fn create_page_table() -> PageTable {
             for i in 0..KERNEL_PT_ROOT_ENTRIES {
                 *page_table.add(i as usize) = *KERNEL_PAGE_TABLE.add(i as usize);
             }
+            #[cfg(assertions)]
             for i in KERNEL_PT_ROOT_ENTRIES..PAGE_TABLE_SIZE as u64 {
                 assert_eq!(0, *KERNEL_PAGE_TABLE.add(i as usize));
             }

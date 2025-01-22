@@ -89,6 +89,7 @@ impl MemoryDisk {
     }
 
     pub fn write_sector_partial(&mut self, sector: usize, data: &Vec<u8>) {
+        #[cfg(assertions)]
         assert!(data.size() <= SECTOR_SIZE);
         if self.cache[sector].is_none() {
             self.cache[sector] = Some(Box::new([0; SECTOR_SIZE]));
@@ -137,7 +138,8 @@ impl MemoryDisk {
     }
 
     pub fn free_sector(&mut self, sector: usize) {
-        debug_assert!(self.is_taken.get(sector));
+        #[cfg(assertions)]
+        assert!(self.is_taken.get(sector));
         self.is_taken.set(sector, false);
     }
 

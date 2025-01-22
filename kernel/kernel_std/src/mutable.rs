@@ -28,16 +28,19 @@ impl<T> Mutable<T> {
     }
 
     pub fn get(&self, token: &MutableToken) -> &T {
+        #[cfg(assertions)]
         assert_eq!(token.token, unsafe { *self.curr_token.get() });
         unsafe { &*self.data.get() }
     }
 
     pub fn get_mut(&self, token: &MutableToken) -> &mut T {
+        #[cfg(assertions)]
         assert_eq!(token.token, unsafe { *self.curr_token.get() });
         unsafe { &mut *(self.data.get()) }
     }
 
     pub fn release(&self, token: MutableToken) {
+        #[cfg(assertions)]
         assert_eq!(token.token, unsafe { *self.curr_token.get() });
         self.lock.unlock();
     }

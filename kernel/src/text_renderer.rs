@@ -103,8 +103,10 @@ fn clear_screen() {
 
 fn get_pixel_mut(x: usize, y: usize) -> *mut u32 {
     unsafe {
-        debug_assert!(x < get_screen_size().0 as usize);
-        debug_assert!(y < get_screen_size().1 as usize);
+        #[cfg(assertions)] {
+            debug_assert!(x < get_screen_size().0 as usize);
+            debug_assert!(y < get_screen_size().1 as usize);
+        }
         let offset = y * get_screen_size().0 as usize + x;
         get_framebuffer().add(offset)
     }
@@ -122,8 +124,10 @@ fn set_pixel(x: usize, y: usize, color: (u8, u8, u8)) {
 fn draw_char(x: usize, y: usize, c: u8, text_color: (u8, u8, u8), background_color: (u8, u8, u8)) {
     let width_chars = (get_screen_size().0 as usize - 2 * BORDER_PADDING) / CHAR_HEIGHT;
     let height_chars = (get_screen_size().1 as usize - 2 * BORDER_PADDING) / CHAR_HEIGHT;
-    debug_assert!(x < width_chars);
-    debug_assert!(y < height_chars);
+    #[cfg(assertions)] {
+        debug_assert!(x < width_chars);
+        debug_assert!(y < height_chars);
+    }
 
     let screen_x = x * CHAR_WIDTH + BORDER_PADDING;
     let screen_y = y * CHAR_HEIGHT + BORDER_PADDING;
