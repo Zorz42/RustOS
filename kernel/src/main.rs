@@ -82,7 +82,7 @@ pub fn main() {
         {
             set_print_color(TextColor::LightGreen, TextColor::Black);
             println!("Debug mode enabled (this message should not be present in release builds)");
-            reset_print_color();
+            print::reset_print_color();
         }
 
         #[cfg(feature = "run_tests")]
