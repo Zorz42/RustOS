@@ -4,7 +4,7 @@ use kernel_test::{kernel_test, kernel_test_mod};
 use kernel_std::{Rng, Vec};
 use crate::disk::disk::SECTOR_SIZE;
 
-kernel_test_mod!(crate::tests::A9_memory_disk);
+kernel_test_mod!(crate::tests::A8_memory_disk);
 
 #[kernel_test]
 fn test_disk_mount_erase() {

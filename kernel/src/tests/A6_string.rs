@@ -1,6 +1,6 @@
 use kernel_test::{kernel_test, kernel_test_mod};
 use kernel_std::{String, Vec};
-kernel_test_mod!(crate::tests::A7_string);
+kernel_test_mod!(crate::tests::A6_string);
 
 #[kernel_test]
 fn test_string_split() {

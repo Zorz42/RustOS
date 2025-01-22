@@ -1,16 +1,15 @@
 use core::ptr::write_bytes;
 use kernel_test::{kernel_test, kernel_test_mod};
-use kernel_std::{free, malloc, Rng, malloc2, free2, println};
-use crate::memory::get_num_free_pages;
+use kernel_std::{free, malloc, Rng};
 
-kernel_test_mod!(crate::tests::A4_malloc);
+kernel_test_mod!(crate::tests::A3_malloc);
 
 #[kernel_test]
 fn test_malloc() {
     let mut rng = Rng::new(754389);
-    let _ = malloc2(0);
+    let _ = malloc(0);
     for _ in 0..10000 {
-        let _ = malloc2(rng.get(0, 100) as usize);
+        let _ = malloc(rng.get(0, 100) as usize);
     }
 }
 
@@ -34,14 +33,14 @@ fn test_malloc_free() {
 
         for i in 0..1024 {
             let len = rng.get(0, 100);
-            ptrs[i] = malloc2(len as usize);
+            ptrs[i] = malloc(len as usize);
             unsafe {
                 write_bytes(ptrs[i], 12, len as usize);
             }
         }
         for i in 0..1024 {
             unsafe {
-                free2(ptrs[perm[i]]);
+                free(ptrs[perm[i]]);
             }
         }
     }
@@ -51,8 +50,8 @@ fn test_malloc_free() {
 fn test_malloc_write_stays() {
     let mut rng = Rng::new(745421);
 
-    let ptr = malloc2(0);
-    let _ = malloc2((4 - (ptr as u64) % 4) as usize);
+    let ptr = malloc(0);
+    let _ = malloc((4 - (ptr as u64) % 4) as usize);
 
     let mut ptrs = [0 as *mut u8; 1024];
     for _ in 0..20 {
@@ -75,7 +74,7 @@ fn test_malloc_write_stays() {
 
         for i in 0..1024 {
             let len = 4;
-            ptrs[perm[i]] = malloc2(len as usize);
+            ptrs[perm[i]] = malloc(len as usize);
             unsafe {
                 *(ptrs[perm[i]] as *mut u32) = arr[i] as u32;
             }
@@ -89,7 +88,7 @@ fn test_malloc_write_stays() {
 
         for i in 0..1024 {
             unsafe {
-                free2(ptrs[i]);
+                free(ptrs[i]);
             }
         }
     }
@@ -99,9 +98,9 @@ fn test_malloc_write_stays() {
 fn test_malloc_big() {
     let mut rng = Rng::new(657438);
     for i in 0..10000 {
-        let ptr = malloc2(rng.get(0, 0x100000) as usize);
+        let ptr = malloc(rng.get(0, 0x100000) as usize);
         unsafe {
-            free2(ptr);
+            free(ptr);
         }
     }
 }
@@ -110,8 +109,8 @@ fn test_malloc_big() {
 fn test_big_malloc_write_stays() {
     let mut rng = Rng::new(745421);
 
-    let ptr = malloc2(0);
-    let _ = malloc2((4 - (ptr as u64) % 4) as usize);
+    let ptr = malloc(0);
+    let _ = malloc((4 - (ptr as u64) % 4) as usize);
 
     let mut ptrs = [0 as *mut u8; 1024];
     for _ in 0..20 {
@@ -134,7 +133,7 @@ fn test_big_malloc_write_stays() {
 
         for i in 0..1024 {
             let len = rng.get(4, 1 << 16);
-            ptrs[perm[i]] = malloc2(len as usize);
+            ptrs[perm[i]] = malloc(len as usize);
             unsafe {
                 *(ptrs[perm[i]] as *mut u32) = arr[i] as u32;
             }
@@ -148,7 +147,7 @@ fn test_big_malloc_write_stays() {
 
         for i in 0..1024 {
             unsafe {
-                free2(ptrs[i]);
+                free(ptrs[i]);
             }
         }
     }

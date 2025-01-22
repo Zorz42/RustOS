@@ -3,7 +3,7 @@ pub type VirtAddr = *mut u8;
 
 use crate::boot::{NUM_CORES, STACK_SIZE};
 use kernel_std::{bitset_size_bytes, BitSetRaw};
-use crate::memory::{get_kernel_top_address, HEAP_ADDR, HEAP_BASE_ADDR, HEAP_TREE_ADDR, ID_MAP_END, KERNEL_OFFSET, KERNEL_PT_ROOT_ENTRIES, NUM_PAGES, PAGE_SIZE};
+use crate::memory::{get_kernel_top_address, HEAP_ADDR, ID_MAP_END, KERNEL_OFFSET, KERNEL_PT_ROOT_ENTRIES, NUM_PAGES, PAGE_SIZE};
 use crate::riscv::{get_core_id, get_satp, set_satp};
 use core::intrinsics::write_bytes;
 use core::sync::atomic::{fence, Ordering};
@@ -110,7 +110,7 @@ pub fn init_paging() {
         KERNEL_PAGE_TABLE = page_table;
     }
 
-    init_std_memory(&page_allocator, &page_deallocator, HEAP_TREE_ADDR, HEAP_BASE_ADDR, HEAP_ADDR);
+    init_std_memory(&page_allocator, &page_deallocator, HEAP_ADDR);
 }
 
 pub fn init_paging_hart() {

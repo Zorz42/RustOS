@@ -33,7 +33,7 @@ fn dealloc_page(addr: *mut u8) {
 pub fn _init() -> ! {
     let ram_start = 1u64 << 34;
     let frame_size = 1u64 << 30;
-    init_std_memory(&alloc_page, &dealloc_page, ram_start + frame_size, ram_start + 2 * frame_size, ram_start + frame_size);
+    init_std_memory(&alloc_page, &dealloc_page, ram_start + frame_size);
 
     init_print(&_print);
 

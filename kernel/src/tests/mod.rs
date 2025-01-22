@@ -13,14 +13,13 @@ use crate::text_renderer::TextColor;
 mod A0_rand;
 mod A1_bitset;
 mod A2_paging;
-mod A3_heap_tree;
-mod A4_malloc;
-mod A5_box;
-mod A6_vector;
-mod A7_string;
-mod A8_disk;
-mod A9_memory_disk;
-mod B0_filesystem;
+mod A3_malloc;
+mod A4_box;
+mod A5_vector;
+mod A6_string;
+mod A7_disk;
+mod A8_memory_disk;
+mod A9_filesystem;
 
 pub trait KernelPerf {
     fn setup() -> Self;

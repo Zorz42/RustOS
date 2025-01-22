@@ -11,10 +11,6 @@ pub const KERNEL_PT_ROOT_ENTRIES: u64 = 13; // how many entries are used for ker
 
 pub const ID_MAP_END: u64 = 3u64 << 30; // the end of identity mapping of physical memory
 const FRAME_SIZE: u64 = 1u64 << 30;
-// where the heap starts
-pub const HEAP_BASE_ADDR: u64 = ID_MAP_END;
-// where the heap tree starts (describes the heap)
-pub const HEAP_TREE_ADDR: u64 = ID_MAP_END + FRAME_SIZE;
 // for testing purposes
 #[allow(dead_code)]
 pub const TESTING_OFFSET: u64 = ID_MAP_END + 2 * FRAME_SIZE;

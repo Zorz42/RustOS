@@ -2,7 +2,7 @@ use crate::tests::get_test_disk;
 use kernel_test::{kernel_test, kernel_test_mod};
 use kernel_std::{Rng, Vec};
 
-kernel_test_mod!(crate::tests::A8_disk);
+kernel_test_mod!(crate::tests::A7_disk);
 
 #[kernel_test]
 fn test_disk_write() {

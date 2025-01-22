@@ -2,8 +2,6 @@
 #![allow(non_camel_case_types)]
 
 mod boxed;
-mod heap_tree;
-mod malloc;
 mod pointer;
 mod rand;
 mod serial;
@@ -12,13 +10,10 @@ mod vector;
 mod print;
 mod spinlock;
 mod mutable;
-mod malloc2;
+mod malloc;
 mod bitset;
 
-pub use heap_tree::HeapTree;
 pub use malloc::{free, malloc};
-pub use malloc2::{free2, malloc2};
-use crate::malloc::init_malloc;
 pub use boxed::Box;
 pub use derive;
 pub use rand::Rng;
@@ -29,14 +24,12 @@ pub use print::{init_print, print_raw};
 pub use spinlock::Lock;
 pub use mutable::{Mutable, MutableToken};
 pub use bitset::{BitSet, BitSetRaw, bitset_size_bytes};
-pub use malloc2::{HEAP_REGION_SIZE};
-use crate::malloc2::init_malloc2;
+pub use malloc::{HEAP_REGION_SIZE};
+use crate::malloc::init_malloc;
 
 static mut PAGE_ALLOCATOR: Option<&'static dyn Fn(*mut u8, bool)> = None;
 static mut PAGE_DEALLOCATOR: Option<&'static dyn Fn(*mut u8)> = None;
-static mut HEAP_TREE_ADDR: u64 = 0;
 static mut HEAP_ADDR: u64 = 0;
-static mut HEAP_ADDR2: u64 = 0;
 
 fn allocate_page(page: *mut u8, ignore_if_exists: bool) {
     unsafe {
@@ -58,14 +51,11 @@ fn deallocate_page(page: *mut u8) {
     }
 }
 
-pub fn init_std_memory(page_allocator: &'static dyn Fn(*mut u8, bool), page_deallocator: &'static dyn Fn(*mut u8), heap_tree_addr: u64, heap_addr: u64, heap_addr2: u64) {
+pub fn init_std_memory(page_allocator: &'static dyn Fn(*mut u8, bool), page_deallocator: &'static dyn Fn(*mut u8), heap_addr: u64) {
     unsafe {
         PAGE_ALLOCATOR = Some(page_allocator);
         PAGE_DEALLOCATOR = Some(page_deallocator);
-        HEAP_TREE_ADDR = heap_tree_addr;
         HEAP_ADDR = heap_addr;
-        HEAP_ADDR2 = heap_addr2;
     }
     init_malloc();
-    init_malloc2();
 }
