@@ -85,6 +85,12 @@ pub fn main() {
             print::reset_print_color();
         }
 
+        fence(Ordering::Release);
+        unsafe {
+            INITIALIZED = true;
+        }
+        fence(Ordering::Release);
+
         #[cfg(feature = "run_tests")]
         {
             use crate::tests::test_runner;
@@ -120,18 +126,10 @@ pub fn main() {
         println!("Loaded!");
 
         run_console();
-
-        unmount_disk();
-        mount_disk(&root_disk);
-
-        fence(Ordering::Release);
-        unsafe {
-            INITIALIZED = true;
-        }
-        fence(Ordering::Release);
-
     } else {
-        while unsafe { !INITIALIZED } {}
+        while unsafe { !INITIALIZED } {
+            fence(Ordering::Acquire);
+        }
 
         switch_to_kernel_trap();
         interrupts_enable(true);

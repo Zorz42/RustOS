@@ -93,7 +93,7 @@ extern "C" fn usertrap() -> ! {
     let ty = get_interrupt_type();
     get_cpu_data().was_last_interrupt_external = false;
 
-    mark_process_interrupted(get_cpu_data().last_pid);
+    //mark_process_interrupted(get_cpu_data().last_pid);
 
     match ty {
         InterruptType::Timer => {
@@ -161,7 +161,7 @@ fn sched_resume() -> ! {
             }
             3 => {
                 // get pid
-                get_context().a2 = get_cpu_data().curr_pid as u64;
+                get_context().a2 = get_cpu_data().last_pid as u64;
             }
             4 => {
                 // exit process
@@ -183,6 +183,7 @@ fn sched_resume() -> ! {
             }
         }
     }
+    mark_process_interrupted(get_cpu_data().last_pid);
     check_screen_refresh_for_print();
     scheduler()
 }

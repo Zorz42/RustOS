@@ -163,8 +163,8 @@ static PROCTABLE_LOCKS: [Lock; NUM_PROC] = [const { Lock::new() }; NUM_PROC];
 
 fn get_free_proc() -> usize {
     unsafe {
-        for (i, proc) in PROCTABLE.iter().enumerate().take(NUM_PROC) {
-            if proc.is_none() {
+        for i in 0..NUM_PROC {
+            if PROCTABLE[i].is_none() {
                 return i;
             }
         }

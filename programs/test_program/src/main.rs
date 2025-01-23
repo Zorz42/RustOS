@@ -7,12 +7,11 @@ fn main() {
 
     let mut curr_ticks = get_ticks() / 1000;
     loop {
-        if get_ticks() / 1000 != curr_ticks {
-            curr_ticks = get_ticks() / 1000;
+        let ticks = get_ticks() + get_pid() * 5;
+
+        if ticks / 1000 != curr_ticks {
             println!("Ticks {}: {}", get_pid(), get_ticks());
-            if curr_ticks >= 5 + get_pid() {
-                break;
-            }
+            curr_ticks = ticks / 1000;
         }
     }
 }
