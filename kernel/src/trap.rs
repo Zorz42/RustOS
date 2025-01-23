@@ -6,7 +6,7 @@ use crate::input::virtio_input_irq;
 use crate::memory::{free_page, map_page_auto};
 use crate::plic::{plic_complete, plic_irq};
 use crate::print::check_screen_refresh_for_print;
-use crate::scheduler::{get_context, get_cpu_data, mark_process_interrupted, scheduler, scheduler_next_proc, terminate_process};
+use crate::scheduler::{get_context, get_cpu_data, mark_process_ready, scheduler, scheduler_next_proc, terminate_process};
 use crate::virtio::device::virtio_irq;
 
 global_asm!(include_str!("asm/kernelvec.S"));
@@ -147,7 +147,8 @@ fn sched_resume() -> ! {
         let int_code = get_context().a7;
         match int_code {
             1 => {
-                // print char
+                // print str
+                mark_process_ready(get_cpu_data().last_pid);
                 let arg1 = get_context().a3 as *mut u8;
                 let arg2 = get_context().a4;
                 // convert to &str
@@ -158,10 +159,12 @@ fn sched_resume() -> ! {
             2 => {
                 // get ticks
                 get_context().a2 = get_ticks();
+                mark_process_ready(get_cpu_data().last_pid);
             }
             3 => {
                 // get pid
                 get_context().a2 = get_cpu_data().last_pid as u64;
+                mark_process_ready(get_cpu_data().last_pid);
             }
             4 => {
                 // exit process
@@ -172,8 +175,10 @@ fn sched_resume() -> ! {
                 let addr = get_context().a3 as *mut u8;
                 let ignore_if_exists = get_context().a4 != 0;
                 map_page_auto(addr, ignore_if_exists, true, true, false);
+                mark_process_ready(get_cpu_data().last_pid);
             }
             6 => {
+                mark_process_ready(get_cpu_data().last_pid);
                 // Dealloc page
                 let addr = get_context().a3 as *mut u8;
                 free_page(addr as u64);
@@ -182,8 +187,9 @@ fn sched_resume() -> ! {
                 println!("Unknown user interrupt occurred with code {}", int_code);
             }
         }
+    } else {
+        mark_process_ready(get_cpu_data().last_pid);
     }
-    mark_process_interrupted(get_cpu_data().last_pid);
     check_screen_refresh_for_print();
     scheduler()
 }

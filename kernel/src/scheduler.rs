@@ -317,7 +317,7 @@ pub fn scheduler() -> ! {
     }
 }
 
-pub fn mark_process_interrupted(pid: usize) {
+pub fn mark_process_ready(pid: usize) {
     PROCTABLE_LOCKS[pid].spinlock();
 
     unsafe {

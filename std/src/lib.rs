@@ -56,19 +56,30 @@ pub fn get_pid() -> u64 {
     syscall0r(SyscallCode::GetPid)
 }
 
-struct Writer;
+struct Writer {
+    string: String,
+}
 
 impl Write for Writer {
     fn write_str(&mut self, s: &str) -> fmt::Result {
-        print_str(s);
+        for c in s.chars() {
+            self.string.push(c);
+        }
         Ok(())
+    }
+}
+
+impl Writer {
+    fn flush(&self) {
+        print_str(self.string.as_str());
     }
 }
 
 #[doc(hidden)]
 fn _print(args: fmt::Arguments) {
-    let mut writer = Writer;
+    let mut writer = Writer { string: String::new() };
     writer.write_fmt(args).unwrap();
+    writer.flush();
 }
 
 pub fn exit() -> ! {
