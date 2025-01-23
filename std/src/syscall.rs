@@ -8,6 +8,7 @@ pub enum SyscallCode {
     Exit = 4,
     AllocPage = 5,
     DeallocPage = 6,
+    Sleep = 7,
 }
 
 pub fn syscall0(code: SyscallCode) {

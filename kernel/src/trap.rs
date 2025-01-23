@@ -6,7 +6,7 @@ use crate::input::virtio_input_irq;
 use crate::memory::{free_page, map_page_auto};
 use crate::plic::{plic_complete, plic_irq};
 use crate::print::check_screen_refresh_for_print;
-use crate::scheduler::{get_context, get_cpu_data, mark_process_ready, scheduler, scheduler_next_proc, terminate_process};
+use crate::scheduler::{get_context, get_cpu_data, mark_process_ready, put_process_to_sleep, scheduler, scheduler_next_proc, terminate_process};
 use crate::virtio::device::virtio_irq;
 
 global_asm!(include_str!("asm/kernelvec.S"));
@@ -182,6 +182,11 @@ fn sched_resume() -> ! {
                 // Dealloc page
                 let addr = get_context().a3 as *mut u8;
                 free_page(addr as u64);
+            }
+            7 => {
+                // Sleep
+                let until = get_ticks() + get_context().a3;
+                put_process_to_sleep(get_cpu_data().last_pid, until);
             }
             _ => {
                 println!("Unknown user interrupt occurred with code {}", int_code);

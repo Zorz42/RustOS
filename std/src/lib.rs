@@ -87,4 +87,8 @@ pub fn exit() -> ! {
     loop {}
 }
 
+pub fn sleep(ms: u64) {
+    syscall1(SyscallCode::Sleep, ms);
+}
+
 

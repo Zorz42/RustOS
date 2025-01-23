@@ -5,6 +5,7 @@ use crate::disk::filesystem::read_file;
 use crate::memory::{create_page_table, destroy_page_table, map_page_auto, switch_to_page_table, PageTable, VirtAddr, KERNEL_VIRTUAL_TOP, PAGE_SIZE, USER_CONTEXT, USER_STACK};
 use crate::print::check_screen_refresh_for_print;
 use crate::riscv::{get_core_id, get_sstatus, interrupts_enable, set_sstatus, SSTATUS_SPP, SSTATUS_UIE};
+use crate::timer::get_ticks;
 use crate::trap::switch_to_user_trap;
 
 #[derive(Debug)]
@@ -146,9 +147,10 @@ fn verify_elf_header(header: &ElfHeader) -> bool {
 
 #[derive(PartialEq)]
 enum ProcessState {
-    Loading,
-    Ready,
-    Running,
+    Loading, // Its initial phase, loading the program into memory
+    Ready, // Ready to be run by a core
+    Running, // Is already running on a core
+    Sleeping(u64), // Ignore until get_ticks() is greater or equal than the value
 }
 
 pub struct Process {
@@ -288,6 +290,12 @@ pub fn scheduler() -> ! {
         PROCTABLE_LOCKS[pid].spinlock();
 
         unsafe {
+            if let Some(ProcessState::Sleeping(until)) = PROCTABLE[pid].as_ref().map(|p| &p.state) {
+                if *until <= get_ticks() {
+                    PROCTABLE[pid].as_mut().unwrap().state = ProcessState::Ready;
+                }
+            }
+
             if PROCTABLE[pid].is_none() || PROCTABLE[pid].as_ref().unwrap().state != ProcessState::Ready {
                 misses += 1;
                 scheduler_next_proc();
@@ -322,6 +330,16 @@ pub fn mark_process_ready(pid: usize) {
 
     unsafe {
         PROCTABLE[pid].as_mut().unwrap().state = ProcessState::Ready;
+    }
+
+    PROCTABLE_LOCKS[pid].unlock();
+}
+
+pub fn put_process_to_sleep(pid: usize, until: u64) {
+    PROCTABLE_LOCKS[pid].spinlock();
+
+    unsafe {
+        PROCTABLE[pid].as_mut().unwrap().state = ProcessState::Sleeping(until);
     }
 
     PROCTABLE_LOCKS[pid].unlock();

@@ -5,7 +5,7 @@
 fn main() {
     println!("Hello, world!");
 
-    let mut curr_ticks = get_ticks() / 1000;
+    /*let mut curr_ticks = get_ticks() / 1000;
     loop {
         let ticks = get_ticks() + get_pid() * 0;
 
@@ -13,5 +13,10 @@ fn main() {
             println!("Ticks {}: {}", get_pid(), get_ticks());
             curr_ticks = ticks / 1000;
         }
+    }*/
+
+    loop {
+        sleep(1000);
+        println!("Ticks {}: {}", get_pid(), get_ticks());
     }
 }
