@@ -274,9 +274,24 @@ pub fn scheduler_next_proc() {
     get_cpu_data().curr_pid %= NUM_PROC;
 }
 
+static mut SCHEDULER_ENABLED: bool = true;
+
+pub fn toggle_scheduler(enabled: bool) {
+    unsafe {
+        SCHEDULER_ENABLED = enabled;
+    }
+}
+
 pub fn scheduler() -> ! {
     let mut misses = 0;
     loop {
+        if unsafe { !SCHEDULER_ENABLED } {
+            unsafe {
+                asm!("wfi");
+            }
+            continue;
+        }
+
         if misses == NUM_PROC {
             misses = 0;
             check_screen_refresh_for_print();

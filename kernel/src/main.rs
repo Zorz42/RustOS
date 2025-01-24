@@ -17,7 +17,7 @@ use crate::disk::memory_disk::{mount_disk, unmount_disk};
 use crate::gpu::init_gpu;
 use crate::input::{init_input_devices};
 use crate::plic::{plicinit, plicinithart};
-use crate::scheduler::{scheduler, run_program};
+use crate::scheduler::{scheduler, run_program, toggle_scheduler};
 use crate::text_renderer::{init_text_renderer, TextColor};
 
 mod boot;
@@ -104,8 +104,10 @@ pub fn main() {
 
         #[cfg(feature = "run_perf")]
         {
+            toggle_scheduler(false);
             use crate::tests::perf_test_runner;
             perf_test_runner();
+            toggle_scheduler(true);
         }
 
         let all_memory = (NUM_PAGES * 4) as f32 / 1000.0;
@@ -126,6 +128,10 @@ pub fn main() {
         println!("Loaded!");
 
         run_console();
+
+        unmount_disk();
+        mount_disk(&root_disk);
+
     } else {
         while unsafe { !INITIALIZED } {
             fence(Ordering::Acquire);

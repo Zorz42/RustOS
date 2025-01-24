@@ -17,6 +17,6 @@ fn main() {
 
     loop {
         sleep(1000);
-        println!("Ticks {}: {}", get_pid(), get_ticks());
+        //println!("Ticks {}: {}", get_pid(), get_ticks());
     }
 }
