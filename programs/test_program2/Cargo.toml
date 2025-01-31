@@ -1,0 +1,22 @@
+[package]
+name = "test_program"
+version = "0.1.0"
+edition = "2021"
+
+[features]
+run_tests = []
+run_perf = []
+
+[profile.dev]
+opt-level = 0
+lto = false
+
+[profile.release]
+strip = true
+lto = "fat"
+codegen-units = 1
+opt-level = 3
+panic = "abort"
+
+[dependencies]
+std = { path = "../../std" }
