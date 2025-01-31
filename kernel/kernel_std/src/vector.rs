@@ -3,6 +3,7 @@ use crate::pointer::Ptr;
 use crate::serial::Serial;
 use core::ops::{DerefMut, Index, IndexMut};
 use core::ptr::copy_nonoverlapping;
+use crate::debug_str;
 
 pub struct Vec<T> {
     arr: Ptr<T>,
@@ -310,9 +311,12 @@ impl<T: PartialEq> PartialEq for Vec<T> {
 
 impl<T: Clone> Clone for Vec<T> {
     fn clone(&self) -> Self {
-        let mut res = Vec::new();
+        let mut res: Vec<T> = Vec::new();
         res.reserve(self.size);
         for i in self {
+            unsafe {
+                let addr = res.arr.get_mut().add(res.size) as u64;
+            }
             res.push(i.clone());
         }
         res

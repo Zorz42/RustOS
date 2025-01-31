@@ -17,14 +17,25 @@ impl<T> Mutable<T> {
         Self { lock: Lock::new(), data: UnsafeCell::new(data), curr_token: UnsafeCell::new(0) }
     }
 
+    pub fn try_borrow(&self) -> Option<MutableToken> {
+        if self.lock.try_lock() {
+            let curr_token_mut = unsafe { &mut *(self.curr_token.get()) };
+            *curr_token_mut = curr_token_mut.wrapping_add(1);
+            let token = unsafe {
+                *self.curr_token.get()
+            };
+            Some(MutableToken { _token: token })
+        } else {
+            None
+        }
+    }
+
     pub fn borrow(&self) -> MutableToken {
-        self.lock.spinlock();
-        let curr_token_mut = unsafe { &mut *(self.curr_token.get()) };
-        *curr_token_mut = curr_token_mut.wrapping_add(1);
-        let token = unsafe {
-            *self.curr_token.get()
-        };
-        MutableToken { _token: token }
+        loop {
+            if let Some(token) = self.try_borrow() {
+                return token;
+            }
+        }
     }
 
     pub fn get(&self, _token: &MutableToken) -> &T {

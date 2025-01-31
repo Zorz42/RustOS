@@ -1,5 +1,5 @@
 use core::intrinsics::write_bytes;
-use kernel_std::{Mutable, Vec};
+use kernel_std::{debug_str, debugln, println, Mutable, Vec};
 use crate::font::{CHAR_HEIGHT, CHAR_WIDTH, DEFAULT_FONT};
 use crate::gpu::{get_framebuffer, get_screen_size, refresh_screen};
 

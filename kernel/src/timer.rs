@@ -1,3 +1,4 @@
+use core::hint::black_box;
 use crate::boot::NUM_CORES;
 use crate::riscv::{get_mhartid, get_mie, get_mstatus, set_mie, set_mscratch, set_mstatus, set_mtvec, CLINT, MIE_TIMER, MSTATUS_MMI};
 use kernel_std::Lock;
@@ -52,5 +53,5 @@ pub fn tick() {
 }
 
 pub fn get_ticks() -> u64 {
-    unsafe { TICKS }
+    unsafe { black_box(TICKS) }
 }

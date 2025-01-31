@@ -167,6 +167,10 @@ pub fn destroy_page_table(page_table: PageTable) {
     free_page(page_table as PhysAddr);
 }
 
+pub fn get_kernel_page_table() -> PageTable {
+    unsafe { KERNEL_PAGE_TABLE }
+}
+
 pub fn switch_to_page_table(page_table: PageTable) {
     debug_assert_eq!(page_table as u64 % PAGE_SIZE, 0);
     fence(Ordering::Release);

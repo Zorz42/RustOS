@@ -24,6 +24,7 @@ panic = "abort"
 paste = "1.0"
 kernel_std = { path = "kernel_std" }
 kernel_test = { path = "kernel_test" }
+log = "0.4.25"
 
 [lints.clippy]
 all = { level = "warn", priority = -1 }

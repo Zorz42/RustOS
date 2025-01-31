@@ -1,3 +1,4 @@
+use core::hint::black_box;
 use crate::tests::KernelPerf;
 use kernel_test::{kernel_perf, kernel_test, kernel_test_mod};
 use kernel_std::{deserialize, serialize, Rng, Serial, Vec};
@@ -78,6 +79,15 @@ fn test_vector_index_out_of_bounds() {
             assert_eq!(vec.get(idx).is_none(), idx >= size);
         }
     }
+}
+
+#[kernel_test]
+fn test_vector_push_many() {
+    let mut vec = Vec::new();
+    for _ in 0..100000 {
+        vec.push(0);
+    }
+    assert_eq!(vec.size(), 100000);
 }
 
 static mut DROP_COUNTER: i32 = 0;

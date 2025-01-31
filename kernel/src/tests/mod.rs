@@ -20,6 +20,7 @@ mod A6_string;
 mod A7_disk;
 mod A8_memory_disk;
 mod A9_filesystem;
+mod B0_scheduler;
 
 pub trait KernelPerf {
     fn setup() -> Self;

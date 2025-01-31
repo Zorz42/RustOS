@@ -4,13 +4,13 @@
 
 use crate::boot::infinite_loop;
 use crate::disk::disk::{Disk, scan_for_disks};
-use crate::memory::{get_num_free_pages, init_paging, init_paging_hart, NUM_PAGES};
+use crate::memory::{get_num_free_pages, init_paging, init_paging_hart, KERNEL_VIRTUAL_END, NUM_PAGES};
 use crate::print::{init_print, set_print_color};
 use crate::riscv::{enable_fpu, get_core_id, interrupts_enable};
 use crate::trap::switch_to_kernel_trap;
 use core::panic::PanicInfo;
 use core::sync::atomic::{fence, Ordering};
-use kernel_std::{println, String, Vec};
+use kernel_std::{debug_str, debugln, println, String, Vec};
 use crate::console::run_console;
 use crate::disk::filesystem::write_to_file;
 use crate::disk::memory_disk::{mount_disk, unmount_disk};
@@ -115,18 +115,6 @@ pub fn main() {
         let portion = used_memory / all_memory * 100.0;
         println!("{used_memory} MB / {all_memory} MB of RAM used ({portion:.1}%)");
 
-        // write to file "test_program" with contents from the test program
-
-        let test_program = include_bytes!("../../programs/test_program/target/riscv64gc-unknown-none-elf/release/test_program");
-        let test_program_vec = Vec::new_from_slice(test_program);
-        write_to_file(&String::from("test_program"), &test_program_vec);
-
-        println!("Loading programs...");
-        for _ in 0..6 {
-            run_program(&String::from("test_program"));
-        }
-        println!("Loaded!");
-
         run_console();
 
         unmount_disk();
@@ -150,6 +138,7 @@ pub fn main() {
 
 #[panic_handler]
 fn panic(info: &PanicInfo) -> ! {
+    debugln!("Kernel panic: {}", info);
     set_print_color(TextColor::LightRed, TextColor::Black);
     println!("Kernel panic: {}", info);
     infinite_loop();

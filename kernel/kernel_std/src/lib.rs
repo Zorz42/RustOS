@@ -13,6 +13,7 @@ mod mutable;
 mod malloc;
 mod bitset;
 
+use core::fmt;
 pub use malloc::{free, malloc};
 pub use boxed::Box;
 pub use derive;
@@ -30,6 +31,45 @@ use crate::malloc::init_malloc;
 static mut PAGE_ALLOCATOR: Option<&'static dyn Fn(*mut u8, bool)> = None;
 static mut PAGE_DEALLOCATOR: Option<&'static dyn Fn(*mut u8)> = None;
 static mut HEAP_ADDR: u64 = 0;
+
+struct Writer {}
+
+impl fmt::Write for Writer {
+    fn write_str(&mut self, s: &str) -> fmt::Result {
+        debug_str(s);
+        Ok(())
+    }
+}
+
+pub fn debug_raw(args: fmt::Arguments) {
+    let mut writer = Writer {};
+    fmt::Write::write_fmt(&mut writer, args).unwrap();
+}
+
+#[macro_export]
+macro_rules! debug {
+    ($($arg:tt)*) => ($crate::debug_raw(format_args!($($arg)*)));
+}
+
+#[macro_export]
+macro_rules! debugln {
+    () => ($crate::print!("\n"));
+    ($($arg:tt)*) => ($crate::debug!("{}\n", format_args!($($arg)*)));
+}
+
+fn write_out(c: char) {
+    let addr = 0x10000000 as *mut u8;
+    unsafe {
+        while addr.add(5).read_volatile() & (1 << 5) == 0 {}
+        addr.write_volatile(c as u8);
+    }
+}
+
+pub fn debug_str(s: &str) {
+    for c in s.chars() {
+        write_out(c);
+    }
+}
 
 fn allocate_page(page: *mut u8, ignore_if_exists: bool) {
     unsafe {

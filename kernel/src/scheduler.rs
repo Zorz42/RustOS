@@ -1,8 +1,8 @@
 use core::arch::asm;
 use core::ptr::{copy, write_bytes};
-use kernel_std::{println, Lock, String, Vec};
+use kernel_std::{debug_str, println, Lock, Mutable, String, Vec};
 use crate::disk::filesystem::read_file;
-use crate::memory::{create_page_table, destroy_page_table, map_page_auto, switch_to_page_table, PageTable, VirtAddr, KERNEL_VIRTUAL_TOP, PAGE_SIZE, USER_CONTEXT, USER_STACK};
+use crate::memory::{create_page_table, destroy_page_table, get_kernel_page_table, map_page_auto, switch_to_page_table, PageTable, VirtAddr, KERNEL_VIRTUAL_TOP, PAGE_SIZE, USER_CONTEXT, USER_STACK, USER_STACK_SIZE};
 use crate::print::check_screen_refresh_for_print;
 use crate::riscv::{get_core_id, get_sstatus, interrupts_enable, set_sstatus, SSTATUS_SPP, SSTATUS_UIE};
 use crate::timer::get_ticks;
@@ -179,6 +179,7 @@ pub fn run_program(path: &String) {
     //println!("Running program: {}", path);
 
     let program = read_file(path).unwrap();
+
     //println!("Program size {}", program.size());
     let elf_header = unsafe { (program.as_ptr() as *const ElfHeader).read() };
 
@@ -239,11 +240,10 @@ pub fn run_program(path: &String) {
         }
     }
 
-    let stack_size = 128 * 1024;
     #[cfg(feature = "assertions")]
-    assert_eq!(stack_size % PAGE_SIZE, 0);
-    let stack_pages = stack_size / PAGE_SIZE;
-    let stack_top = USER_STACK + stack_size;
+    assert_eq!(USER_STACK_SIZE % PAGE_SIZE, 0);
+    let stack_pages = USER_STACK_SIZE / PAGE_SIZE;
+    let stack_top = USER_STACK + USER_STACK_SIZE;
     for i in 0..stack_pages {
         map_page_auto((USER_STACK + i * PAGE_SIZE) as VirtAddr, true, true, true, false);
     }
@@ -255,6 +255,12 @@ pub fn run_program(path: &String) {
 
     get_context().pc = elf_header.entry;
     get_context().sp = stack_top;
+
+    switch_to_page_table(get_kernel_page_table());
+
+    let t = NUM_PROCESSES.borrow();
+    *NUM_PROCESSES.get_mut(&t) += 1;
+    NUM_PROCESSES.release(t);
 
     PROCTABLE_LOCKS[free_proc].spinlock();
     unsafe {
@@ -282,14 +288,23 @@ pub fn toggle_scheduler(enabled: bool) {
     }
 }
 
+static NUM_PROCESSES: Mutable<usize> = Mutable::new(0);
+
+pub fn get_num_processes() -> usize {
+    let t = NUM_PROCESSES.borrow();
+    let res = *NUM_PROCESSES.get(&t);
+    NUM_PROCESSES.release(t);
+    res
+}
+
 pub fn scheduler() -> ! {
     let mut misses = 0;
     loop {
-        if unsafe { !SCHEDULER_ENABLED } {
-            unsafe {
+        unsafe {
+            if !SCHEDULER_ENABLED {
                 asm!("wfi");
+                continue;
             }
-            continue;
         }
 
         if misses == NUM_PROC {
@@ -363,10 +378,16 @@ pub fn put_process_to_sleep(pid: usize, until: u64) {
 pub fn terminate_process(pid: usize) {
     PROCTABLE_LOCKS[pid].spinlock();
 
+    switch_to_page_table(get_kernel_page_table());
+
     unsafe {
         destroy_page_table(PROCTABLE[pid].as_ref().unwrap().page_table);
         PROCTABLE[pid] = None;
     }
+
+    let t = NUM_PROCESSES.borrow();
+    *NUM_PROCESSES.get_mut(&t) -= 1;
+    NUM_PROCESSES.release(t);
 
     PROCTABLE_LOCKS[pid].unlock();
 }

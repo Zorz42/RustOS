@@ -1,5 +1,5 @@
 use core::ptr::write_bytes;
-use crate::{allocate_page, bitset_size_bytes, deallocate_page, BitSetRaw, Mutable, HEAP_ADDR};
+use crate::{allocate_page, bitset_size_bytes, deallocate_page, debug_str, print, println, BitSetRaw, Mutable, String, HEAP_ADDR};
 use crate::bitset::{get_raw, set_raw};
 
 pub const HEAP_REGION_SIZE: u64 = 1 << 28;

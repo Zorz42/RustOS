@@ -1,6 +1,7 @@
 use core::fmt;
 use core::fmt::Write;
-use kernel_std::Mutable;
+use kernel_std::{debug_str, Mutable};
+use log::debug;
 use crate::riscv::{get_core_id, interrupts_get};
 use crate::text_renderer::{get_screen_height_chars, get_screen_width_chars, render_text_to_screen, scroll, set_char, TextColor};
 use crate::timer::get_ticks;
@@ -78,15 +79,15 @@ pub fn _print(args: fmt::Arguments) {
     check_screen_refresh_for_print();
 }
 
-const PRINT_REFRESH_INTERVAL: u64 = 50;
+const PRINT_REFRESH_INTERVAL: u64 = 16;
 
 pub fn check_screen_refresh_for_print() {
-    if get_core_id() != 0 {
+    if get_core_id() != 0 || !interrupts_get() {
         return;
     }
 
     let t = LAST_REFRESH.borrow();
-    if get_ticks() - *LAST_REFRESH.get(&t) > PRINT_REFRESH_INTERVAL && interrupts_get() {
+    if get_ticks() - *LAST_REFRESH.get(&t) > PRINT_REFRESH_INTERVAL {
         render_text_to_screen();
         *LAST_REFRESH.get_mut(&t) = get_ticks();
     }

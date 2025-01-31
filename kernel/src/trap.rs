@@ -1,9 +1,9 @@
 use core::arch::global_asm;
 use crate::riscv::{get_core_id, get_scause, get_sepc, get_sip, get_sstatus, get_stval, interrupts_enable, interrupts_get, set_sip, set_sstatus, set_stvec, SSTATUS_SPP, SSTATUS_UIE};
 use crate::timer::{get_ticks, tick};
-use kernel_std::{print, println};
+use kernel_std::{debug_str, print, println};
 use crate::input::virtio_input_irq;
-use crate::memory::{free_page, map_page_auto};
+use crate::memory::{free_page, get_kernel_page_table, map_page_auto, switch_to_page_table};
 use crate::plic::{plic_complete, plic_irq};
 use crate::print::check_screen_refresh_for_print;
 use crate::scheduler::{get_context, get_cpu_data, mark_process_ready, put_process_to_sleep, scheduler, scheduler_next_proc, terminate_process};
@@ -93,8 +93,6 @@ extern "C" fn usertrap() -> ! {
     let ty = get_interrupt_type();
     get_cpu_data().was_last_interrupt_external = false;
 
-    //mark_process_interrupted(get_cpu_data().last_pid);
-
     match ty {
         InterruptType::Timer => {
             if get_core_id() == 0 {
@@ -121,6 +119,7 @@ extern "C" fn usertrap() -> ! {
             get_cpu_data().was_last_interrupt_external = true;
         }
         InterruptType::Unknown => {
+            debug_str("Interrupt occurred");
             println!("Interrupt occurred");
             println!("Scause: {}", get_scause());
             println!("Sepc: 0x{:x}", get_sepc());
@@ -195,6 +194,7 @@ fn sched_resume() -> ! {
     } else {
         mark_process_ready(get_cpu_data().last_pid);
     }
+    switch_to_page_table(get_kernel_page_table());
     check_screen_refresh_for_print();
     scheduler()
 }
