@@ -6,7 +6,7 @@ use crate::input::virtio_input_irq;
 use crate::memory::{free_page, map_page_auto, switch_to_page_table};
 use crate::plic::{plic_complete, plic_irq};
 use crate::print::check_screen_refresh_for_print;
-use crate::scheduler::{get_context, get_cpu_data, mark_process_ready, put_process_to_sleep, scheduler, scheduler_next_proc, set_context, terminate_process};
+use crate::scheduler::{get_context, get_cpu_data, mark_process_ready, put_process_to_sleep, refresh_paging_for_proc, scheduler, scheduler_next_proc, terminate_process};
 use crate::virtio::device::virtio_irq;
 
 global_asm!(include_str!("asm/kernelvec.S"));
@@ -115,9 +115,7 @@ extern "C" fn usertrap() -> ! {
             plic_complete(irq);
         }
         InterruptType::User => {
-            let mut context = get_context();
-            context.pc += 4;
-            set_context(context);
+            get_context().pc += 4;
             get_cpu_data().was_last_interrupt_external = true;
         }
         InterruptType::Unknown => {
@@ -159,16 +157,12 @@ fn sched_resume() -> ! {
             }
             2 => {
                 // get ticks
-                let mut context = get_context();
-                context.a2 = get_ticks();
-                set_context(context);
+                get_context().a2 = get_ticks();
                 mark_process_ready(get_cpu_data().last_pid);
             }
             3 => {
                 // get pid
-                let mut context = get_context();
-                context.a2 = get_cpu_data().last_pid as u64;
-                set_context(context);
+                get_context().a2 = get_cpu_data().last_pid as u64;
                 mark_process_ready(get_cpu_data().last_pid);
             }
             4 => {
@@ -186,6 +180,7 @@ fn sched_resume() -> ! {
                 // Dealloc page
                 let addr = get_context().a3 as *mut u8;
                 free_page(addr as u64);
+                refresh_paging_for_proc(get_cpu_data().last_pid);
                 mark_process_ready(get_cpu_data().last_pid);
             }
             7 => {

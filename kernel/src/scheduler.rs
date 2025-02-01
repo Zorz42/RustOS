@@ -63,15 +63,9 @@ pub fn get_cpu_data() -> &'static mut CpuData {
     }
 }
 
-pub fn get_context() -> Context {
+pub fn get_context() -> &'static mut Context {
     unsafe {
-        (USER_CONTEXT as *mut Context).read_volatile()
-    }
-}
-
-pub fn set_context(context: Context) {
-    unsafe {
-        (USER_CONTEXT as *mut Context).write_volatile(context);
+        &mut *(USER_CONTEXT as *mut Context)
     }
 }
 
@@ -182,10 +176,8 @@ pub fn run_program(path: &String) {
         write_bytes(USER_CONTEXT as *mut u8, 0, size_of::<Context>());
     }
 
-    let mut context = get_context();
-    context.pc = elf_header.entry;
-    context.sp = stack_top;
-    set_context(context);
+    get_context().pc = elf_header.entry;
+    get_context().sp = stack_top;
 
     let t = NUM_PROCESSES.borrow();
     *NUM_PROCESSES.get_mut(&t) += 1;
@@ -320,6 +312,16 @@ pub fn terminate_process(pid: usize) {
     let t = NUM_PROCESSES.borrow();
     *NUM_PROCESSES.get_mut(&t) -= 1;
     NUM_PROCESSES.release(t);
+
+    PROCTABLE_LOCKS[pid].unlock();
+}
+
+pub fn refresh_paging_for_proc(pid: usize) {
+    PROCTABLE_LOCKS[pid].spinlock();
+
+    unsafe {
+        PROCTABLE[pid].0.as_mut().unwrap().needs_paging_refresh = [true; NUM_CORES];
+    }
 
     PROCTABLE_LOCKS[pid].unlock();
 }
