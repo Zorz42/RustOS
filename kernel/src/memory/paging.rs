@@ -1,8 +1,9 @@
 pub type PhysAddr = u64;
 pub type VirtAddr = *mut u8;
 
+use core::arch::asm;
 use crate::boot::{NUM_CORES, STACK_SIZE};
-use kernel_std::{bitset_size_bytes, BitSetRaw};
+use kernel_std::{bitset_size_bytes, debugln, BitSetRaw};
 use crate::memory::{get_kernel_top_address, HEAP_ADDR, ID_MAP_END, KERNEL_OFFSET, KERNEL_PT_ROOT_ENTRIES, NUM_PAGES, PAGE_SIZE};
 use crate::riscv::{get_core_id, get_satp, set_satp};
 use core::intrinsics::write_bytes;
@@ -85,7 +86,6 @@ pub fn init_paging() {
     let t = SEGMENTS_BITSET.borrow();
     *SEGMENTS_BITSET.get_mut(&t) = BitSetRaw::new(NUM_PAGES as usize, kernel_end as *mut u64);
 
-
     // mark kernel and bitset pages as taken
     for i in 0..bitset_size_pages + kernel_size_pages {
         SEGMENTS_BITSET.get_mut(&t).set(i as usize, true);
@@ -104,6 +104,11 @@ pub fn init_paging() {
     for i in 0..3 {
         unsafe {
             *page_table.add(i) = create_page_table_entry(((i as u64) << (12 + 2 * 9)) as PhysAddr) | PTE_READ | PTE_WRITE | PTE_EXECUTE;
+        }
+    }
+    for i in 3..KERNEL_PT_ROOT_ENTRIES as usize {
+        unsafe {
+            *page_table.add(i) = create_page_table_entry(alloc_page());
         }
     }
     switch_to_page_table(page_table);
@@ -156,19 +161,40 @@ pub fn create_page_table() -> PageTable {
     page_table
 }
 
-pub fn destroy_page_table(page_table: PageTable) {
+fn destroy_page_table(page_table: PageTable) {
     for i in 0..PAGE_TABLE_SIZE {
         let entry = *get_sub_page_table_entry(page_table, i);
-        let kernel_entry = *get_sub_page_table_entry(unsafe { KERNEL_PAGE_TABLE }, i);
-        if is_entry_table(entry) && entry != kernel_entry {
+        if is_entry_table(entry) {
             destroy_page_table(get_entry_addr(entry).unwrap());
+        } else if is_entry_leaf(entry) {
+            free_page(get_entry_addr(entry).unwrap() as PhysAddr);
         }
     }
     free_page(page_table as PhysAddr);
 }
 
-pub fn get_kernel_page_table() -> PageTable {
-    unsafe { KERNEL_PAGE_TABLE }
+pub fn clear_page_table(page_table: PageTable) {
+    for i in 0..KERNEL_PT_ROOT_ENTRIES as usize {
+        unsafe {
+            assert_eq!(*page_table.add(i), *KERNEL_PAGE_TABLE.add(i));
+        }
+    }
+
+    /*for i in KERNEL_PT_ROOT_ENTRIES..PAGE_TABLE_SIZE as u64 {
+        let entry = *get_sub_page_table_entry(page_table, i as usize);
+        //if is_entry_table(entry) {
+            //destroy_page_table(get_entry_addr(entry).unwrap());
+        //}
+        unsafe {
+            *page_table.add(i as usize) = 0;
+        }
+    }*/
+
+    for i in KERNEL_PT_ROOT_ENTRIES..KERNEL_PT_ROOT_ENTRIES + 1 {
+        unsafe {
+            *page_table.add(i as usize) = 0;
+        }
+    }
 }
 
 pub fn switch_to_page_table(page_table: PageTable) {
@@ -189,6 +215,10 @@ pub fn refresh_paging() {
     let satp = get_satp();
     set_satp(satp);
     fence(Ordering::Release);
+
+    unsafe {
+        asm!("sfence.vma zero, zero", options(nostack, preserves_flags));
+    }
 }
 
 fn get_sub_page_table_entry(table: PageTable, index: usize) -> &'static mut PageTableEntry {
@@ -206,6 +236,10 @@ const fn get_entry_addr(entry: PageTableEntry) -> Option<PageTable> {
 
 const fn is_entry_table(entry: PageTableEntry) -> bool {
     (entry & (PTE_PRESENT | PTE_READ | PTE_WRITE | PTE_EXECUTE)) == PTE_PRESENT
+}
+
+const fn is_entry_leaf(entry: PageTableEntry) -> bool {
+    (entry & (PTE_PRESENT | PTE_READ | PTE_WRITE | PTE_EXECUTE)) != PTE_PRESENT && (entry & PTE_PRESENT) != 0
 }
 
 fn create_page_table_entry(addr: PhysAddr) -> PageTableEntry {

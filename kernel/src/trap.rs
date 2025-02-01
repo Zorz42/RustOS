@@ -1,12 +1,12 @@
 use core::arch::global_asm;
 use crate::riscv::{get_core_id, get_scause, get_sepc, get_sip, get_sstatus, get_stval, interrupts_enable, interrupts_get, set_sip, set_sstatus, set_stvec, SSTATUS_SPP, SSTATUS_UIE};
 use crate::timer::{get_ticks, tick};
-use kernel_std::{debug_str, print, println};
+use kernel_std::{debug_str, debugln, print, println};
 use crate::input::virtio_input_irq;
-use crate::memory::{free_page, get_kernel_page_table, map_page_auto, switch_to_page_table};
+use crate::memory::{free_page, map_page_auto, switch_to_page_table};
 use crate::plic::{plic_complete, plic_irq};
 use crate::print::check_screen_refresh_for_print;
-use crate::scheduler::{get_context, get_cpu_data, mark_process_ready, put_process_to_sleep, scheduler, scheduler_next_proc, terminate_process};
+use crate::scheduler::{get_context, get_cpu_data, mark_process_ready, put_process_to_sleep, scheduler, scheduler_next_proc, set_context, terminate_process};
 use crate::virtio::device::virtio_irq;
 
 global_asm!(include_str!("asm/kernelvec.S"));
@@ -115,7 +115,9 @@ extern "C" fn usertrap() -> ! {
             plic_complete(irq);
         }
         InterruptType::User => {
-            get_context().pc += 4;
+            let mut context = get_context();
+            context.pc += 4;
+            set_context(context);
             get_cpu_data().was_last_interrupt_external = true;
         }
         InterruptType::Unknown => {
@@ -147,22 +149,26 @@ fn sched_resume() -> ! {
         match int_code {
             1 => {
                 // print str
-                mark_process_ready(get_cpu_data().last_pid);
                 let arg1 = get_context().a3 as *mut u8;
                 let arg2 = get_context().a4;
                 // convert to &str
                 let arg1 = unsafe { core::str::from_utf8_unchecked(core::slice::from_raw_parts(arg1, arg2 as usize)) };
 
                 print!("{}", arg1);
+                mark_process_ready(get_cpu_data().last_pid);
             }
             2 => {
                 // get ticks
-                get_context().a2 = get_ticks();
+                let mut context = get_context();
+                context.a2 = get_ticks();
+                set_context(context);
                 mark_process_ready(get_cpu_data().last_pid);
             }
             3 => {
                 // get pid
-                get_context().a2 = get_cpu_data().last_pid as u64;
+                let mut context = get_context();
+                context.a2 = get_cpu_data().last_pid as u64;
+                set_context(context);
                 mark_process_ready(get_cpu_data().last_pid);
             }
             4 => {
@@ -177,10 +183,10 @@ fn sched_resume() -> ! {
                 mark_process_ready(get_cpu_data().last_pid);
             }
             6 => {
-                mark_process_ready(get_cpu_data().last_pid);
                 // Dealloc page
                 let addr = get_context().a3 as *mut u8;
                 free_page(addr as u64);
+                mark_process_ready(get_cpu_data().last_pid);
             }
             7 => {
                 // Sleep
@@ -194,7 +200,6 @@ fn sched_resume() -> ! {
     } else {
         mark_process_ready(get_cpu_data().last_pid);
     }
-    switch_to_page_table(get_kernel_page_table());
     check_screen_refresh_for_print();
     scheduler()
 }

@@ -34,7 +34,7 @@ pub const USER_STACK_SIZE: u64 = 32 * PAGE_SIZE;
 pub const USER_STACK: u64 = USER_CONTEXT + PAGE_SIZE;
 
 use kernel_std::HEAP_REGION_SIZE;
-pub use paging::{alloc_page, get_kernel_page_table, destroy_page_table, alloc_continuous_pages, free_page, get_num_free_pages, init_paging, init_paging_hart, map_page, map_page_auto, unmap_page, virt_to_phys, PhysAddr, VirtAddr, PageTable, create_page_table, switch_to_page_table};
+pub use paging::{refresh_paging, alloc_page, clear_page_table, alloc_continuous_pages, free_page, get_num_free_pages, init_paging, init_paging_hart, map_page, map_page_auto, unmap_page, virt_to_phys, PhysAddr, VirtAddr, PageTable, create_page_table, switch_to_page_table};
 
 extern "C" {
     pub static _end: u8;

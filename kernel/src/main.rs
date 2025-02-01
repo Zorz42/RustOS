@@ -17,7 +17,7 @@ use crate::disk::memory_disk::{mount_disk, unmount_disk};
 use crate::gpu::init_gpu;
 use crate::input::{init_input_devices};
 use crate::plic::{plicinit, plicinithart};
-use crate::scheduler::{scheduler, run_program, toggle_scheduler};
+use crate::scheduler::{scheduler, run_program, toggle_scheduler, init_scheduler};
 use crate::text_renderer::{init_text_renderer, TextColor};
 
 mod boot;
@@ -38,6 +38,7 @@ mod input;
 mod console;
 mod scheduler;
 mod text_renderer;
+mod elf;
 
 pub const ROOT_MAGIC: u32 = 0x63726591;
 
@@ -76,6 +77,7 @@ pub fn main() {
 
         println!("Initializing kernel with core 0");
 
+        init_scheduler();
         init_input_devices();
 
         #[cfg(debug_assertions)]

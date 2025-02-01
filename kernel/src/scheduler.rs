@@ -1,50 +1,13 @@
 use core::arch::asm;
 use core::ptr::{copy, write_bytes};
-use kernel_std::{debug_str, println, Lock, Mutable, String, Vec};
+use kernel_std::{debug, debugln, println, Lock, Mutable, String, Vec};
 use crate::disk::filesystem::read_file;
-use crate::memory::{create_page_table, destroy_page_table, get_kernel_page_table, map_page_auto, switch_to_page_table, PageTable, VirtAddr, KERNEL_VIRTUAL_TOP, PAGE_SIZE, USER_CONTEXT, USER_STACK, USER_STACK_SIZE};
+use crate::elf::{verify_elf_header, ElfHeader, ElfProgramHeader};
+use crate::memory::{create_page_table, clear_page_table, map_page_auto, switch_to_page_table, PageTable, VirtAddr, KERNEL_VIRTUAL_TOP, PAGE_SIZE, USER_CONTEXT, USER_STACK, USER_STACK_SIZE, refresh_paging, virt_to_phys};
 use crate::print::check_screen_refresh_for_print;
-use crate::riscv::{get_core_id, get_sstatus, interrupts_enable, set_sstatus, SSTATUS_SPP, SSTATUS_UIE};
+use crate::riscv::{get_core_id, get_satp, get_sstatus, interrupts_enable, set_sstatus, SSTATUS_SPP, SSTATUS_UIE};
 use crate::timer::get_ticks;
 use crate::trap::switch_to_user_trap;
-
-#[derive(Debug)]
-#[repr(C)]
-struct ElfHeader {
-    pub magic: [u8; 4],
-    pub bits: u8,
-    pub endianness: u8,
-    pub version: u8,
-    pub abi: u8,
-    pub abi_version: u8,
-    pub padding: [u8; 7],
-    pub elf_type: u16,
-    pub machine: u16,
-    pub version2: u32,
-    pub entry: u64,
-    pub ph_offset: u64,
-    pub sh_offset: u64,
-    pub flags: u32,
-    pub header_size: u16,
-    pub ph_entry_size: u16,
-    pub ph_entry_count: u16,
-    pub sh_entry_size: u16,
-    pub sh_entry_count: u16,
-    pub sh_str_index: u16,
-}
-
-#[derive(Debug)]
-#[repr(C)]
-struct ElfProgramHeader {
-    pub p_type: u32,
-    pub flags: u32,
-    pub offset: u64,
-    pub vaddr: u64,
-    pub paddr: u64,
-    pub file_size: u64,
-    pub memory_size: u64,
-    pub align: u64,
-}
 
 #[derive(Debug)]
 #[repr(C)]
@@ -99,50 +62,16 @@ pub fn get_cpu_data() -> &'static mut CpuData {
     }
 }
 
-pub fn get_context() -> &'static mut Context {
+pub fn get_context() -> Context {
     unsafe {
-        &mut *(USER_CONTEXT as *mut Context)
+        (USER_CONTEXT as *mut Context).read_volatile()
     }
 }
 
-fn verify_elf_header(header: &ElfHeader) -> bool {
-    if header.magic != [0x7f, 0x45, 0x4c, 0x46] {
-        return false;
+pub fn set_context(context: Context) {
+    unsafe {
+        (USER_CONTEXT as *mut Context).write_volatile(context);
     }
-
-    if header.bits != 2 {
-        return false;
-    }
-
-    if header.endianness != 1 {
-        return false;
-    }
-
-    if header.version != 1 {
-        return false;
-    }
-
-    if header.abi != 0 {
-        return false;
-    }
-
-    if header.abi_version != 0 {
-        return false;
-    }
-
-    if header.elf_type != 2 {
-        return false;
-    }
-
-    if header.machine != 0xf3 {
-        return false;
-    }
-
-    if header.version2 != 1 {
-        return false;
-    }
-
-    true
 }
 
 #[derive(PartialEq)]
@@ -155,18 +84,25 @@ enum ProcessState {
 
 pub struct Process {
     state: ProcessState,
-    page_table: PageTable,
 }
 
 const NUM_PROC: usize = 16;
-static mut PROCTABLE: [Option<Process>; NUM_PROC] = [const { None }; NUM_PROC];
+static mut PROCTABLE: [(Option<Process>, PageTable); NUM_PROC] = [const { (None, 0 as PageTable) }; NUM_PROC];
 static PROCTABLE_ALLOC_LOCK: Lock = Lock::new();
 static PROCTABLE_LOCKS: [Lock; NUM_PROC] = [const { Lock::new() }; NUM_PROC];
+
+pub fn init_scheduler() {
+    unsafe {
+        for i in 0..NUM_PROC {
+            PROCTABLE[i].1 = create_page_table();
+        }
+    }
+}
 
 fn get_free_proc() -> usize {
     unsafe {
         for i in 0..NUM_PROC {
-            if PROCTABLE[i].is_none() {
+            if PROCTABLE[i].0.is_none() {
                 return i;
             }
         }
@@ -176,11 +112,8 @@ fn get_free_proc() -> usize {
 }
 
 pub fn run_program(path: &String) {
-    //println!("Running program: {}", path);
-
     let program = read_file(path).unwrap();
 
-    //println!("Program size {}", program.size());
     let elf_header = unsafe { (program.as_ptr() as *const ElfHeader).read() };
 
     if !verify_elf_header(&elf_header) {
@@ -188,34 +121,27 @@ pub fn run_program(path: &String) {
         return;
     }
 
+    PROCTABLE_ALLOC_LOCK.spinlock();
+    let free_proc = get_free_proc();
+
+    PROCTABLE_LOCKS[free_proc].spinlock();
+    unsafe {
+        PROCTABLE[free_proc].0 = (Some(Process {
+            state: ProcessState::Loading,
+        }));
+    }
+    let page_table = unsafe { PROCTABLE[free_proc].1 };
+    PROCTABLE_LOCKS[free_proc].unlock();
+    PROCTABLE_ALLOC_LOCK.unlock();
+
+    switch_to_page_table(page_table);
+
     // get program headers
     let mut program_headers = Vec::new();
     for i in 0..elf_header.ph_entry_count {
         let program_header = unsafe { (program.as_ptr().add(elf_header.ph_offset as usize) as *const ElfProgramHeader).add(i as usize).read() };
         program_headers.push(program_header);
     }
-
-    //println!("Elf header: {:?}", elf_header);
-    /*println!("Program headers: ");
-    for header in &program_headers {
-        println!("{:?}", header);
-    }*/
-
-    let page_table = create_page_table();
-    switch_to_page_table(page_table);
-
-    PROCTABLE_ALLOC_LOCK.spinlock();
-    let free_proc = get_free_proc();
-
-    PROCTABLE_LOCKS[free_proc].spinlock();
-    unsafe {
-        PROCTABLE[free_proc] = Some(Process {
-            state: ProcessState::Loading,
-            page_table,
-        });
-    }
-    PROCTABLE_LOCKS[free_proc].unlock();
-    PROCTABLE_ALLOC_LOCK.unlock();
 
     // map program headers to memory
     for header in &program_headers {
@@ -253,10 +179,10 @@ pub fn run_program(path: &String) {
         write_bytes(USER_CONTEXT as *mut u8, 0, size_of::<Context>());
     }
 
-    get_context().pc = elf_header.entry;
-    get_context().sp = stack_top;
-
-    switch_to_page_table(get_kernel_page_table());
+    let mut context = get_context();
+    context.pc = elf_header.entry;
+    context.sp = stack_top;
+    set_context(context);
 
     let t = NUM_PROCESSES.borrow();
     *NUM_PROCESSES.get_mut(&t) += 1;
@@ -264,11 +190,9 @@ pub fn run_program(path: &String) {
 
     PROCTABLE_LOCKS[free_proc].spinlock();
     unsafe {
-        PROCTABLE[free_proc].as_mut().unwrap().state = ProcessState::Ready;
+        PROCTABLE[free_proc].0.as_mut().unwrap().state = ProcessState::Ready;
     }
     PROCTABLE_LOCKS[free_proc].unlock();
-
-    //println!("entry is at {:#x}", elf_header.entry);
 }
 
 extern "C" {
@@ -320,13 +244,13 @@ pub fn scheduler() -> ! {
         PROCTABLE_LOCKS[pid].spinlock();
 
         unsafe {
-            if let Some(ProcessState::Sleeping(until)) = PROCTABLE[pid].as_ref().map(|p| &p.state) {
+            if let Some(ProcessState::Sleeping(until)) = PROCTABLE[pid].0.as_ref().map(|p| &p.state) {
                 if *until <= get_ticks() {
-                    PROCTABLE[pid].as_mut().unwrap().state = ProcessState::Ready;
+                    PROCTABLE[pid].0.as_mut().unwrap().state = ProcessState::Ready;
                 }
             }
 
-            if PROCTABLE[pid].is_none() || PROCTABLE[pid].as_ref().unwrap().state != ProcessState::Ready {
+            if PROCTABLE[pid].0.is_none() || PROCTABLE[pid].0.as_ref().unwrap().state != ProcessState::Ready {
                 misses += 1;
                 scheduler_next_proc();
                 PROCTABLE_LOCKS[pid].unlock();
@@ -345,10 +269,12 @@ pub fn scheduler() -> ! {
         switch_to_user_trap();
 
         unsafe {
-            switch_to_page_table(PROCTABLE[pid].as_ref().unwrap().page_table);
-            PROCTABLE[pid].as_mut().unwrap().state = ProcessState::Running;
+            switch_to_page_table(PROCTABLE[pid].1);
+            PROCTABLE[pid].0.as_mut().unwrap().state = ProcessState::Running;
             get_cpu_data().last_pid = pid;
             PROCTABLE_LOCKS[pid].unlock();
+
+            refresh_paging();
 
             jump_to_user();
         }
@@ -359,7 +285,7 @@ pub fn mark_process_ready(pid: usize) {
     PROCTABLE_LOCKS[pid].spinlock();
 
     unsafe {
-        PROCTABLE[pid].as_mut().unwrap().state = ProcessState::Ready;
+        PROCTABLE[pid].0.as_mut().unwrap().state = ProcessState::Ready;
     }
 
     PROCTABLE_LOCKS[pid].unlock();
@@ -369,7 +295,7 @@ pub fn put_process_to_sleep(pid: usize, until: u64) {
     PROCTABLE_LOCKS[pid].spinlock();
 
     unsafe {
-        PROCTABLE[pid].as_mut().unwrap().state = ProcessState::Sleeping(until);
+        PROCTABLE[pid].0.as_mut().unwrap().state = ProcessState::Sleeping(until);
     }
 
     PROCTABLE_LOCKS[pid].unlock();
@@ -378,11 +304,10 @@ pub fn put_process_to_sleep(pid: usize, until: u64) {
 pub fn terminate_process(pid: usize) {
     PROCTABLE_LOCKS[pid].spinlock();
 
-    switch_to_page_table(get_kernel_page_table());
-
     unsafe {
-        destroy_page_table(PROCTABLE[pid].as_ref().unwrap().page_table);
-        PROCTABLE[pid] = None;
+        clear_page_table(PROCTABLE[pid].1);
+        refresh_paging();
+        PROCTABLE[pid].0 = None;
     }
 
     let t = NUM_PROCESSES.borrow();
