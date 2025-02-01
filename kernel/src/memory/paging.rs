@@ -180,17 +180,11 @@ pub fn clear_page_table(page_table: PageTable) {
         }
     }
 
-    /*for i in KERNEL_PT_ROOT_ENTRIES..PAGE_TABLE_SIZE as u64 {
+    for i in KERNEL_PT_ROOT_ENTRIES..PAGE_TABLE_SIZE as u64 {
         let entry = *get_sub_page_table_entry(page_table, i as usize);
-        //if is_entry_table(entry) {
-            //destroy_page_table(get_entry_addr(entry).unwrap());
-        //}
-        unsafe {
-            *page_table.add(i as usize) = 0;
+        if is_entry_table(entry) {
+            destroy_page_table(get_entry_addr(entry).unwrap());
         }
-    }*/
-
-    for i in KERNEL_PT_ROOT_ENTRIES..KERNEL_PT_ROOT_ENTRIES + 1 {
         unsafe {
             *page_table.add(i as usize) = 0;
         }
