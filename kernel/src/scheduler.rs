@@ -1,11 +1,12 @@
 use core::arch::asm;
 use core::ptr::{copy, write_bytes};
 use kernel_std::{debug, debugln, println, Lock, Mutable, String, Vec};
+use crate::boot::NUM_CORES;
 use crate::disk::filesystem::read_file;
 use crate::elf::{verify_elf_header, ElfHeader, ElfProgramHeader};
 use crate::memory::{create_page_table, clear_page_table, map_page_auto, switch_to_page_table, PageTable, VirtAddr, KERNEL_VIRTUAL_TOP, PAGE_SIZE, USER_CONTEXT, USER_STACK, USER_STACK_SIZE, refresh_paging, virt_to_phys};
 use crate::print::check_screen_refresh_for_print;
-use crate::riscv::{get_core_id, get_satp, get_sstatus, interrupts_enable, set_sstatus, SSTATUS_SPP, SSTATUS_UIE};
+use crate::riscv::{get_core_id, get_sstatus, interrupts_enable, set_sstatus, SSTATUS_SPP, SSTATUS_UIE};
 use crate::timer::get_ticks;
 use crate::trap::switch_to_user_trap;
 
@@ -54,7 +55,7 @@ pub struct CpuData {
     pub last_pid: usize,
 }
 
-static mut CPU_DATA: [CpuData; 4] = [CpuData { was_last_interrupt_external: false, curr_pid: 1000, last_pid: 1000 }; 4];
+static mut CPU_DATA: [CpuData; NUM_CORES] = [CpuData { was_last_interrupt_external: false, curr_pid: 1000, last_pid: 1000 }; NUM_CORES];
 
 pub fn get_cpu_data() -> &'static mut CpuData {
     unsafe {
@@ -84,6 +85,7 @@ enum ProcessState {
 
 pub struct Process {
     state: ProcessState,
+    needs_paging_refresh: [bool; NUM_CORES],
 }
 
 const NUM_PROC: usize = 16;
@@ -128,6 +130,7 @@ pub fn run_program(path: &String) {
     unsafe {
         PROCTABLE[free_proc].0 = (Some(Process {
             state: ProcessState::Loading,
+            needs_paging_refresh: [true; NUM_CORES],
         }));
     }
     let page_table = unsafe { PROCTABLE[free_proc].1 };
@@ -270,11 +273,15 @@ pub fn scheduler() -> ! {
 
         unsafe {
             switch_to_page_table(PROCTABLE[pid].1);
+
+            if PROCTABLE[pid].0.as_ref().unwrap().needs_paging_refresh[get_core_id() as usize] {
+                refresh_paging();
+                PROCTABLE[pid].0.as_mut().unwrap().needs_paging_refresh[get_core_id() as usize] = false;
+            }
+
             PROCTABLE[pid].0.as_mut().unwrap().state = ProcessState::Running;
             get_cpu_data().last_pid = pid;
             PROCTABLE_LOCKS[pid].unlock();
-
-            refresh_paging();
 
             jump_to_user();
         }

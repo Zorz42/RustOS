@@ -189,6 +189,8 @@ pub fn clear_page_table(page_table: PageTable) {
             *page_table.add(i as usize) = 0;
         }
     }
+
+    refresh_paging();
 }
 
 pub fn switch_to_page_table(page_table: PageTable) {
@@ -205,11 +207,6 @@ pub fn switch_to_page_table(page_table: PageTable) {
 }
 
 pub fn refresh_paging() {
-    fence(Ordering::Release);
-    let satp = get_satp();
-    set_satp(satp);
-    fence(Ordering::Release);
-
     unsafe {
         asm!("sfence.vma zero, zero", options(nostack, preserves_flags));
     }
@@ -282,7 +279,6 @@ pub fn map_page(virtual_addr: VirtAddr, physical_addr: PhysAddr, ignore_if_exist
     if executable {
         *curr_entry |= PTE_EXECUTE;
     }
-    refresh_paging();
 }
 
 #[allow(clippy::fn_params_excessive_bools)]
