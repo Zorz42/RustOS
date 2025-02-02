@@ -51,3 +51,21 @@ fn test_process_spam() {
         }
     }
 }
+
+#[kernel_test]
+fn test_thousand_processes() {
+    let test_program = include_bytes!("../../../programs/test_program1/target/riscv64gc-unknown-none-elf/release/test_program");
+    let test_program_vec = Vec::new_from_slice(test_program);
+    write_to_file(&String::from("test_program1"), &test_program_vec);
+
+
+    for i in 0..1000 {
+        run_program(&String::from("test_program1"));
+    }
+
+    while get_num_processes() > 0 {
+        unsafe {
+            asm!("wfi");
+        }
+    }
+}
