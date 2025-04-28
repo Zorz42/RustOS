@@ -69,7 +69,7 @@ impl MemoryDisk {
         if self.cache[sector].is_none() {
             self.cache[sector] = Some(Box::new(self.disk.read(sector)));
         }
-        *self.cache[sector].as_ref().unwrap().deref()
+        **self.cache[sector].as_ref().unwrap()
     }
 
     pub fn read_sector_partial(&mut self, sector: usize, size: usize) -> Vec<u8> {
@@ -77,7 +77,7 @@ impl MemoryDisk {
             self.cache[sector] = Some(Box::new(self.disk.read(sector)));
         }
         let mut res = Vec::new_with_size(size);
-        let data = self.cache[sector].as_ref().unwrap().deref();
+        let data = &**self.cache[sector].as_ref().unwrap();
         unsafe {
             copy_nonoverlapping(data.as_ptr(), res.as_mut_ptr(), size);
         }
@@ -103,7 +103,7 @@ impl MemoryDisk {
     pub fn get_head(&mut self) -> Vec<u8> {
         let first_sector = self.read_sector(0);
 
-        let size = unsafe { *(&first_sector[0] as *const u8 as *const i32) } as usize;
+        let size = unsafe { *(&raw const first_sector[0] as *const i32) } as usize;
         let mut data = Vec::new();
 
         for i in 0..size {
@@ -117,7 +117,7 @@ impl MemoryDisk {
         let mut first_sector = self.read_sector(0);
 
         unsafe {
-            write_volatile(&mut first_sector[0] as *mut u8 as *mut i32, data.size() as i32);
+            write_volatile(&raw mut first_sector[0] as *mut i32, data.size() as i32);
         }
 
         for i in 0..data.size() {

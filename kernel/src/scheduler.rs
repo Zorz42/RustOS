@@ -82,7 +82,7 @@ pub struct Process {
     needs_paging_refresh: [bool; NUM_CORES],
 }
 
-const NUM_PROC: usize = 16;
+const NUM_PROC: usize = 1024;
 static mut PROCTABLE: [(Option<Process>, PageTable); NUM_PROC] = [const { (None, 0 as PageTable) }; NUM_PROC];
 static PROCTABLE_ALLOC_LOCK: Lock = Lock::new();
 static PROCTABLE_LOCKS: [Lock; NUM_PROC] = [const { Lock::new() }; NUM_PROC];
@@ -122,10 +122,10 @@ pub fn run_program(path: &String) {
 
     PROCTABLE_LOCKS[free_proc].spinlock();
     unsafe {
-        PROCTABLE[free_proc].0 = (Some(Process {
+        PROCTABLE[free_proc].0 = Some(Process {
             state: ProcessState::Loading,
             needs_paging_refresh: [true; NUM_CORES],
-        }));
+        });
     }
     let page_table = unsafe { PROCTABLE[free_proc].1 };
     PROCTABLE_LOCKS[free_proc].unlock();

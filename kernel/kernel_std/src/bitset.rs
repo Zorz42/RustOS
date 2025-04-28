@@ -252,7 +252,7 @@ impl BitSet {
 
 impl Deref for BitSet {
     type Target = BitSetRaw;
-
+    
     fn deref(&self) -> &Self::Target {
         &self.bitset
     }

@@ -180,7 +180,7 @@ impl VirtioInputDevice {
         }
     }
 
-    fn get_from_queue(&mut self) -> Option<InputEvent> {
+    const fn get_from_queue(&mut self) -> Option<InputEvent> {
         if self.events_queue_l == self.events_queue_r {
             None
         } else {

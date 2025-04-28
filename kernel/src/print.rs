@@ -21,7 +21,7 @@ impl Writer {
         }
     }
 
-    fn set_color(&mut self, text_color: TextColor, background_color: TextColor) {
+    const fn set_color(&mut self, text_color: TextColor, background_color: TextColor) {
         self.text_color = text_color;
         self.background_color = background_color;
     }
@@ -56,7 +56,7 @@ impl Writer {
         }
     }
 
-    fn move_cursor_back(&mut self) {
+    const fn move_cursor_back(&mut self) {
         if self.x != 0 {
             self.x -= 1;
         }

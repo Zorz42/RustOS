@@ -31,7 +31,7 @@ impl KernelLock {
 
     pub fn unlock(&self) {
         fence(Ordering::Release);
-        assert_eq!(unsafe { amoswap(&self.acquired as *const i32 as *mut i32, 0) }, 1);
+        assert_eq!(unsafe { amoswap(&raw const self.acquired as *mut i32, 0) }, 1);
         fence(Ordering::Release);
     }
 
